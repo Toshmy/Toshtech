@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>$TOSH | Empowering $PEPU L2</title>
+  <title>$TOSH | Coming Soon</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
   <style>
@@ -14,19 +14,9 @@
       overflow-x: hidden;
       scroll-behavior: smooth;
     }
-	nav {
-	  position: fixed;
-	  left: 0;
-	  width: 100%;
-	  z-index: 60;
-	  top: 4.5rem; /* default fallback */
-	  background: rgba(0,0,0,0.8);
-	  backdrop-filter: blur(6px);
-	}
     .glow-text {
       text-shadow: 0 0 12px #00ffae, 0 0 24px #00ffae;
     }
-
     .tech-glass {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(0, 255, 174, 0.2);
@@ -34,252 +24,92 @@
       border-radius: 1rem;
       box-shadow: 0 0 30px rgba(0, 255, 174, 0.2);
     }
-  .banner {
-    white-space: nowrap;       /* Prevent line breaks */
-    overflow: hidden;          /* Hide overflow text */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 50;
-    background: #000;          /* Optional background */
-    color: #00ffae;            /* Optional text color */
-  }
-
-  .banner-text {
-    display: inline-block;
-    padding-left: 100%;       /* Start from outside the right edge */
-    animation: scroll-left 15s linear infinite;
-  }
-
-  @keyframes scroll-left {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-100%);
-    }
-  }
-
     @keyframes pulseGlow {
       0% { box-shadow: 0 0 10px #00ffae, 0 0 20px #00ffae; }
       50% { box-shadow: 0 0 20px #00ffae, 0 0 40px #00ffae; }
       100% { box-shadow: 0 0 10px #00ffae, 0 0 20px #00ffae; }
     }
-
     .glow-ring {
       animation: pulseGlow 3s infinite;
     }
-
     @keyframes sip {
       0%, 100% { transform: rotate(-7deg); }
       10% { transform: rotate(0deg); }
       20% { transform: rotate(-7deg); }
     }
-
-	#cup-arm {
-	  position: absolute;
-	  left: 200px;
-	  top: 185px;
-	  width: 230px;
-
-	  animation: sip 10s infinite, slightShake 2s infinite;
-	  z-index: 20;
-	}
-
-	@media (max-width: 768px) {
-	  #cup-arm { 
-		top: 55%;
-		left: 40%;
-		width: 180px;
-	  }
-	}
-
-
-    .coin {
+    #cup-arm {
       position: absolute;
-      height: 60px;
-      width: 60px;
-      animation: fall 6s linear forwards;
-      opacity: 0.85;
-      z-index: 10;
+      left: 200px;
+      top: 185px;
+      width: 230px;
+      animation: sip 10s infinite;
+      z-index: 20;
     }
-
-    @keyframes fall {
-      0% { transform: translateY(0px) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    @media (max-width: 768px) {
+      #cup-arm {
+        top: 55%;
+        left: 40%;
+        width: 180px;
+      }
     }
-
     @keyframes fadeIn {
       0% { opacity: 0; transform: translateY(40px); }
       100% { opacity: 1; transform: translateY(0); }
     }
-
     .animate-fadeIn {
       animation: fadeIn 1.2s ease forwards;
     }
   </style>
-
 </head>
-<body class="min-h-screen overflow-hidden">
-<div class="banner min-h-[4.5rem] flex items-center justify-start px-4">
-  <div class="banner-text text-lg font-semibold glow-text">
-    🚧 $TOSH — Built by Tosh Tech, We’re delivering the tools Pepu communities deserve 
-  </div>
-</div>
+<body class="min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden">
 
-<nav class="fixed top-[4.5rem] left-0 w-full bg-black bg-opacity-80 backdrop-blur-md z-60">
-  <div class="max-w-4xl mx-auto px-4">
-    <div class="flex items-center justify-between py-3">
-      <div class="text-white font-bold text-lg">Menu</div>
-      <button id="menu-toggle" class="md:hidden text-white focus:outline-none">
-        <!-- Hamburger icon -->
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-      </button>
-      <div class="hidden md:flex space-x-6 text-white font-semibold">
-        <a href="index.html" class="hover:text-green-400">Home</a>
-        <a href="under-construction.html" class="hover:text-green-400">Roadmap</a>
-        <a href="under-construction.html" class="hover:text-green-400">Tools</a>
-        <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
-      </div>
-    </div>
-    <!-- Mobile menu -->
-    <div id="mobile-menu" class="hidden flex-col md:hidden pb-4 space-y-3 text-center text-white font-semibold">
-      <a href="index.html" class="block hover:text-green-400">Home</a>
-      <a href="under-construction.html" class="block hover:text-green-400">Roadmap</a>
-      <a href="under-construction.html" class="block hover:text-green-400">Tools</a>
-      <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
+  <div class="max-w-2xl tech-glass p-6 glow-text animate-fadeIn">
+    <p class="text-lg md:text-xl text-green-100 mb-4">Empowering Pepu Communities</p>
+    <p class="italic text-green-300 mb-6">Utility. Innovation. Community.</p>
+
+  <div class="w-full px-4 py-12 text-center mt-12">
+    <div class="inline-flex items-center justify-center w-60 h-60 rounded-full border-4 border-[#00ffae] mx-auto glow-text glow-ring">
+      <h1 class="text-5xl font-bold glow-text">$TOSH</h1>
     </div>
   </div>
-</nav>
 
-<div class="fixed top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-black bg-opacity-50 rounded-full glow-text text-sm font-semibold animate-pulse z-40 whitespace-nowrap">
-  ⚡ Full Roadmap REVEAL SOON ⚡
-</div>
-  
-
-  <div class="w-full px-4 pt-32 pb-8 text-center">
-    <div class="max-w-2xl mx-auto tech-glass p-6 glow-text animate-fadeIn">
-      <h2 class="text-2xl md:text-3xl font-bold mb-4 text-green-200">Pepe Unchained x Tosh Tech</h2>
-      <p class="text-lg md:text-xl text-green-100 mb-2">Free & Premium Tools for PEPU</p>
-      <p class="italic text-green-300">Utility. Innovation. Community.</p>
-		<div class="relative mx-auto max-w-md">
-			<img src="assets/TOSH-image.png" alt="$TOSH mascot" class="w-full">
-			<img src="assets/cup-arm.png" alt="Cup Arm" id="cup-arm" class="absolute">
-		</div>
-
-			<h2 class="text-1xl text-green-400 font-semibold mb-4">🚀 Next Official Announcement In:</h2>
-		<div id="countdown" class="text-1xl font-bold glow-text">
-		</div>
-
-    </div>
-
+    <h2 class="text-xl text-green-400 font-semibold mb-2">🚀 Launch Countdown:</h2>
+    <div id="countdown" class="text-2xl font-bold glow-text"></div>
   </div>
 
+  <div class="fixed bottom-4 text-center text-xs text-gray-400 px-2 max-w-2xl mx-auto">
+    <p>Disclaimer: $TOSH is a community-driven project. This is not financial advice. Do your own research.</p>
+  </div>
 
-
-<div class="fixed bottom-14 left-1/2 transform -translate-x-1/2 flex justify-center gap-2 whitespace-nowrap z-50">
-  <a href="https://t.me/ToshCommunity" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Telegram 💬</a>
-  <a href="https://x.com/ToshTech_" target="_blank" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-100 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition flex items-center gap-1 text-sm">Twitter 🐦</a>
-  <a href="https://www.geckoterminal.com/pepe-unchained/pools" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Chart 📈</a>
- <a href="https://pepuswap.com//#/swap?inputCurrency=ETH&outputCurrency=" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Buy 🛒</a>
-</div>
-
-
-	
-
-
-
-  <audio id="hover-sound" src="assets/hover.mp3" preload="auto"></audio>
   <audio id="intro-sound" src="assets/intro.mp3" preload="auto"></audio>
-<div class="text-center text-xs text-gray-400 px-2 max-w-2xl mx-auto">
-  <br><br><br><br><br><br><p class="mb-2">Disclaimer: $TOSH is a community-driven project and should be considered purely speculative. Participation in cryptocurrency markets involves significant risk. Always conduct your own research. This is not financial advice.</p><br><br><br><br><br><br>
-</div>
-
-
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
-  const hoverSound = document.getElementById('hover-sound');
-
-  hoverSound.volume = 0;
-  hoverSound.play().catch(() => {});
-  hoverSound.pause();
-  hoverSound.currentTime = 0;
-  hoverSound.volume = 1;
-
-  const playIntro = () => {
+  document.addEventListener('click', () => {
     introSound.volume = 0.5;
     introSound.play().catch(() => {});
-    document.removeEventListener('click', playIntro);
-  };
+  }, { once: true });
 
-  document.addEventListener('click', playIntro);
+  const targetDate = new Date('2025-06-09T14:00:00Z');
+  const countdown = document.getElementById('countdown');
+  const interval = setInterval(() => {
+    const now = new Date().getTime();
+    const distance = targetDate - now;
 
-  // Hover Sound on social links
-  const socialBtns = document.querySelectorAll('a');
-  socialBtns.forEach(btn => {
-    btn.addEventListener('mouseenter', () => {
-      hoverSound.currentTime = 0;
-      hoverSound.play().catch(() => {});
-    });
-  });
-});
-document.addEventListener("DOMContentLoaded", () => {
-  // Toggle mobile menu
-  const toggleBtn = document.getElementById('menu-toggle');
-  const mobileMenu = document.getElementById('mobile-menu');
-  toggleBtn.addEventListener('click', () => {
-    mobileMenu.classList.toggle('hidden');
-  });
+    if (distance < 0) {
+      clearInterval(interval);
+      countdown.innerText = "It's Time. 🔥";
+      return;
+    }
 
-  // Adjust nav top based on banner height
-  const banner = document.querySelector('.banner');
-  const nav = document.querySelector('nav');
-  function updateMenuTop() {
-    const bannerHeight = banner.offsetHeight;
-    nav.style.top = bannerHeight + 'px';
-  }
-  window.addEventListener('resize', updateMenuTop);
-  updateMenuTop(); // initial call
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-  // Hover sound on links
-  const socialBtns = document.querySelectorAll('a');
-  const hoverSound = document.getElementById('hover-sound');
-  socialBtns.forEach(btn => {
-    btn.addEventListener('mouseenter', () => {
-      hoverSound.currentTime = 0;
-      hoverSound.play();
-    });
-  });
-
-
-const targetDate = new Date('2025-07-09T14:00:00Z');
-// OR for 48 hours from now, use:
-// const targetDate = new Date(); targetDate.setHours(targetDate.getHours() + 48);
-
-const countdown = document.getElementById('countdown');
-const interval = setInterval(() => {
-  const now = new Date().getTime();
-  const distance = targetDate - now;
-
-  if (distance < 0) {
-    clearInterval(interval);
-    countdown.innerText = "It's Time. 🔥";
-    return;
-  }
-
-  const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-  countdown.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-}, 1000);
-
+    countdown.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }, 1000);
 
   // Animate cup arm with random duration and delay
   const cup = document.getElementById("cup-arm");
