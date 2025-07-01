@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How to Buy $TOSH Token</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    html, body {
+      background: radial-gradient(circle at center, #1a2238 0%, #0c1222 80%);
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+	nav {
+	  position: fixed;
+	  left: 0;
+	  width: 100%;
+	  z-index: 60;
+	  top: 4.5rem; /* default fallback */
+	  background: rgba(0,0,0,0.8);
+	  backdrop-filter: blur(6px);
+	}
+    .glow-text {
+      text-shadow: 0 0 12px #00ffae, 0 0 24px #00ffae;
+    }
+
+    .tech-glass {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(0, 255, 174, 0.2);
+      backdrop-filter: blur(6px);
+      border-radius: 1rem;
+      box-shadow: 0 0 30px rgba(0, 255, 174, 0.2);
+    }
+  .banner {
+    white-space: nowrap;       /* Prevent line breaks */
+    overflow: hidden;          /* Hide overflow text */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 50;
+    background: #000;          /* Optional background */
+    color: #00ffae;            /* Optional text color */
+  }
+
+  .banner-text {
+    display: inline-block;
+    padding-left: 100%;       /* Start from outside the right edge */
+    animation: scroll-left 15s linear infinite;
+  }
+
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 10px #00ffae, 0 0 20px #00ffae; }
+      50% { box-shadow: 0 0 20px #00ffae, 0 0 40px #00ffae; }
+      100% { box-shadow: 0 0 10px #00ffae, 0 0 20px #00ffae; }
+    }
+
+    .glow-ring {
+      animation: pulseGlow 3s infinite;
+    }
+
+    @keyframes sip {
+      0%, 100% { transform: rotate(-7deg); }
+      10% { transform: rotate(0deg); }
+      20% { transform: rotate(-7deg); }
+    }
+
+	#cup-arm {
+	  position: absolute;
+	  left: 200px;
+	  top: 185px;
+	  width: 230px;
+
+	  animation: sip 10s infinite, slightShake 2s infinite;
+	  z-index: 20;
+	}
+
+	@media (max-width: 768px) {
+	  #cup-arm { 
+		top: 55%;
+		left: 40%;
+		width: 180px;
+	  }
+	}
+
+
+    .coin {
+      position: absolute;
+      height: 60px;
+      width: 60px;
+      animation: fall 6s linear forwards;
+      opacity: 0.85;
+      z-index: 10;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(40px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 1.2s ease forwards;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-6">
+<div class="banner min-h-[4.5rem] flex items-center justify-start px-4">
+  <div class="banner-text text-lg font-semibold glow-text">
+    🚧 $TOSH — Built by Tosh Tech, We’re delivering the tools Pepu communities deserve 
+  </div>
+</div>
+<nav class="fixed top-[4.5rem] left-0 w-full bg-black bg-opacity-80 backdrop-blur-md z-60">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="flex items-center justify-between py-3">
+      <div class="text-white font-bold text-lg">Menu</div>
+      <button id="menu-toggle" class="md:hidden text-white focus:outline-none">
+        <!-- Hamburger icon -->
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <div class="hidden md:flex space-x-6 text-white font-semibold">
+        <a href="index.html" class="hover:text-green-400">Home</a>
+        <a href="under-construction.html" class="hover:text-green-400">Roadmap</a>
+        <a href="under-construction.html" class="hover:text-green-400">Tools</a>
+        <a href="under-construction.html" class="hover:text-green-400">How to buy</a>
+      </div>
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden flex-col md:hidden pb-4 space-y-3 text-center text-white font-semibold">
+      <a href="index.html" class="block hover:text-green-400">Home</a>
+      <a href="under-construction.html" class="block hover:text-green-400">Roadmap</a>
+      <a href="under-construction.html" class="block hover:text-green-400">Tools</a>
+        <a href="under-construction.html" class="hover:text-green-400">How to buy</a>
+    </div>
+  </div>
+</nav>
+<div class="w-full px-4 pt-32 pb-12 text-center">
+    <div class="max-w-2xl mx-auto tech-glass p-8 animate-fadeIn">
+      <h1 class="text-4xl font-extrabold mb-8 ">🚨 How to Buy <span class="text-green-400">$TOSH</span> Token 🚨</h1>
+
+      <section class="mb-8 text-left">
+        <h2 class="text-2xl font-bold mb-4 ">Step 1: Buy <span class="text-green-400">PEPU</span> Tokens</h2>
+        <p class="mb-4 leading-relaxed">
+          First, purchase PEPU tokens from one of the following:
+        </p>
+        <ul class="list-disc list-inside space-y-3 text-white text-lg">
+          <li>
+            <strong>Uniswap:</strong> 
+            <a href="https://app.uniswap.org/swap?outputcurrency=0x93aA0ccD1e5628d3A841C4DbdF602D9eb04085d6" target="_blank" rel="noopener" class="glow-link underline hover:text-green-400 transition duration-300">
+              Buy PEPU on Uniswap
+            </a>
+          </li>
+          <li>
+            <strong>Centralized Exchanges:</strong> BingX, MEXC, BitMart, LBank, WEEX, KCEX, BVOX
+          </li>
+        </ul>
+      </section>
+
+      <section class="mb-8 text-left">
+        <h2 class="text-2xl font-bold mb-4">Step 2: Bridge PEPU to Pepe Unchained Layer 2 Network</h2>
+        <p class="mb-4 leading-relaxed">
+          Use the official bridge at <a href="https://pepubridge.com" target="_blank" rel="noopener" class="glow-link underline hover:text-green-400 transition duration-300">pepubridge.com</a> to transfer your PEPU tokens from Ethereum to the Pepe Unchained Layer 2 network.
+        </p>
+        <p class="mb-4 font-semibold text-yellow-400">
+          Important: Connecting to Pepuswap or Pepubridge will automatically add the Pepe Unchained Layer 2 network to your wallet.
+        </p>
+        <p class="mb-4 leading-relaxed">
+          Make sure your wallet supports custom networks before bridging. Supported wallets include:
+        </p>
+        <ul class="list-disc list-inside mb-4 text-lg">
+          <li>MetaMask (recommended)</li>
+          <li>Coinbase Wallet (recovery phrase wallets only)</li>
+          <li>Trust Wallet (Android or browser extension only)</li>
+          <li>Rainbow Wallet (browser extension only)</li>
+        </ul>
+        <p class="mb-4 leading-relaxed text-red-400 font-semibold">
+          If your wallet doesn’t support custom networks, do NOT bridge or you will be unable to transact or bridge back.
+        </p>
+        <p class="mt-6">
+          For troubleshooting, see: <a href="https://help.superbridge.app/en/articles/10293436-pepe-unchained-pepu-troubleshooting" target="_blank" rel="noopener" class="glow-link underline hover:text-green-400 transition duration-300">Pepe Unchained PEPU Troubleshooting</a>
+        </p>
+      </section>
+
+      <section class="mb-8 text-left">
+        <h2 class="text-2xl font-bold mb-4">Step 3: Swap PEPU for <span class="text-green-400">$TOSH</span></h2>
+        <p class="leading-relaxed">
+          After bridging, swap your PEPU tokens for $TOSH at <a href="https://pepuswap.com/" target="_blank" rel="noopener" class="glow-link underline hover:text-green-400 transition duration-300">pepuswap.com</a>.
+        </p>
+      </section>
+
+      <section class="text-center">
+        <h2 class="text-3xl font-bold mb-4">🚀 Congrat for Joining the $TOSH Revolution! 🚀</h2>
+        <p class="leading-relaxed">
+          Track $TOSH price and charts on <a href="https://geckoterminal.com/" target="_blank" rel="noopener" class="glow-link underline hover:text-green-400 transition duration-300">Geckoterminal</a>.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <footer class="text-center text-xs text-gray-400 max-w-3xl px-4">
+    <p class="mb-2">
+      Disclaimer: $TOSH is a community-driven project and should be considered purely speculative. Participation in cryptocurrency markets involves significant risk. Always conduct your own research. This is not financial advice.
+    </p>
+  </footer>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const introSound = document.getElementById('intro-sound');
+  const hoverSound = document.getElementById('hover-sound');
+
+  hoverSound.volume = 0;
+  hoverSound.play().catch(() => {});
+  hoverSound.pause();
+  hoverSound.currentTime = 0;
+  hoverSound.volume = 1;
+
+  const playIntro = () => {
+    introSound.volume = 0.5;
+    introSound.play().catch(() => {});
+    document.removeEventListener('click', playIntro);
+  };
+
+  document.addEventListener('click', playIntro);
+
+  // Hover Sound on social links
+  const socialBtns = document.querySelectorAll('a');
+  socialBtns.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      hoverSound.currentTime = 0;
+      hoverSound.play().catch(() => {});
+    });
+  });
+});
+document.addEventListener("DOMContentLoaded", () => {
+  // Toggle mobile menu
+  const toggleBtn = document.getElementById('menu-toggle');
+  const mobileMenu = document.getElementById('mobile-menu');
+  toggleBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+  });
+
+  // Adjust nav top based on banner height
+  const banner = document.querySelector('.banner');
+  const nav = document.querySelector('nav');
+  function updateMenuTop() {
+    const bannerHeight = banner.offsetHeight;
+    nav.style.top = bannerHeight + 'px';
+  }
+  window.addEventListener('resize', updateMenuTop);
+  updateMenuTop(); // initial call
+
+  // Hover sound on links
+  const socialBtns = document.querySelectorAll('a');
+  const hoverSound = document.getElementById('hover-sound');
+  socialBtns.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      hoverSound.currentTime = 0;
+      hoverSound.play();
+    });
+  });
+
+
+const targetDate = new Date('2025-07-09T14:00:00Z');
+// OR for 48 hours from now, use:
+// const targetDate = new Date(); targetDate.setHours(targetDate.getHours() + 48);
+
+const countdown = document.getElementById('countdown');
+const interval = setInterval(() => {
+  const now = new Date().getTime();
+  const distance = targetDate - now;
+
+  if (distance < 0) {
+    clearInterval(interval);
+    countdown.innerText = "It's Time. 🔥";
+    return;
+  }
+
+  const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+  countdown.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}, 1000);
+
+
+  // Animate cup arm with random duration and delay
+  const cup = document.getElementById("cup-arm");
+  const duration = (4 + Math.random() * 6).toFixed(1);
+  const delay = (Math.random() * 2).toFixed(1);
+  cup.style.animationDuration = `${duration}s`;
+  cup.style.animationDelay = `${delay}s`;
+});
+</script>
+</body>
+</html>
