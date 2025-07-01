@@ -61,7 +61,7 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+<body class="pt-4 flex flex-col items-center justify-center text-center px-4 overflow-hidden">
 
   <div class="max-w-2xl tech-glass p-6 glow-text animate-fadeIn">
     <p class="text-lg md:text-xl text-green-100 mb-4">Empowering Pepu Communities</p>
@@ -82,7 +82,12 @@
   </div>
 
   <audio id="intro-sound" src="assets/intro.mp3" preload="auto"></audio>
-
+<div class="fixed bottom-14 left-1/2 transform -translate-x-1/2 flex justify-center gap-2 whitespace-nowrap z-50">
+  <a href="https://t.me/ToshCommunity" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Telegram 💬</a>
+  <a href="https://x.com/ToshTech_" target="_blank" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-100 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition flex items-center gap-1 text-sm">Twitter 🐦</a>
+  <a href="https://www.geckoterminal.com/pepe-unchained/pools" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Chart 📈</a>
+ <a href="https://pepuswap.com//#/swap?inputCurrency=ETH&outputCurrency=" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Buy 🛒</a>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
