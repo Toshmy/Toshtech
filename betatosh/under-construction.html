@@ -181,6 +181,33 @@ html, body {
   <p class="mb-2">Disclaimer: $TOSH is a community-driven project. Participation involves risk. Not financial advice. DYOR.</p>
 </div> 
 <script> 
+window.addEventListener('DOMContentLoaded', () => {
+  const introSound = document.getElementById('intro-sound');
+  const hoverSound = document.getElementById('hover-sound');
+
+  hoverSound.volume = 0;
+  hoverSound.play().catch(() => {});
+  hoverSound.pause();
+  hoverSound.currentTime = 0;
+  hoverSound.volume = 1;
+
+  const playIntro = () => {
+    introSound.volume = 0.5;
+    introSound.play().catch(() => {});
+    document.removeEventListener('click', playIntro);
+  };
+
+  document.addEventListener('click', playIntro);
+
+  // Hover Sound on social links
+  const socialBtns = document.querySelectorAll('a');
+  socialBtns.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      hoverSound.currentTime = 0;
+      hoverSound.play().catch(() => {});
+    });
+  });
+});
   // Toggle mobile menu
   const toggleBtn = document.getElementById('menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
