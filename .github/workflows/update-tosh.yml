@@ -18,15 +18,13 @@ jobs:
 
       - name: Fetch $TOSH token data
         run: |
-          mkdir -p data
           curl -s -H 'accept: application/json' \
-          "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/tokens/0x0b52dfa17542f30f3072c53ca5061120c74d86e9" > data/tosh2.json
+          "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/tokens/0x0b52dfa17542f30f3072c53ca5061120c74d86e9" > data/tosh.json
 
       - name: Fetch market info from GeckoTerminal
         run: |
-          mkdir -p data
           curl -s -H 'accept: application/json' \
-          "https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0x36337e694b3b1eadde50101e8aa4f4fa74463aee" > data/market2.json
+          "https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0x36337e694b3b1eadde50101e8aa4f4fa74463aee" > data/market.json
 
       - name: Commit and push changes
         run: |
