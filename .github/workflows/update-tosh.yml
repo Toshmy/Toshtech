@@ -1,4 +1,4 @@
-name: Update $TOSH Metrics and Market Info
+name: Update $TOSH Metrics and Market Info Json
 
 on:
   schedule:
