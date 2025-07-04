@@ -192,7 +192,7 @@
       <div><span class="font-semibold text-green-300">24h Transactions:</span> <span id="transactions">--</span></div>
     </div>
 
-    <p class="text-green-400 text-sm mt-4 italic">Live data from official sources. Updates every 60 seconds.</p>
+    <p class="text-green-400 text-sm mt-4 italic">Live data from official sources. Updates every 15 minutes.</p>
   </div>
 </div>
 <div class="fixed bottom-14 left-1/2 transform -translate-x-1/2 flex justify-center gap-2 whitespace-nowrap z-50">
@@ -209,48 +209,6 @@
   <p class="mb-2">Disclaimer: $TOSH is a community-driven project. Participation involves risk. Not financial advice. DYOR.</p>
 </div>
 <script>
-
-const holdersUrl = 'https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/tokens/0x0b52dfa17542f30f3072c53ca5061120c74d86e9';
-const marketUrl = 'https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0x36337e694b3b1eadde50101e8aa4f4fa74463aee';
-
-async function fetchToshData() {
-  try {
-    const holdersRes = await fetch(holdersUrl);
-    const holdersData = await holdersRes.json();
-    document.getElementById('holders').textContent = holdersData.holders || '--';
-
-    const marketRes = await fetch(marketUrl);
-    const marketData = await marketRes.json();
-    const attrs = marketData.data.attributes;
-
-    document.getElementById('price').textContent = `$${parseFloat(attrs.base_token_price_usd).toFixed(8)}`;
-    document.getElementById('fdv').textContent = `$${formatNumber(attrs.fdv_usd)}`;
-    document.getElementById('volume').textContent = `$${formatNumber(attrs.volume_usd.h24)}`;
-    document.getElementById('liquidity').textContent = `$${formatNumber(attrs.reserve_in_usd)}`;
-    document.getElementById('transactions').textContent = `${attrs.transactions.h24.buys} Buys / ${attrs.transactions.h24.sells} Sells`;
-
-    const priceChangeEl = document.getElementById('priceChange');
-    const priceChange = parseFloat(attrs.price_change_percentage.h24);
-    priceChangeEl.textContent = `${priceChange}%`;
-
-    priceChangeEl.classList.remove('text-green-400', 'text-red-400');
-
-    if (priceChange > 0) {
-      priceChangeEl.classList.add('text-green-400');
-    } else if (priceChange < 0) {
-      priceChangeEl.classList.add('text-red-400');
-    }
-  } catch (error) {
-    console.error('Error fetching $TOSH data:', error);
-  }
-}
-
-function formatNumber(num) {
-  return parseFloat(num).toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
-fetchToshData();
-setInterval(fetchToshData, 60000);
 
 window.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
@@ -339,6 +297,60 @@ const interval = setInterval(() => {
   cup.style.animationDuration = `${duration}s`;
   cup.style.animationDelay = `${delay}s`;
 });
+
+async function loadToshMetrics() {
+  try {
+    // Fetch both JSON files (adjust paths if needed)
+    const [toshResp, marketResp] = await Promise.all([
+      fetch('data/tosh.json'),
+      fetch('data/market.json')
+    ]);
+
+    if (!toshResp.ok || !marketResp.ok) throw new Error('Failed to fetch data');
+
+    const toshData = await toshResp.json();
+    const marketData = await marketResp.json();
+
+    // Extract relevant fields from tosh.json
+    const holders = toshData.holders || '--';
+
+    // Extract relevant fields from market.json attributes
+    const attrs = marketData.data.attributes || {};
+    const price = attrs.base_token_price_usd || '--';
+    const fdv = attrs.fdv_usd || '--';
+    const priceChange = attrs.price_change_percentage?.h24 || '--';
+    const volume = attrs.volume_usd?.h24 || '--';
+    const liquidity = attrs.reserve_in_usd || '--';
+    const transactionsObj = attrs.transactions?.h24 || {};
+    const transactions = transactionsObj.buys + transactionsObj.sells || '--';
+
+    // Update DOM elements
+    document.getElementById('holders').textContent = holders;
+    document.getElementById('price').textContent = parseFloat(price).toFixed(8);
+    document.getElementById('fdv').textContent = Number(fdv).toLocaleString(undefined, {maximumFractionDigits: 2});
+    document.getElementById('volume').textContent = Number(volume).toLocaleString(undefined, {maximumFractionDigits: 2});
+    document.getElementById('liquidity').textContent = Number(liquidity).toLocaleString(undefined, {maximumFractionDigits: 2});
+    document.getElementById('transactions').textContent = transactions;
+
+    // Handle price change with color coding
+    const priceChangeElem = document.getElementById('priceChange');
+    if (priceChange === '--' || isNaN(priceChange)) {
+      priceChangeElem.textContent = '--';
+      priceChangeElem.style.color = '';
+    } else {
+      const pcFloat = parseFloat(priceChange);
+      priceChangeElem.textContent = pcFloat.toFixed(2) + '%';
+      priceChangeElem.style.color = pcFloat > 0 ? 'limegreen' : pcFloat < 0 ? 'red' : 'inherit';
+    }
+
+  } catch (error) {
+    console.error('Error loading $TOSH metrics:', error);
+  }
+}
+
+// Run on page load
+window.addEventListener('DOMContentLoaded', loadToshMetrics);
+
 </script>
 
 </body>
