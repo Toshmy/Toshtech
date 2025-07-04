@@ -1,0 +1,22 @@
+name: Update TOSH Metrics
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # Every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Fetch and update data
+        run: |
+          curl -s -H 'accept: application/json' "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/tokens/0x0b52dfa17542f30f3072c53ca5061120c74d86e9" > data/tosh.json
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add data/tosh.json
+          git commit -m "Auto-update TOSH metrics"
+          git push
