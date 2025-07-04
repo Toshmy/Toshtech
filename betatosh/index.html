@@ -124,7 +124,7 @@
 <body class="min-h-screen overflow-hidden">
 <div class="banner min-h-[4.5rem] flex items-center justify-start px-4">
   <div class="banner-text text-lg font-semibold glow-text">
-    🚧 $TOSH — Built by Tosh Tech, We’re delivering the tools Pepu communities deserve
+    🚧 $TOSH — Built by Tosh Tech, We’re delivering the tools Pepu communities deserve 
   </div>
 </div>
 
@@ -180,27 +180,17 @@
   
 <div class="w-full px-4 pb-16 text-center">
   <div class="max-w-xl mx-auto tech-glass p-6 glow-text animate-fadeIn space-y-4">
-    <h2 class="text-2xl md:text-3xl font-bold text-green-200 mb-4">$TOSH Token Metrics :</h2>
+    <h2 class="text-2xl md:text-3xl font-bold text-green-200 mb-4">$TOSH Token Metrics (Live)</h2>
     
-<div class="grid grid-cols-2 gap-4 text-green-100 text-left">
-  <div><span class="font-semibold text-green-300">Holders:</span> <span id="holders">--</span></div>
-  <div><span class="font-semibold text-green-300">$</span> <span id="price">--</span></div>
-
-  <div><span class="font-semibold text-green-300">MC (FDV):</span> <span id="fdv">--</span><span>$</span></div>
-  <div><span class="font-semibold text-green-300">24h Change:</span> <span id="priceChange">--</span></div>
-
-  <div><span class="font-semibold text-green-300">24h Vol.:</span> <span id="volume">--</span><span>$</span></div>
-  <div><span class="font-semibold text-green-300">Liquidity:</span> <span id="liquidity">--</span><span>$</span></div>
-
-  <div><span class="font-semibold text-green-300">24h Tx:</span> <span id="transactions">--</span></div>
-
-  <!-- Added missing IDs here -->
-  <div><span class="font-semibold text-green-300">Circulating Supply:</span> <span id="circulating-supply">--</span></div>
-  <div><span class="font-semibold text-green-300">Total Supply:</span> <span id="total-supply">--</span></div>
-  <div><span class="font-semibold text-green-300">Burned Tokens:</span> <span id="burned-tokens">--</span></div>
-  <div><span class="font-semibold text-green-300">Market Cap:</span> <span id="market-cap">--</span></div>
-</div>
-
+    <div class="grid grid-cols-2 gap-4 text-green-100 text-left">
+      <div><span class="font-semibold text-green-300">Holders:</span> <span id="holders">--</span></div>
+      <div><span class="font-semibold text-green-300">$</span> <span id="price">--</span></div>
+      <div><span class="font-semibold text-green-300">MC (FDV):</span> <span id="fdv">--</span><span>$</span></div>
+      <div><span class="font-semibold text-green-300">24h Change:</span> <span id="priceChange">--</span></div>
+      <div><span class="font-semibold text-green-300">24h Vol.:</span> <span id="volume">--</span><span>$</span></div>
+      <div><span class="font-semibold text-green-300">Liquidity:</span> <span id="liquidity">--</span><span>$</span></div>
+      <div><span class="font-semibold text-green-300">24h Tx:</span> <span id="transactions">--</span></div>
+    </div>
 
     <p class="text-green-400 text-sm mt-4 italic">Live data from official sources. Updates every 15 minutes.</p>
   </div>
@@ -307,32 +297,58 @@ const interval = setInterval(() => {
   cup.style.animationDuration = `${duration}s`;
   cup.style.animationDelay = `${delay}s`;
 });
-function loadToshMetrics() {
-    fetch('data/tosh.json')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('circulating-supply').textContent = Number(data.circulatingSupply).toLocaleString();
-            document.getElementById('total-supply').textContent = Number(data.totalSupply).toLocaleString();
-            document.getElementById('burned-tokens').textContent = Number(data.burnedTokens).toLocaleString();
-        })
-        .catch(error => console.error('Error loading Tosh Metrics:', error));
 
-    fetch('data/market.json')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('price').textContent = Number(data.price).toFixed(8);
-            document.getElementById('market-cap').textContent = Number(data.marketCap).toLocaleString();
-            document.getElementById('liquidity').textContent = Number(data.liquidity).toLocaleString();
-            document.getElementById('holders').textContent = Number(data.holders).toLocaleString();
-        })
-        .catch(error => console.error('Error loading Market Data:', error));
+async function loadToshMetrics() {
+  try {
+    // Fetch both JSON files (adjust paths if needed)
+    const [toshResp, marketResp] = await Promise.all([
+      fetch('data/tosh.json'),
+      fetch('data/market.json')
+    ]);
+
+    if (!toshResp.ok || !marketResp.ok) throw new Error('Failed to fetch data');
+
+    const toshData = await toshResp.json();
+    const marketData = await marketResp.json();
+
+    // Extract relevant fields from tosh.json
+    const holders = toshData.holders || '--';
+
+    // Extract relevant fields from market.json attributes
+    const attrs = marketData.data.attributes || {};
+    const price = attrs.base_token_price_usd || '--';
+    const fdv = attrs.fdv_usd || '--';
+    const priceChange = attrs.price_change_percentage?.h24 || '--';
+    const volume = attrs.volume_usd?.h24 || '--';
+    const liquidity = attrs.reserve_in_usd || '--';
+    const transactionsObj = attrs.transactions?.h24 || {};
+    const transactions = transactionsObj.buys + transactionsObj.sells || '--';
+
+    // Update DOM elements
+    document.getElementById('holders').textContent = holders;
+    document.getElementById('price').textContent = parseFloat(price).toFixed(8);
+    document.getElementById('fdv').textContent = Number(fdv).toLocaleString(undefined, {maximumFractionDigits: 2});
+    document.getElementById('volume').textContent = Number(volume).toLocaleString(undefined, {maximumFractionDigits: 2});
+    document.getElementById('liquidity').textContent = Number(liquidity).toLocaleString(undefined, {maximumFractionDigits: 2});
+    document.getElementById('transactions').textContent = transactions;
+
+    // Handle price change with color coding
+    const priceChangeElem = document.getElementById('priceChange');
+    if (priceChange === '--' || isNaN(priceChange)) {
+      priceChangeElem.textContent = '--';
+      priceChangeElem.style.color = '';
+    } else {
+      const pcFloat = parseFloat(priceChange);
+      priceChangeElem.textContent = pcFloat.toFixed(2) + '%';
+      priceChangeElem.style.color = pcFloat > 0 ? 'limegreen' : pcFloat < 0 ? 'red' : 'inherit';
+    }
+
+  } catch (error) {
+    console.error('Error loading $TOSH metrics:', error);
+  }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadToshMetrics(); // Initial data load
-    setInterval(loadToshMetrics, 15 * 60 * 1000); // Reload every 15 minutes (900,000 ms)
-});
-
+// Run on page load
 window.addEventListener('DOMContentLoaded', loadToshMetrics);
 
 </script>
