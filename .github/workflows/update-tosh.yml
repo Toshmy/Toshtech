@@ -1,24 +1,41 @@
-name: Update TOSH Metrics
+name: Update $TOSH Metrics and Market Info
 
 on:
   schedule:
     - cron: "*/15 * * * *"  # Every 15 minutes
   workflow_dispatch:
+
 permissions:
   contents: write
 
 jobs:
-  update:
+  update-metrics:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Fetch and update data
+        with:
+          persist-credentials: true
+
+      - name: Fetch $TOSH token data
         run: |
-          curl -s -H 'accept: application/json' "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/tokens/0x0b52dfa17542f30f3072c53ca5061120c74d86e9" > data/tosh.json
+          mkdir -p data
+          curl -s -H 'accept: application/json' \
+          "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/tokens/0x0b52dfa17542f30f3072c53ca5061120c74d86e9" > data/tosh.json
+
+      - name: Fetch market info from GeckoTerminal
+        run: |
+          mkdir -p data
+          curl -s -H 'accept: application/json' \
+          "https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0x36337e694b3b1eadde50101e8aa4f4fa74463aee" > data/market.json
+
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add data/tosh.json
-          git commit -m "Auto-update TOSH metrics"
-          git push
+          if [[ $(git status --porcelain) ]]; then
+            git add data/tosh.json data/market.json
+            git commit -m "Auto-update $TOSH and market metrics [skip ci]"
+            git push
+          else
+            echo "No changes detected."
+          fi
