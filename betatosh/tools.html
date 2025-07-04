@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>$TOSH Bots — Pepu L2 Tools</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background: radial-gradient(circle at center, #1a2238 0%, #0c1222 80%);
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+    .glow-text {
+      text-shadow: 0 0 12px #00ffae, 0 0 24px #00ffae;
+    }
+    .tech-glass {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(0, 255, 174, 0.2);
+      backdrop-filter: blur(6px);
+      border-radius: 1rem;
+      box-shadow: 0 0 30px rgba(0, 255, 174, 0.2);
+    }
+    .banner {
+      white-space: nowrap;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 50;
+      background: #000;
+      color: #00ffae;
+    }
+    .banner-text {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scroll-left 15s linear infinite;
+    }
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+</head>
+
+<body class="flex flex-col items-center justify-start min-h-screen p-4">
+
+<!-- Banner -->
+<div class="banner min-h-[4.5rem] flex items-center justify-start px-4">
+  <div class="banner-text text-lg font-semibold glow-text">
+    🚀 $TOSH — Building Pepu L2's Automation Tools for Communities
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav class="fixed top-[4.5rem] left-0 w-full bg-black bg-opacity-80 backdrop-blur-md z-60">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="flex items-center justify-between py-3">
+      <div class="text-white font-bold text-lg">Menu</div>
+      <button id="menu-toggle" class="md:hidden text-white focus:outline-none">
+        <!-- Hamburger icon -->
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <div class="hidden md:flex space-x-6 text-white font-semibold">
+        <a href="index.html" class="hover:text-green-400">Home</a>
+        <a href="roadmap.html" class="hover:text-green-400">Roadmap</a>
+        <a href="tools.html" class="hover:text-green-400">Tools</a>
+        <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
+      </div>
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden flex-col md:hidden pb-4 space-y-3 text-center text-white font-semibold">
+      <a href="index.html" class="block hover:text-green-400">Home</a>
+      <a href="roadmap.html" class="block hover:text-green-400">Roadmap</a>
+      <a href="tools.html" class="block hover:text-green-400">Tools</a>
+      <a href="how-to-buy.html" class="block hover:text-green-400">How to buy</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Page Content -->
+<main class="mt-32 max-w-4xl w-full flex flex-col items-center space-y-6">
+
+  <h1 class="text-4xl md:text-5xl font-extrabold glow-text text-center">🚀 Tosh Tech Bots for Pepu L2</h1>
+  <p class="text-lg text-center max-w-l">Automation for token communities<br>Powered by $TOSH.<br>No noise, just clean, reliable alerts.</p>
+
+<!-- Freemium Bots Section -->
+
+<div class="text-center mb-8 max-w-xl">
+  <h2 class="text-3xl font-bold mt-4 mb-0">🟢 Freemium Bots 🟢</h2>
+  <h3 class="text-xl font-bold mb-4">(Public Access)</h3>
+  <p class="text-sm leading-snug">Community bots are free to use for all Pepu groups. Admins can activate using simple commands. Premium upgrades available for projects wanting custom versions.</p>
+</div>
+  <!-- BuyBot Card -->
+  <div class="tech-glass p-6 w-full flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+    <img src="BuyBot.png" alt="BuyBot Preview" class="w-60 rounded-lg border border-green-400 shadow-lg">
+    <div>
+      <h2 class="text-2xl font-bold  mb-2">🐸 Tosh BuyBot — <span class="text-green-400">@ToshPepuBuyBot</span></h2>
+      <ul class="list-disc list-inside mb-4 text-sm">
+        <li>Instant buy alerts for Pepu tokens</li>
+        <li>Displays price, amount, and market cap</li>
+        <li>Clickable Buy links included</li>
+        <li>Available for all Pepu projects</li>
+      </ul>
+      <p class="text-sm">Group Admins: Enable with <code>/setchatbot true</code>.</p>
+    </div>
+  </div>
+
+  <!-- ChatBot Card -->
+  <div class="tech-glass p-6 w-full flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+    <img src="ChatBot.png" alt="ChatBot Preview" class="w-60 rounded-lg border border-green-400 shadow-lg">
+    <div>
+      <h2 class="text-2xl font-bold  mb-2">🤖 Tosh ChatBot — <span class="text-green-400">@PUMPPAD_TOSH_BOT</span></h2>
+      <ul class="list-disc list-inside mb-4 text-sm">
+        <li><code>/top3mc</code>, <code>/top5mc</code>, <code>/top10mc</code> — Live Market Cap rankings</li>
+        <li><code>/price [token]</code> — Get token price instantly</li>
+        <li><code>/supply [token]</code> — Check total supply</li>
+        <li><code>/last5</code> — Latest Pepu token launches</li>
+        <li><code>/top5</code> — Trending new tokens</li>
+      </ul>
+      <p class="text-sm">Data powered by Graph API — Only functional in group chats.</p>
+    </div>
+  </div>
+
+  <!-- Premium Bots Section -->
+<div class="text-center mb-8 max-w-xl">
+  <h2 class="text-3xl font-bold mt-4 mb-0">💎Premium Bots💎</h2>
+  <h3 class="text-xl font-bold mb-4">(Project Exclusive)</h3>
+  <p class="text-sm leading-snug">Custom Bots designed for projects, with branding, dedicated alerts, and advanced features.<br><span class="text-green-400 font-semibold">Premium Bot services launching soon!</span></p>
+</div>  
+  <div class="tech-glass p-6 w-full flex flex-col items-center space-y-4 justify-center">
+    <h3 class="text-2xl font-bold  mb-2">🚧 Premium Bot Program — Coming Soon</h3>
+    <p class="text-center text-sm mb-4 max-w-md">Project teams will be able to request branded BuyBots, MarketBots, and exclusive tools tailored to their tokens. More control, more features, more visibility.</p>
+    <button disabled class="px-6 py-3 bg-gray-500 text-white rounded-full cursor-not-allowed opacity-50">
+      Launching Soon
+    </button>
+  </div>
+
+  <!-- CTA Button -->
+  <div class="text-center max-w-md mt-8">
+    <a href="how-to-buy.html" class="inline-block mt-6 px-6 py-3 bg-green-500 hover:bg-green-600 rounded-full font-semibold shadow-lg transition">
+      Buy $TOSH — Unlock Full Features
+    </a>
+  </div>
+
+</main>
+
+<div class="fixed bottom-14 left-1/2 transform -translate-x-1/2 flex justify-center gap-2 whitespace-nowrap z-50">
+  <a href="https://t.me/ToshCommunity" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Telegram 💬</a>
+  <a href="https://x.com/ToshTech_" target="_blank" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-100 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition flex items-center gap-1 text-sm">Twitter 🐦</a>
+  <a href="https://www.geckoterminal.com/pepe-unchained/pools" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Chart 📈</a>
+ <a href="https://pepuswap.com//#/swap?inputCurrency=ETH&outputCurrency=" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Buy 🛒</a>
+</div>
+
+
+	
+
+
+
+  <audio id="hover-sound" src="assets/hover.mp3" preload="auto"></audio>
+  <audio id="intro-sound" src="assets/intro.mp3" preload="auto"></audio>
+<div class="text-center text-xs text-gray-400 px-2 max-w-2xl mx-auto">
+  <br><br><br><br><br><br><p class="mb-2">Disclaimer: $TOSH is a community-driven project and should be considered purely speculative. Participation in cryptocurrency markets involves significant risk. Always conduct your own research. This is not financial advice.</p><br><br><br><br><br><br>
+</div>
+<div class="fixed bottom-14 left-1/2 transform -translate-x-1/2 flex justify-center gap-2 whitespace-nowrap z-50">
+  <a href="https://t.me/ToshTech" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Telegram 💬</a>
+  <a href="https://x.com/ToshTech_" target="_blank" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-100 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition flex items-center gap-1 text-sm">Twitter 🐦</a>
+  <a href="https://www.geckoterminal.com/pepe-unchained/pools/0x36337e694b3b1eadde50101e8aa4f4fa74463aee" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Chart 📈</a>
+ <a href="https://pepuswap.com//#/swap?inputCurrency=ETH&outputCurrency=0x0b52dfa17542f30f3072c53ca5061120c74d86e9" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Buy 🛒</a>
+</div>
+
+
+	
+
+
+
+  <audio id="hover-sound" src="assets/hover.mp3" preload="auto"></audio>
+
+<!-- Disclaimer -->
+<div class="text-center text-xs text-gray-400 mt-16 max-w-2xl mx-auto px-2">
+  <p class="mb-2">Disclaimer: $TOSH is a community-driven project. Participation involves risk. Not financial advice. DYOR.</p>
+</div>
+<script>
+  const toggleBtn = document.getElementById('menu-toggle');
+  const mobileMenu = document.getElementById('mobile-menu');
+  toggleBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+  });
+
+  const banner = document.querySelector('.banner');
+  const nav = document.querySelector('nav');
+  function updateMenuTop() {
+    const bannerHeight = banner.offsetHeight;
+    nav.style.top = bannerHeight + 'px';
+  }
+  window.addEventListener('resize', updateMenuTop);
+  updateMenuTop();
+</script>
+
+</body>
+</html>
