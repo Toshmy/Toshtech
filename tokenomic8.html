@@ -196,9 +196,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- 10% Breakdown Pie -->
     <div class="flex flex-col items-center">
-      <h3 class="text-xl font-semibold text-purple-400 mb-4">📦 Breakdown of 10% Supply</h3>
+<br>
+      <h3 class="text-xl font-semibold text-purple-400 mt-8 mb-4">📦 Breakdown of 10% Supply</h3>
+
       <svg id="breakdownPie" width="200" height="200" viewBox="0 0 200 200"></svg>
       <ul class="mt-4 text-gray-300 text-sm max-w-xs">
+
         <li><span class="inline-block w-4 h-4 mr-2 bg-purple-600"></span>3.5% Team & Development</li>
         <li><span class="inline-block w-4 h-4 mr-2 bg-yellow-400"></span>2.0% Marketing & Promotion</li>
         <li><span class="inline-block w-4 h-4 mr-2 bg-green-500"></span>2.5% Ecosystem Growth</li>
@@ -291,10 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const breakdownPie = document.getElementById('breakdownPie');
 
   // Start at 0 so 50% slice starts at top
-  createPieSlices(generalPie, generalData, generalColors, 90, 0);
+  createPieSlices(generalPie, generalData, generalColors, 70, 0);
 
   // Breakdown pie full 100% start at 0 (top)
-  createPieSlices(breakdownPie, breakdownData, breakdownColors, 90, 0);
+  createPieSlices(breakdownPie, breakdownData, breakdownColors, 70, 0);
 });
 
 
