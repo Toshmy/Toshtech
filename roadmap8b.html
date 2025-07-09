@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-	<!-- Google tag (gtag.js) -->
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-KQGNWXWKPM"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -9,21 +9,28 @@
   gtag('js', new Date());
 
   gtag('config', 'G-KQGNWXWKPM');
-</script>
+</script>	
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-NCRKWCRS');</script>
-<!-- End Google Tag Manager -->
+<!-- End Google Tag Manager -->	
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>$TOSH | Empowering $PEPU L2</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>$TOSH Roadmap </title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <style>
-    html, body {
+    body {
+      background: radial-gradient(circle at center, #1a2238 0%, #0c1222 80%);
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .glow-text {
+      text-shadow: 0 0 8px #00ffae, 0 0 16px #00ffae;
+    }
+html, body {
       background: radial-gradient(circle at center, #1a2238 0%, #0c1222 80%);
       color: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -93,24 +100,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       20% { transform: rotate(-7deg); }
     }
 
-	#cup-arm {
-	  position: absolute;
-	  left: 200px;
-	  top: 185px;
-	  width: 230px;
-
-	  animation: sip 10s infinite, slightShake 2s infinite;
-	  z-index: 20;
-	}
-
-	@media (max-width: 768px) {
-	  #cup-arm { 
-		top: 55%;
-		left: 40%;
-		width: 180px;
-	  }
-	}
-
+    #cup-arm {
+      position: absolute;
+      left: 205px;
+      top: 185px;
+      width: 230px;
+      transform-origin: 56.25% 40.625%;
+      animation-name: sip;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      z-index: 20;
+    }
 
     .coin {
       position: absolute;
@@ -133,20 +133,22 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
     .animate-fadeIn {
       animation: fadeIn 1.2s ease forwards;
-    }
+    }	
   </style>
-
 </head>
-
-<body class="min-h-screen overflow-hidden">
+	
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NCRKWCRS"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->	
+
 <div class="banner min-h-[4.5rem] flex items-center justify-start px-4">
-  <div class="banner-text text-lg font-semibold glow-text">
-    🚧 $TOSH — Built by Tosh Tech, We’re delivering the tools Pepu communities deserve 
-  </div>
+
+
+<div class="banner-text text-lg font-semibold glow-text">
+  📅 $TOSH Roadmap — Our Plan to Revolutionize Pepu Tools
+</div>
 </div>
 
 <nav class="fixed top-[4.5rem] left-0 w-full bg-black bg-opacity-80 backdrop-blur-md z-60">
@@ -162,7 +164,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="hidden md:flex space-x-6 text-white font-semibold">
         <a href="index.html" class="hover:text-green-400">Home</a>
         <a href="roadmap.html" class="hover:text-green-400">Roadmap</a>
-        <a href="tokenomic.html" class="hover:text-green-400">Tokenomic</a>		
         <a href="tools.html" class="hover:text-green-400">Tools</a>
         <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
       </div>
@@ -171,68 +172,148 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="mobile-menu" class="hidden flex-col md:hidden pb-4 space-y-3 text-center text-white font-semibold">
       <a href="index.html" class="block hover:text-green-400">Home</a>
       <a href="roadmap.html" class="block hover:text-green-400">Roadmap</a>
-      <a href="tokenomic.html" class="block hover:text-green-400">Tokenomic</a>	  
       <a href="tools.html" class="block hover:text-green-400">Tools</a>
       <a href="how-to-buy.html" class="block hover:text-green-400">How to buy</a>
     </div>
   </div>
 </nav>
+<main class="mt-24 sm:mt-28 max-w-4xl w-full flex flex-col items-center space-y-6 px-4">
+  <h1 class="text-2xl sm:text-3xl md:text-5xl font-extrabold glow-text text-center">🚀 Tosh Tech Roadmap</h1>
+  <div class="relative border-l-4 border-green-400 ml-6 w-full">
 
-<div class="fixed top-20 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-black bg-opacity-50 rounded-full glow-text text-sm font-semibold animate-pulse z-40 whitespace-nowrap">
-  ⚡ Full Roadmap REVEAL SOON ⚡
-</div>
-  
+    <!-- PHASE TEMPLATE -->
+    <!-- Copy and modify for each phase -->
 
-  <div class="w-full px-4 pt-32 pb-8 text-center">
-    <div class="max-w-2xl mx-auto tech-glass p-6 glow-text animate-fadeIn">
-      <h2 class="text-2xl md:text-3xl font-bold mb-4 text-green-200">Pepe Unchained x Tosh Tech</h2>
-      <p class="text-lg md:text-xl text-green-100 mb-2">Free & Premium Tools for PEPU</p>
-      <p class="italic text-green-300">Utility. Innovation. Community.</p>
-		<div class="relative mx-auto max-w-md">
-			<img src="assets/TOSH-image.png" alt="$TOSH mascot" class="w-full">
-			<img src="assets/cup-arm.png" alt="Cup Arm" id="cup-arm" class="absolute">
-		</div>
+    <!-- Phase 0 -->
+    <div class="mb-12 ml-6 relative">
+      <span class="absolute -left-8 top-0 flex items-center justify-center w-10 h-10 rounded-full bg-green-400 text-black font-bold">0</span>
+	  	  <br>
+      <h3 class="text-yellow-400 text-xl font-semibold mb-1">✨ Phase 0 — Spark</h3>
 
-			<h2 class="text-1xl text-green-400 font-semibold mb-4">🚀 Next Official Announcement In:</h2>
-		<div id="countdown" class="text-1xl font-bold glow-text">
-		</div>
+      <!-- Progress Bar -->
+      <div class="mb-1 text-sm text-gray-300">Progress: 100%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-green-400 h-2.5 rounded-full" style="width: 100%"></div>
+      </div>
 
+      <!-- Tasks -->
+      <ul class="text-gray-300 space-y-1 text-sm">
+        <li>✅ Launched core ChatBot & BuyBot</li>
+        <li>✅ Premium BuyBot to top projects</li>
+        <li>✅ Built scalable infrastructure</li>
+      </ul>
+    </div>
+
+    <!-- Phase 1 -->
+    <div class="mb-12 ml-6 relative">
+
+      <h3 class="text-yellow-500 text-xl font-semibold mb-1">🔥 Phase 1 — Ignite</h3>
+
+      <div class="mb-1 text-sm text-gray-300">Progress: 40%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-yellow-400 h-2.5 rounded-full" style="width: 66%"></div>
+      </div>
+
+      <ul class="text-gray-300 space-y-1 text-sm">
+        <li>✅ Launch $TOSH token</li>
+        <li>✅ Freemium model with ads & premium tiers</li>
+        <li>🔄 Tiered buyer analytics & custom bots</li>
+        <li>🔄 Roadmap</li>		
+        <li>🔄 Tokenomic</li>		
+      </ul>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="mb-12 ml-6 relative">
+
+      <h3 class="text-blue-400 text-xl font-semibold mb-1">⚡ Phase 2 — Pulse</h3>
+
+      <div class="mb-1 text-sm text-gray-300">Progress: 25%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-blue-400 h-2.5 rounded-full" style="width: 33%"></div>
+      </div>
+
+      <ul class="text-gray-300 space-y-1 text-sm">
+        <li>✅ Wallet association from telegram</li>
+        <li>🔄 Bot launch & validation</li>	
+        <li>🔄 Wallet/Portfolio Tracker</li>		
+        <li>🔄 Smart alert system</li>
+
+      </ul>
+    </div>
+
+    <!-- Repeat below for remaining phases -->
+
+    <!-- Phase 3 -->
+    <div class="mb-12 ml-6 relative">
+
+      <h3 class="text-purple-400 text-xl font-semibold mb-1">🌅 Phase 3 — Horizon</h3>
+      <div class="mb-1 text-sm text-gray-300">Progress: 0%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-purple-400 h-2.5 rounded-full" style="width: 0%"></div>
+      </div>
+      <ul class="text-gray-300 space-y-1 text-sm">
+
+      </ul>
+    </div>
+
+    <!-- Phase 4 -->
+    <div class="mb-12 ml-6 relative">
+
+      <h3 class="text-purple-700 text-xl font-semibold mb-1">🛡️ Phase 4 — Shield</h3>
+      <div class="mb-1 text-sm text-gray-300">Progress: 0%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-purple-700 h-2.5 rounded-full" style="width: 0%"></div>
+      </div>
+      <ul class="text-gray-300 space-y-1 text-sm">
+
+      </ul>
+    </div>
+
+    <!-- Phase 5 -->
+    <div class="mb-12 ml-6 relative">
+
+      <h3 class="text-pink-400 text-xl font-semibold mb-1">🤖 Phase 5 — Sentinel</h3>
+      <div class="mb-1 text-sm text-gray-300">Progress: 0%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-pink-400 h-2.5 rounded-full" style="width: 0%"></div>
+      </div>
+      <ul class="text-gray-300 space-y-1 text-sm">
+
+      </ul>
+    </div>
+
+    <!-- Phase 6 -->
+    <div class="mb-12 ml-6 relative">
+
+      <h3 class="text-green-400 text-xl font-semibold mb-1">🔆 Phase 6 — Beacon</h3>
+      <div class="mb-1 text-sm text-gray-300">Progress: 0%</div>
+      <div class="w-full bg-gray-700 rounded-full h-2.5 mb-3">
+        <div class="bg-green-400 h-2.5 rounded-full" style="width: 0%"></div>
+      </div>
+      <ul class="text-gray-300 space-y-1 text-sm">
+
+      </ul>
     </div>
 
   </div>
-  
-<div class="w-full px-4 pb-16 text-center">
-  <div class="max-w-xl mx-auto tech-glass p-6 glow-text animate-fadeIn space-y-4">
-    <h2 class="text-2xl md:text-3xl font-bold text-green-200 mb-4">$TOSH Token Metrics (Live)</h2>
-    
-    <div class="grid grid-cols-2 gap-4 text-green-100 text-left">
-      <div><span class="font-semibold text-green-300">Holders:</span> <span id="holders">--</span></div>
-      <div><span class="font-semibold text-green-300">$</span> <span id="price">--</span></div>
-      <div><span class="font-semibold text-green-300">MC (FDV):</span> <span id="fdv">--</span><span>$</span></div>
-      <div><span class="font-semibold text-green-300">24h Change:</span> <span id="priceChange">--</span></div>
-      <div><span class="font-semibold text-green-300">24h Vol.:</span> <span id="volume">--</span><span>$</span></div>
-      <div><span class="font-semibold text-green-300">Liquidity:</span> <span id="liquidity">--</span><span>$</span></div>
-      <div><span class="font-semibold text-green-300">24h Tx:</span> <span id="transactions">--</span></div>
-    </div>
+</section>
+</main>
 
-    <p class="text-green-400 text-sm mt-4 italic">Live data from official sources. Updates every 15 minutes.</p>
-  </div>
-</div>
+
+
 <div class="fixed bottom-14 left-1/2 transform -translate-x-1/2 flex justify-center gap-2 whitespace-nowrap z-50">
   <a href="https://t.me/ToshTech" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Telegram 💬</a>
   <a href="https://x.com/ToshTech_" target="_blank" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-100 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition flex items-center gap-1 text-sm">Twitter 🐦</a>
   <a href="https://www.geckoterminal.com/pepe-unchained/pools/0x36337e694b3b1eadde50101e8aa4f4fa74463aee" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Chart 📈</a>
  <a href="https://pepuswap.com//#/swap?inputCurrency=ETH&outputCurrency=0x0b52dfa17542f30f3072c53ca5061120c74d86e9" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-full font-semibold shadow-xl transition text-sm">Buy 🛒</a>
 </div>
-
-  <audio id="hover-sound" src="assets/hover.mp3" preload="auto"></audio>
-
 <!-- Disclaimer -->
-<div class="text-center text-xs text-gray-400 max-w-2xl mx-auto px-2">
+<div class="text-center text-xs text-gray-400 mt-16 max-w-2xl mx-auto px-2">
   <p class="mb-2">Disclaimer: $TOSH is a community-driven project. Participation involves risk. Not financial advice. DYOR.</p>
 </div>
-<script>
-
+  <audio id="hover-sound" src="assets/hover.mp3" preload="auto"></audio>
+<script> 
 window.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
   const hoverSound = document.getElementById('hover-sound');
@@ -260,7 +341,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
-document.addEventListener("DOMContentLoaded", () => {
   // Toggle mobile menu
   const toggleBtn = document.getElementById('menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
@@ -277,104 +357,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener('resize', updateMenuTop);
   updateMenuTop(); // initial call
-
-  // Hover sound on links
-  const socialBtns = document.querySelectorAll('a');
-  const hoverSound = document.getElementById('hover-sound');
-  socialBtns.forEach(btn => {
-    btn.addEventListener('mouseenter', () => {
-      hoverSound.currentTime = 0;
-      hoverSound.play();
-    });
-  });
-
-
-const targetDate = new Date('2025-07-09T14:00:00Z');
-// OR for 48 hours from now, use:
-// const targetDate = new Date(); targetDate.setHours(targetDate.getHours() + 48);
-
-const countdown = document.getElementById('countdown');
-const interval = setInterval(() => {
-  const now = new Date().getTime();
-  const distance = targetDate - now;
-
-  if (distance < 0) {
-    clearInterval(interval);
-    countdown.innerText = "🔥 It's Time 🔥";
-    return;
-  }
-
-  const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-  countdown.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-}, 1000);
-
-
-  // Animate cup arm with random duration and delay
-  const cup = document.getElementById("cup-arm");
-  const duration = (4 + Math.random() * 6).toFixed(1);
-  const delay = (Math.random() * 2).toFixed(1);
-  cup.style.animationDuration = `${duration}s`;
-  cup.style.animationDelay = `${delay}s`;
-});
-
-async function loadToshMetrics() {
-  try {
-    // Fetch both JSON files (adjust paths if needed)
-    const [toshResp, marketResp] = await Promise.all([
-      fetch('data/tosh.json'),
-      fetch('data/market.json')
-    ]);
-
-    if (!toshResp.ok || !marketResp.ok) throw new Error('Failed to fetch data');
-
-    const toshData = await toshResp.json();
-    const marketData = await marketResp.json();
-
-    // Extract relevant fields from tosh.json
-    const holders = toshData.holders || '--';
-
-    // Extract relevant fields from market.json attributes
-    const attrs = marketData.data.attributes || {};
-    const price = attrs.base_token_price_usd || '--';
-    const fdv = attrs.fdv_usd || '--';
-    const priceChange = attrs.price_change_percentage?.h24 || '--';
-    const volume = attrs.volume_usd?.h24 || '--';
-    const liquidity = attrs.reserve_in_usd || '--';
-    const transactionsObj = attrs.transactions?.h24 || {};
-    const transactions = transactionsObj.buys + transactionsObj.sells || '--';
-
-    // Update DOM elements
-    document.getElementById('holders').textContent = holders;
-    document.getElementById('price').textContent = parseFloat(price).toFixed(8);
-    document.getElementById('fdv').textContent = Number(fdv).toLocaleString(undefined, {maximumFractionDigits: 2});
-    document.getElementById('volume').textContent = Number(volume).toLocaleString(undefined, {maximumFractionDigits: 2});
-    document.getElementById('liquidity').textContent = Number(liquidity).toLocaleString(undefined, {maximumFractionDigits: 2});
-    document.getElementById('transactions').textContent = transactions;
-
-    // Handle price change with color coding
-    const priceChangeElem = document.getElementById('priceChange');
-    if (priceChange === '--' || isNaN(priceChange)) {
-      priceChangeElem.textContent = '--';
-      priceChangeElem.style.color = '';
-    } else {
-      const pcFloat = parseFloat(priceChange);
-      priceChangeElem.textContent = pcFloat.toFixed(2) + '%';
-      priceChangeElem.style.color = pcFloat > 0 ? 'limegreen' : pcFloat < 0 ? 'red' : 'inherit';
-    }
-
-  } catch (error) {
-    console.error('Error loading $TOSH metrics:', error);
-  }
-}
-
-// Run on page load
-window.addEventListener('DOMContentLoaded', loadToshMetrics);
-
 </script>
-
 </body>
 </html>
