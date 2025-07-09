@@ -303,43 +303,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
   </div>
-  <section class="mt-24 max-w-4xl w-full flex flex-col items-center space-y-6 px-4">
-  <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-yellow-300">📊 $TOSH Tokenomics</h2>
-
-  <!-- Initial Distribution -->
-  <div class="w-full space-y-4">
-    <h3 class="text-xl font-semibold text-green-400">🚀 Initial Launch Allocation</h3>
-    <ul class="space-y-2 text-sm text-gray-300">
-      <li>🟢 <strong>50%</strong> — Presale Sold on <span class="font-semibold text-white">PumpPad.gg</span></li>
-      <li>🟡 <strong>40%</strong> — Post-DEX Listing Liquidity</li>
-      <li>🔵 <strong>10%</strong> — Team Buy After Presale</li>
-    </ul>
-  </div>
-
-  <!-- Token Allocation Visual -->
-  <div class="w-full mt-8 space-y-4">
-    <h3 class="text-xl font-semibold text-purple-400">📦 10% Strategic Supply Allocation</h3>
-    <template x-data="{ allocations: [
-      { name: 'Team & Development', percent: 3.5, color: 'bg-purple-600', desc: 'Founder/Team compensation, locked & vested' },
-      { name: 'Marketing & Promotion', percent: 2.0, color: 'bg-yellow-400', desc: 'Listings, influencers, partnerships' },
-      { name: 'Ecosystem Growth', percent: 2.5, color: 'bg-green-500', desc: 'Strategic partners & expansion' },
-      { name: 'Community Incentives', percent: 1.5, color: 'bg-blue-400', desc: 'Staking, campaigns' },
-      { name: 'Emergency/Reserve Fund', percent: 0.7, color: 'bg-red-500', desc: 'Critical future needs' }
-    ]}">
-      <template x-for="(item, idx) in allocations" :key="idx">
-        <div>
-          <div class="flex justify-between text-sm text-gray-200 mb-1">
-            <span x-text="item.name"></span>
-            <span x-text="`${item.percent}%`"></span>
-          </div>
-          <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden mb-1">
-            <div class="h-3 rounded-full transition-all duration-500" :class="item.color" :style="`width: ${item.percent * 10}%`"></div>
-          </div>
-          <p class="text-xs text-gray-400 mb-2" x-text="item.desc"></p>
-        </div>
-      </template>
-    </template>
-  </div>
 </section>
 </main>
 
