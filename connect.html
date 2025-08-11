@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshLock — Connect (Static)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0c1222; --fg:#fff; --card: rgba(255,255,255,.06); --border: rgba(255,255,255,.12); }
+    body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; margin:0; }
+    .wrap { max-width: 760px; margin: 40px auto; padding: 0 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .muted { opacity:.85; font-size:12px; }
+    button { cursor:pointer; border-radius:10px; }
+  </style>
+
+  <!-- ethers v5 (optional, handy for testing signer right here) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <!-- AppKit setup: use esm.sh (clean ESM + CORS) -->
+  <script type="module">
+    import { createAppKit, getWalletProvider } from 'https://esm.sh/@reown/appkit@1.7.19';
+    import { WagmiAdapter } from 'https://esm.sh/@reown/appkit-adapter-wagmi@1.1.4';
+
+    // ---- Your environment (hardcoded) ----
+    const projectId = '6e2df48125e4f633b093361ba0a87c81'; // WalletConnect project ID
+    const pepuTestnet = {
+      id: 97741,
+      name: 'PEPU Testnet',
+      rpcUrls: { default: { http: ['https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'] } },
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }
+    };
+    const metadata = {
+      name: 'ToshLock',
+      description: 'Lock tokens with ToshLock',
+      url: location.origin,
+      icons: ['https://walletconnect.com/walletconnect-logo.png']
+    };
+
+    // ---- Initialize AppKit BEFORE using <appkit-button> ----
+    const wagmi = new WagmiAdapter({ projectId, networks: [pepuTestnet] });
+    createAppKit({
+      adapters: [wagmi],
+      networks: [pepuTestnet],
+      projectId,
+      metadata,
+      features: { analytics: true }
+    });
+
+    // Expose EVM provider for the rest of your site
+    window.toshlockProvider = getWalletProvider('eip155');
+
+    // Tiny status label
+    const setStatus = (msg) => (document.getElementById('status').textContent = msg);
+
+    // Update on connect / account change
+    window.addEventListener('eip155:accountsChanged', (e) => {
+      const a = e.detail?.accounts || [];
+      setStatus(a.length ? `Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}` : 'Not connected');
+    });
+
+    // If user was already connected, reflect it on load
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const p = window.toshlockProvider;
+        if (!p) return setStatus('Not connected');
+        const accounts = await p.request({ method: 'eth_accounts' }).catch(() => []);
+        setStatus(accounts?.length ? `Connected: ${accounts[0].slice(0,6)}…${accounts[0].slice(-4)}` : 'Not connected');
+      } catch {
+        setStatus('Not connected');
+      }
+    });
+
+    // Optional helper so you can test in console: await window.getSigner()
+    window.getSigner = async () => {
+      const p = window.toshlockProvider;
+      if (!p) throw new Error('Not connected');
+      const provider = new ethers.providers.Web3Provider(p, 'any');
+      return provider.getSigner();
+    };
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🔌 Connect Wallet</h1>
+    <div class="card">
+      <div class="row">
+        <!-- Official WalletConnect AppKit web component -->
+        <appkit-button label="Connect Wallet"></appkit-button>
+        <div id="status" class="muted">Not connected</div>
+      </div>
+
+      <!-- Optional: quick “test signer” button -->
+      <div style="margin-top:12px">
+        <button onclick="(async()=>{try{const s=await window.getSigner(); alert(await s.getAddress());}catch(e){alert(e.message||e)}})()">
+          Test signer
+        </button>
+      </div>
+
+      <p class="muted" style="margin-top:12px">
+        This is a static page using WalletConnect AppKit (Wagmi adapter). Once connected, use
+        <code>window.toshlockProvider</code> to build an <code>ethers</code> signer anywhere on your site.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
