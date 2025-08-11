@@ -1,83 +1,58 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <title>ToshLock — WalletConnect (UMD)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <title>ToshLock — WalletConnect (self-hosted)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root { --bg:#0c1222; --fg:#fff; --card: rgba(255,255,255,.06); --border: rgba(255,255,255,.12); }
-    body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; margin:0; }
-    .wrap { max-width: 760px; margin: 40px auto; padding: 0 20px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-    .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .muted { opacity:.85; font-size:12px; }
-    button { cursor:pointer; border-radius:10px; padding:8px 12px; border:0; }
-    #btnConnect { background:#2563eb; color:#fff; }
+    body{background:#0c1222;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;margin:0;padding:24px}
+    button{padding:10px 14px;border:0;border-radius:10px;cursor:pointer}
+    #connect{background:#2563eb;color:#fff}
+    #status{opacity:.85;font-size:12px;margin-left:10px}
+    pre{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px}
   </style>
 
-  <!-- ethers v5 UMD -->
+  <!-- ethers v5 -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <!-- WalletConnect Ethereum Provider v2 UMD (official) -->
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.2/dist/umd/index.min.js"></script>
+  <!-- your self-hosted provider bundle -->
+  <script src="/assets/walletconnect.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <h1>🔌 Connect Wallet (WalletConnect UMD)</h1>
-    <div class="card">
-      <div class="row">
-        <button id="btnConnect">Connect Wallet</button>
-        <div id="status" class="muted">Not connected</div>
-      </div>
-
-      <div style="margin-top:12px" class="row">
-        <button id="btnAddress" disabled>Show Address</button>
-        <button id="btnChain" disabled>Show Chain</button>
-      </div>
-
-      <p class="muted" style="margin-top:12px">
-        This page uses <code>@walletconnect/ethereum-provider</code> UMD + <code>ethers</code>.
-        No bundler. No React. Works on GitHub Pages.
-      </p>
-      <pre id="log" class="card" style="margin-top:12px; height:180px; overflow:auto; font-size:12px;"></pre>
-    </div>
+  <h1>🔌 Connect Wallet</h1>
+  <button id="connect">Connect</button><span id="status">Not connected</span>
+  <div style="margin-top:12px">
+    <button id="showAddr" disabled>Show Address</button>
+    <button id="showChain" disabled>Show Chain</button>
   </div>
+  <pre id="log" style="margin-top:16px;height:180px;overflow:auto"></pre>
 
 <script>
-/** ===== Hardcoded env ===== */
 const WC_PROJECT_ID = "6e2df48125e4f633b093361ba0a87c81";
-const CHAIN_ID      = 97741;
-const RPC_URL       = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+const CHAIN_ID = 97741;
+const RPC_URL  = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
 
-/** ===== Globals ===== */
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 const log = (...a) => { $("log").textContent += a.join(" ") + "\n"; };
 
-let wcProvider;     // WalletConnect EIP-1193 provider
-let ethersProvider; // ethers.js provider wrapping wcProvider
-let signer;         // ethers.js signer
+let wcProvider, ethersProvider, signer;
 
-/** ===== Sanity check for UMD global ===== */
-function getWcUMD() {
-  // UMD exposes WalletConnectEthereumProvider on window
-  return window.WalletConnectEthereumProvider || null;
+// sanity check
+if (!window.WalletConnectEthereumProvider) {
+  log("❌ walletconnect.min.js not loaded or blocked.");
+} else {
+  log("✅ WalletConnect global present");
 }
 
-/** ===== Connect flow ===== */
-$("btnConnect").onclick = async () => {
+$("connect").onclick = async () => {
   try {
-    const WcEP = getWcUMD();
-    if (!WcEP) throw new Error("WalletConnect UMD not found. Check the <script> above.");
+    const WcEP = window.WalletConnectEthereumProvider;
 
-    // Initialize the provider (shows QR modal on enable)
     wcProvider = await WcEP.init({
       projectId: WC_PROJECT_ID,
       showQrModal: true,
-      // Chains to support (single chain dapp)
       chains: [CHAIN_ID],
       optionalChains: [CHAIN_ID],
-      // Map chain to RPC so wallets can call it
       rpcMap: { [CHAIN_ID]: RPC_URL },
-      // Wallet / dapp metadata
       metadata: {
         name: "ToshLock",
         description: "Lock tokens with ToshLock",
@@ -85,63 +60,30 @@ $("btnConnect").onclick = async () => {
         icons: ["https://walletconnect.com/walletconnect-logo.png"]
       }
     });
-
-    // Open session
     await wcProvider.enable();
 
-    // Wrap with ethers
     ethersProvider = new ethers.providers.Web3Provider(wcProvider, "any");
     signer = ethersProvider.getSigner();
 
-    // Update UI
     const addr = await signer.getAddress();
     const net  = await ethersProvider.getNetwork();
     $("status").textContent = `Connected: ${addr.slice(0,6)}…${addr.slice(-4)} on chain ${net.chainId}`;
-    $("btnAddress").disabled = false;
-    $("btnChain").disabled = false;
+    $("showAddr").disabled = false;
+    $("showChain").disabled = false;
 
-    // Listen for changes
-    wcProvider.on("accountsChanged", (accts) => {
-      $("status").textContent = accts.length
-        ? `Connected: ${accts[0].slice(0,6)}…${accts[0].slice(-4)}`
-        : "Not connected";
-      log("[accountsChanged]", JSON.stringify(accts));
-    });
-    wcProvider.on("chainChanged", (chainIdHex) => {
-      log("[chainChanged]", chainIdHex);
-    });
-    wcProvider.on("disconnect", () => {
-      $("status").textContent = "Not connected";
-      $("btnAddress").disabled = true;
-      $("btnChain").disabled = true;
-      log("[disconnect]");
-    });
+    wcProvider.on("accountsChanged", (a)=>{ $("status").textContent = a.length?`Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}`:"Not connected"; log("[accountsChanged]", JSON.stringify(a)); });
+    wcProvider.on("chainChanged", (c)=>{ log("[chainChanged]", c); });
+    wcProvider.on("disconnect", ()=>{ $("status").textContent="Not connected"; $("showAddr").disabled=$("showChain").disabled=true; log("[disconnect]"); });
 
     log("✅ Connected via WalletConnect");
-
   } catch (e) {
     log("❌", e?.message || String(e));
     alert(e?.message || String(e));
   }
 };
 
-/** ===== Test helpers ===== */
-$("btnAddress").onclick = async () => {
-  try {
-    const addr = await signer.getAddress();
-    alert(addr);
-  } catch (e) {
-    alert(e?.message || String(e));
-  }
-};
-$("btnChain").onclick = async () => {
-  try {
-    const net = await ethersProvider.getNetwork();
-    alert(`chainId: ${net.chainId}`);
-  } catch (e) {
-    alert(e?.message || String(e));
-  }
-};
+$("showAddr").onclick = async () => { try { alert(await signer.getAddress()); } catch(e){ alert(e.message||e); } };
+$("showChain").onclick = async () => { try { const net = await ethersProvider.getNetwork(); alert(`chainId: ${net.chainId}`); } catch(e){ alert(e.message||e); } };
 </script>
 </body>
 </html>
