@@ -2,28 +2,35 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>ToshLock — WalletConnect (self-bundled)</title>
+  <title>ToshLock — WalletConnect (self-hosted)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body{background:#0c1222;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;margin:0;padding:24px}
     button{padding:10px 14px;border:0;border-radius:10px;cursor:pointer}
     #connect{background:#2563eb;color:#fff}
+    #disconnect{background:#6b7280;color:#fff}
     #status{opacity:.85;font-size:12px;margin-left:10px}
     pre{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px}
   </style>
 
   <!-- ethers v5 -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <!-- Your self-hosted provider bundle (built in steps above) -->
-  <script src="/assets/wc-ep-2.11.2.min.js"></script>
+  <!-- your self-hosted WalletConnect v2 provider bundle (built via esbuild) -->
+  <script src="/assets/walletconnect.min.js"></script>
 </head>
 <body>
   <h1>🔌 Connect Wallet</h1>
-  <button id="connect">Connect</button><span id="status">Not connected</span>
-  <div style="margin-top:12px">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button id="connect">Connect</button>
+    <button id="disconnect" disabled>Disconnect</button>
+    <span id="status">Not connected</span>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
     <button id="showAddr" disabled>Show Address</button>
     <button id="showChain" disabled>Show Chain</button>
   </div>
+
   <pre id="log" style="margin-top:16px;height:180px;overflow:auto"></pre>
 
 <script>
@@ -36,9 +43,21 @@ const log = (...a) => { $("log").textContent += a.join(" ") + "\n"; };
 
 let wcProvider, ethersProvider, signer;
 
-// sanity
+function setConnectedUI(addr, chainId) {
+  $("status").textContent = `Connected: ${addr.slice(0,6)}…${addr.slice(-4)} on chain ${chainId}`;
+  $("showAddr").disabled = false;
+  $("showChain").disabled = false;
+  $("disconnect").disabled = false;
+}
+function setDisconnectedUI() {
+  $("status").textContent = "Not connected";
+  $("showAddr").disabled = true;
+  $("showChain").disabled = true;
+  $("disconnect").disabled = true;
+}
+
 if (!window.WalletConnectEthereumProvider) {
-  log("❌ Global missing. Make sure /assets/wc-ep-2.11.2.min.js is served and not blocked by CSP/ad-block.");
+  log("❌ walletconnect.min.js not loaded or blocked.");
 } else {
   log("✅ WalletConnect global present");
 }
@@ -46,6 +65,8 @@ if (!window.WalletConnectEthereumProvider) {
 $("connect").onclick = async () => {
   try {
     const WcEP = window.WalletConnectEthereumProvider;
+    if (!WcEP) throw new Error("WalletConnect provider not found");
+
     wcProvider = await WcEP.init({
       projectId: WC_PROJECT_ID,
       showQrModal: true,
@@ -66,13 +87,25 @@ $("connect").onclick = async () => {
 
     const addr = await signer.getAddress();
     const net  = await ethersProvider.getNetwork();
-    $("status").textContent = `Connected: ${addr.slice(0,6)}…${addr.slice(-4)} on chain ${net.chainId}`;
-    $("showAddr").disabled = false;
-    $("showChain").disabled = false;
+    setConnectedUI(addr, net.chainId);
 
-    wcProvider.on("accountsChanged", (a)=>{ $("status").textContent = a.length?`Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}`:"Not connected"; log("[accountsChanged]", JSON.stringify(a)); });
-    wcProvider.on("chainChanged", (c)=>{ log("[chainChanged]", c); });
-    wcProvider.on("disconnect", ()=>{ $("status").textContent="Not connected"; $("showAddr").disabled=$("showChain").disabled=true; log("[disconnect]"); });
+    // listeners
+    wcProvider.on("accountsChanged", (a) => {
+      if (a && a.length) {
+        $("status").textContent = `Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}`;
+      } else {
+        setDisconnectedUI();
+      }
+      log("[accountsChanged]", JSON.stringify(a));
+    });
+    wcProvider.on("chainChanged", (c) => { log("[chainChanged]", c); });
+    wcProvider.on("disconnect", () => {
+      log("[disconnect]");
+      setDisconnectedUI();
+      wcProvider = undefined;
+      ethersProvider = undefined;
+      signer = undefined;
+    });
 
     log("✅ Connected via WalletConnect");
   } catch (e) {
@@ -81,8 +114,31 @@ $("connect").onclick = async () => {
   }
 };
 
-$("showAddr").onclick = async () => { try { alert(await signer.getAddress()); } catch(e){ alert(e.message||e); } };
-$("showChain").onclick = async () => { try { const net = await ethersProvider.getNetwork(); alert(`chainId: ${net.chainId}`); } catch(e){ alert(e.message||e); } };
+$("disconnect").onclick = async () => {
+  try {
+    if (wcProvider && typeof wcProvider.disconnect === "function") {
+      await wcProvider.disconnect();
+      log("✅ Disconnected via provider.disconnect()");
+    } else {
+      // Hard reset (in case provider doesn’t expose disconnect)
+      wcProvider = undefined;
+      ethersProvider = undefined;
+      signer = undefined;
+      log("ℹ️ Provider missing disconnect(), UI state cleared.");
+    }
+    setDisconnectedUI();
+  } catch (e) {
+    log("❌ Disconnect error:", e?.message || String(e));
+    alert(e?.message || String(e));
+  }
+};
+
+$("showAddr").onclick = async () => {
+  try { alert(await signer.getAddress()); } catch(e){ alert(e.message||e); }
+};
+$("showChain").onclick = async () => {
+  try { const net = await ethersProvider.getNetwork(); alert(`chainId: ${net.chainId}`); } catch(e){ alert(e.message||e); }
+};
 </script>
 </body>
 </html>
