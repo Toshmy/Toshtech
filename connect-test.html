@@ -2,24 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AppKit Connect Test</title>
+  <title>AppKit Connect Test (esm.sh)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { background:#0c1222; color:#fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu; }
+    body { background:#0c1222; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; }
     .wrap { max-width: 720px; margin: 40px auto; padding: 24px; }
-    .card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 16px; }
+    .card { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:16px; }
   </style>
 
-  <!-- 1) Initialize AppKit BEFORE the button -->
+  <!-- Initialize AppKit BEFORE rendering the button -->
   <script type="module">
-    import { createAppKit } from 'https://unpkg.com/@reown/appkit@1?module';
-    import { WagmiAdapter } from 'https://unpkg.com/@reown/appkit-adapter-wagmi@1?module';
-    import { getWalletProvider } from 'https://unpkg.com/@reown/appkit@1/dist/core/helpers.js?module';
+    import { createAppKit, getWalletProvider } from 'https://esm.sh/@reown/appkit@1.7.19';
+    import { WagmiAdapter } from 'https://esm.sh/@reown/appkit-adapter-wagmi@1.1.4';
 
-    // Your WalletConnect Project ID
-    const projectId = '6e2df48125e4f633b093361ba0a87c81';
+    const projectId = '6e2df48125e4f633b093361ba0a87c81'; // your WC project id
 
-    // Define your PEPU testnet as a custom EVM network (Viem-style)
+    // Custom PEPU testnet (Viem-style chain object)
     const pepuTestnet = {
       id: 97741,
       name: 'PEPU Testnet',
@@ -27,7 +25,6 @@
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }
     };
 
-    // Basic dapp metadata (shown in wallets)
     const metadata = {
       name: 'ToshLock',
       description: 'Lock tokens with ToshLock',
@@ -35,37 +32,24 @@
       icons: ['https://walletconnect.com/walletconnect-logo.png']
     };
 
-    // Set up Wagmi adapter (this registers the EVM connector stack)
-    const wagmiAdapter = new WagmiAdapter({
-      projectId,
-      networks: [pepuTestnet]
-    });
-
-    // Create AppKit (must run BEFORE rendering the <appkit-button/>)
+    // Create adapter + AppKit (must happen before <appkit-button/>)
+    const wagmi = new WagmiAdapter({ projectId, networks: [pepuTestnet] });
     const modal = createAppKit({
-      adapters: [wagmiAdapter],
+      adapters: [wagmi],
       networks: [pepuTestnet],
       projectId,
       metadata,
       features: { analytics: true }
     });
 
-    // Expose the connected EVM provider (re-usable in your code)
+    // Expose provider for ethers/web3 use
     window.toshlockProvider = getWalletProvider('eip155');
 
-    // Tiny diagnostics so you can see what’s happening
-    window.addEventListener('DOMContentLoaded', async () => {
-      console.log('appkit-button defined?', !!customElements.get('appkit-button'));
-      console.log('AppKit modal ready?', !!modal);
-    });
-
-    // Update connection label when accounts change
+    // Update small status text on account change
     window.addEventListener('eip155:accountsChanged', (e) => {
-      const status = document.getElementById('status');
-      const accounts = e.detail?.accounts || [];
-      status.textContent = accounts.length
-        ? `Connected: ${accounts[0].slice(0,6)}…${accounts[0].slice(-4)}`
-        : 'Not connected';
+      const a = e.detail?.accounts || [];
+      const el = document.getElementById('status');
+      el.textContent = a.length ? `Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}` : 'Not connected';
     });
   </script>
 </head>
@@ -73,22 +57,22 @@
   <div class="wrap">
     <h1>🔌 Connect</h1>
     <div class="card">
-      <!-- 2) Official AppKit connect button (web component) -->
+      <!-- Official AppKit web component -->
       <appkit-button label="Connect Wallet"></appkit-button>
       <div id="status" style="margin-top:10px;font-size:12px;opacity:.85">Not connected</div>
     </div>
   </div>
 
-  <!-- (Optional) ethers v5 if you want to test signing right here -->
+  <!-- Optional: ethers v5 for quick testing -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script>
-    // Example: build an ethers provider from AppKit when connected
-    async function getSigner() {
-      if (!window.toshlockProvider) throw new Error('Not connected');
+    // example: get signer after you click Connect
+    async function testSigner(){
       const provider = new ethers.providers.Web3Provider(window.toshlockProvider, 'any');
-      return provider.getSigner();
+      const signer = provider.getSigner();
+      console.log('address:', await signer.getAddress());
     }
-    // window.getSigner = getSigner; // expose if you want to test from console
+    // window.testSigner = testSigner;
   </script>
 </body>
 </html>
