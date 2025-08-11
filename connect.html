@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ToshLock — Connect (Static)</title>
+  <title>ToshLock — WalletConnect (UMD)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root { --bg:#0c1222; --fg:#fff; --card: rgba(255,255,255,.06); --border: rgba(255,255,255,.12); }
@@ -11,119 +11,137 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
     .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .muted { opacity:.85; font-size:12px; }
-    button { cursor:pointer; border-radius:10px; padding:8px 12px; }
-    #fallbackConnect { background:#2563eb; color:#fff; border:0; }
+    button { cursor:pointer; border-radius:10px; padding:8px 12px; border:0; }
+    #btnConnect { background:#2563eb; color:#fff; }
   </style>
 
-  <!-- ethers v5 (optional, handy for testing signer right here) -->
+  <!-- ethers v5 UMD -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
-  <!-- AppKit bootstrapping -->
-  <script type="module">
-    import { createAppKit, getWalletProvider } from 'https://esm.sh/@reown/appkit@1.7.19';
-    import { WagmiAdapter } from 'https://esm.sh/@reown/appkit-adapter-wagmi@1.1.4';
-
-    // ---- Hardcoded env ----
-    const projectId = '6e2df48125e4f633b093361ba0a87c81';
-    const pepuTestnet = {
-      id: 97741,
-      name: 'PEPU Testnet',
-      rpcUrls: { default: { http: ['https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'] } },
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }
-    };
-    const metadata = {
-      name: 'ToshLock',
-      description: 'Lock tokens with ToshLock',
-      url: location.origin,
-      icons: ['https://walletconnect.com/walletconnect-logo.png']
-    };
-
-    // 1) Init AppKit BEFORE the button is used
-    console.log('[AppKit] Initializing…');
-    const wagmi = new WagmiAdapter({ projectId, networks: [pepuTestnet] });
-    const modal = createAppKit({
-      adapters: [wagmi],
-      networks: [pepuTestnet],
-      projectId,
-      metadata,
-      features: { analytics: true }
-    });
-    // Save reference so we can open it from a fallback button if needed
-    window.__appkitModal = modal;
-
-    // 2) Expose the EVM provider for ethers
-    window.toshlockProvider = getWalletProvider('eip155');
-
-    // 3) Connection status
-    const setStatus = (msg) => (document.getElementById('status').textContent = msg);
-
-    window.addEventListener('eip155:accountsChanged', (e) => {
-      const a = e.detail?.accounts || [];
-      setStatus(a.length ? `Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}` : 'Not connected');
-    });
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      // diagnostics
-      console.log('[AppKit] <appkit-button> defined?', !!customElements.get('appkit-button'));
-      console.log('[AppKit] provider present?', !!window.toshlockProvider);
-
-      // Already connected?
-      try {
-        const p = window.toshlockProvider;
-        if (!p) return setStatus('Not connected');
-        const accounts = await p.request({ method: 'eth_accounts' }).catch(() => []);
-        setStatus(accounts?.length ? `Connected: ${accounts[0].slice(0,6)}…${accounts[0].slice(-4)}` : 'Not connected');
-      } catch {
-        setStatus('Not connected');
-      }
-
-      // If the web component isn't defined yet (edge case), retry shortly
-      if (!customElements.get('appkit-button')) {
-        setTimeout(() => {
-          console.log('[AppKit] retry define check:', !!customElements.get('appkit-button'));
-        }, 500);
-      }
-    });
-
-    // 4) Fallback manual connect button (opens the AppKit modal)
-    window.__openAppKit = () => {
-      try { window.__appkitModal?.open(); } catch (e) { alert(e?.message || e); }
-    };
-
-    // 5) Helper for your code: get signer
-    window.getSigner = async () => {
-      const p = window.toshlockProvider;
-      if (!p) throw new Error('Not connected');
-      const provider = new ethers.providers.Web3Provider(p, 'any');
-      return provider.getSigner();
-    };
-  </script>
+  <!-- WalletConnect Ethereum Provider v2 UMD (official) -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.2/dist/umd/index.min.js"></script>
 </head>
 <body>
   <div class="wrap">
-    <h1>🔌 Connect Wallet</h1>
+    <h1>🔌 Connect Wallet (WalletConnect UMD)</h1>
     <div class="card">
       <div class="row">
-        <!-- Official WalletConnect AppKit web component -->
-        <appkit-button label="Connect Wallet"></appkit-button>
-
-        <!-- Fallback: if the web component doesn’t render for any reason -->
-        <button id="fallbackConnect" onclick="window.__openAppKit()">Connect</button>
-
+        <button id="btnConnect">Connect Wallet</button>
         <div id="status" class="muted">Not connected</div>
       </div>
 
-      <!-- Optional: quick “test signer” button -->
-      <div style="margin-top:12px">
-        <button onclick="(async()=>{try{const s=await window.getSigner(); alert(await s.getAddress());}catch(e){alert(e.message||e)}})()">
-          Test signer
-        </button>
+      <div style="margin-top:12px" class="row">
+        <button id="btnAddress" disabled>Show Address</button>
+        <button id="btnChain" disabled>Show Chain</button>
       </div>
 
       <p class="muted" style="margin-top:12px">
-        If you don’t see the WalletConnect button, check the console for any network/CORS errors.
+        This page uses <code>@walletconnect/ethereum-provider</code> UMD + <code>ethers</code>.
+        No bundler. No React. Works on GitHub Pages.
       </p>
+      <pre id="log" class="card" style="margin-top:12px; height:180px; overflow:auto; font-size:12px;"></pre>
     </div>
   </div>
+
+<script>
+/** ===== Hardcoded env ===== */
+const WC_PROJECT_ID = "6e2df48125e4f633b093361ba0a87c81";
+const CHAIN_ID      = 97741;
+const RPC_URL       = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+
+/** ===== Globals ===== */
+const $ = (id) => document.getElementById(id);
+const log = (...a) => { $("log").textContent += a.join(" ") + "\n"; };
+
+let wcProvider;     // WalletConnect EIP-1193 provider
+let ethersProvider; // ethers.js provider wrapping wcProvider
+let signer;         // ethers.js signer
+
+/** ===== Sanity check for UMD global ===== */
+function getWcUMD() {
+  // UMD exposes WalletConnectEthereumProvider on window
+  return window.WalletConnectEthereumProvider || null;
+}
+
+/** ===== Connect flow ===== */
+$("btnConnect").onclick = async () => {
+  try {
+    const WcEP = getWcUMD();
+    if (!WcEP) throw new Error("WalletConnect UMD not found. Check the <script> above.");
+
+    // Initialize the provider (shows QR modal on enable)
+    wcProvider = await WcEP.init({
+      projectId: WC_PROJECT_ID,
+      showQrModal: true,
+      // Chains to support (single chain dapp)
+      chains: [CHAIN_ID],
+      optionalChains: [CHAIN_ID],
+      // Map chain to RPC so wallets can call it
+      rpcMap: { [CHAIN_ID]: RPC_URL },
+      // Wallet / dapp metadata
+      metadata: {
+        name: "ToshLock",
+        description: "Lock tokens with ToshLock",
+        url: location.origin,
+        icons: ["https://walletconnect.com/walletconnect-logo.png"]
+      }
+    });
+
+    // Open session
+    await wcProvider.enable();
+
+    // Wrap with ethers
+    ethersProvider = new ethers.providers.Web3Provider(wcProvider, "any");
+    signer = ethersProvider.getSigner();
+
+    // Update UI
+    const addr = await signer.getAddress();
+    const net  = await ethersProvider.getNetwork();
+    $("status").textContent = `Connected: ${addr.slice(0,6)}…${addr.slice(-4)} on chain ${net.chainId}`;
+    $("btnAddress").disabled = false;
+    $("btnChain").disabled = false;
+
+    // Listen for changes
+    wcProvider.on("accountsChanged", (accts) => {
+      $("status").textContent = accts.length
+        ? `Connected: ${accts[0].slice(0,6)}…${accts[0].slice(-4)}`
+        : "Not connected";
+      log("[accountsChanged]", JSON.stringify(accts));
+    });
+    wcProvider.on("chainChanged", (chainIdHex) => {
+      log("[chainChanged]", chainIdHex);
+    });
+    wcProvider.on("disconnect", () => {
+      $("status").textContent = "Not connected";
+      $("btnAddress").disabled = true;
+      $("btnChain").disabled = true;
+      log("[disconnect]");
+    });
+
+    log("✅ Connected via WalletConnect");
+
+  } catch (e) {
+    log("❌", e?.message || String(e));
+    alert(e?.message || String(e));
+  }
+};
+
+/** ===== Test helpers ===== */
+$("btnAddress").onclick = async () => {
+  try {
+    const addr = await signer.getAddress();
+    alert(addr);
+  } catch (e) {
+    alert(e?.message || String(e));
+  }
+};
+$("btnChain").onclick = async () => {
+  try {
+    const net = await ethersProvider.getNetwork();
+    alert(`chainId: ${net.chainId}`);
+  } catch (e) {
+    alert(e?.message || String(e));
+  }
+};
+</script>
 </body>
 </html>
