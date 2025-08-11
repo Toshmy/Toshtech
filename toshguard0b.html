@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ToshGuard — Ultimate Token Utility Companion</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background: radial-gradient(circle at center, #1a2238 0%, #0c1222 80%);
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+    .glow-text {
+      text-shadow: 0 0 12px #00ffae, 0 0 24px #00ffae;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen p-4">
+<!-- Banner -->
+<div class="banner min-h-[4.5rem] flex items-center justify-start px-4">
+  <div class="banner-text text-lg font-semibold glow-text">
+    🚀 ToshGuard — The Ultimate Token Utility Companion for Crypto Traders
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav class="fixed top-[4.5rem] left-0 w-full bg-black bg-opacity-80 backdrop-blur-md z-60">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="flex items-center justify-between py-3">
+      <div class="text-white font-bold text-lg">Menu</div>
+      <button id="menu-toggle" class="md:hidden text-white focus:outline-none">
+        <!-- Hamburger icon -->
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <div class="hidden md:flex space-x-6 text-white font-semibold">
+        <a href="index.html" class="hover:text-green-400">Home</a>
+        <a href="roadmap.html" class="hover:text-green-400">Roadmap</a>
+        <a href="tokenomic.html" class="hover:text-green-400">Tokenomic</a>
+        <a href="tools.html" class="hover:text-green-400">Tools</a>
+        <a href="toshguard.html" class="hover:text-green-400">ToshGuard</a> <!-- New link for ToshGuard -->
+        <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ToshGuard Page Content -->
+<main class="mt-24 sm:mt-28 max-w-4xl w-full flex flex-col items-center space-y-6 px-4">
+  <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold glow-text text-center">🛡️ ToshGuard — Your Ultimate Token Utility Companion</h1>
+  <p class="text-lg sm:text-xl text-center max-w-lg">Unlock powerful features for crypto traders and investors in the PEPU/WPEPU ecosystem. Stay ahead of the market with ToshGuard's advanced tools and real-time alerts.</p>
+
+  <!-- ToshGuard Features -->
+  <div class="text-center mb-6 max-w-xl">
+    <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 mb-1 text-yellow-400">🔐 Wallet Verification & Linking</h2>
+    <p class="text-sm sm:text-base leading-snug">Link your wallet to unlock premium features. Simple, secure verification ensures only TOSH holders get access to advanced tools.</p>
+  </div>
+
+  <div class="text-center mb-6 max-w-xl">
+    <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 mb-1 text-yellow-400">💼 Wallet Analyzer</h2>
+    <p class="text-sm sm:text-base leading-snug">Track your token portfolio's value over time. Monitor historical growth and analyze performance across all linked wallets.</p>
+  </div>
+
+  <div class="text-center mb-6 max-w-xl">
+    <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 mb-1 text-yellow-400">🔔 Custom Token Alerts</h2>
+    <p class="text-sm sm:text-base leading-snug">Stay ahead of market moves with real-time alerts for price changes, percentage drops, and more. Set up personalized notifications for your tokens.</p>
+  </div>
+
+  <div class="text-center mb-6 max-w-xl">
+    <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 mb-1 text-yellow-400">🐋 Whale Activity Tracker</h2>
+    <p class="text-sm sm:text-base leading-snug">Track large transactions in the market. Get alerts for buys, sells, swaps, and liquidity changes by whales holding over 300k PEPU.</p>
+  </div>
+
+  <div class="text-center mb-6 max-w-xl">
+    <h2 class="text-xl sm:text-2xl md:text-3xl font-bold mt-4 mb-1 text-yellow-400">📁 Transaction Export</h2>
+    <p class="text-sm sm:text-base leading-snug">Export your wallet's transaction history in CSV format for tax reporting, portfolio reconciliation, and personal tracking.</p>
+  </div>
+
+  <div class="text-center mb-6 max-w-xl">
+    <p class="text-sm sm:text-base leading-snug text-yellow-300 font-semibold">
+      To access all features, you need to hold a minimum of 1M $TOSH tokens in your wallet.
+    </p>
+    <a href="how-to-buy.html" class="inline-block px-6 py-3 bg-green-500 hover:bg-green-600 rounded-full font-semibold shadow-lg transition">
+      Buy $TOSH — Secure Your Access
+    </a>
+  </div>
+</main>
+
+<!-- Footer -->
+<div class="text-center text-xs text-gray-400 mt-16 max-w-2xl mx-auto px-2">
+  <p class="mb-2">Disclaimer: $TOSH is a community-driven project. Participation involves risk. Not financial advice. DYOR.</p>
+</div>
+
+</body>
+</html>

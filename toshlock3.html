@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ToshGuard – Active Locks (Multi‑Lock + Names)</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body { background: radial-gradient(circle at center, #111827 0%, #0b1020 80%); color: #e5e7eb; }
+    .glass { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(6px); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="max-w-6xl mx-auto p-6 space-y-6">
+    <header class="flex items-center justify-between">
+      <h1 class="text-2xl md:text-3xl font-bold text-green-300">🔒 ToshGuard – Active Locks (Multi‑Lock + Names)</h1>
+      <div class="flex gap-2">
+        <button id="btnUseRPC" class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600">Use RPC URL</button>
+        <button id="btnScan" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700">Scan Locks</button>
+      </div>
+    </header>
+
+    <section class="glass rounded-2xl p-4">
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-sm text-gray-300">Locker address</label>
+          <input id="locker" value="0xdAafaf8fC73C6D4dfE27B2494Bdc864D0f7C9c01" class="w-full p-2 rounded bg-gray-900 border border-gray-700 mono" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-300">From block</label>
+          <input id="fromBlock" value="97740" class="w-full p-2 rounded bg-gray-900 border border-gray-700 mono" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-300">RPC URL</label>
+          <input id="rpcUrl" value="https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz" class="w-full p-2 rounded bg-gray-900 border border-gray-700" />
+        </div>
+      </div>
+      <div id="status" class="mt-2 text-sm text-gray-300"></div>
+    </section>
+
+    <section class="glass rounded-2xl p-4">
+      <h2 class="text-xl font-semibold text-green-200 mb-3">Active Locks</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left bg-gray-800">
+              <th class="p-2">#</th>
+              <th class="p-2">User</th>
+              <th class="p-2">Token</th>
+              <th class="p-2">Name</th>
+              <th class="p-2">Symbol</th>
+              <th class="p-2">Locked Amount</th>
+              <th class="p-2">Unlock Time</th>
+              <th class="p-2">Lock ID</th>
+            </tr>
+          </thead>
+          <tbody id="locksBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+const ethersObj = window.ethers; const ethers = ethersObj;
+const LOCKER_ABI = [
+  "event LiquidityLocked(address indexed token, address indexed user, uint256 indexed lockId, uint256 amount, uint256 unlockTime, string name)",
+  "event LiquidityUnlocked(address indexed token, address indexed user, uint256 indexed lockId, uint256 amount)",
+  "function getLock(address token, address user, uint256 lockId) view returns (uint256 amount, uint256 unlockTime, string name)",
+  "function lockedLiquidity(address token, address user) view returns (uint256 amount, uint256 unlockTime)"
+];
+const ERC20_ABI = ["function decimals() view returns (uint8)","function symbol() view returns (string)"];
+let provider;
+
+const $ = id => document.getElementById(id);
+
+$("btnUseRPC").onclick = async () => {
+  provider = new ethers.providers.JsonRpcProvider($("rpcUrl").value.trim());
+  const net = await provider.getNetwork();
+  $("status").textContent = `Using RPC chain ${net.chainId}`;
+};
+
+async function scanLocks(){
+  try{
+    if(!provider) return alert("Connect RPC first");
+    const lockerAddr = ethers.utils.getAddress($("locker").value.trim());
+    const fromBlock = Number($("fromBlock").value || 0);
+    const toBlock = await provider.getBlockNumber();
+
+    const iface = new ethers.utils.Interface(LOCKER_ABI);
+    const topicLocked = iface.getEventTopic("LiquidityLocked");
+    const step = 50000;
+    const logs = [];
+    for(let start = fromBlock; start <= toBlock; start += (step+1)){
+      const end = Math.min(start + step, toBlock);
+      const chunk = await provider.getLogs({ address: lockerAddr, topics: [topicLocked], fromBlock: start, toBlock: end });
+      logs.push(...chunk);
+    }
+
+    const items = [];
+    for(const lg of logs){
+      let ev; try { ev = iface.parseLog(lg); } catch { continue; }
+      const { token, user, lockId, name } = ev.args;
+      items.push({ token, user, lockId: lockId.toNumber(), name: String(name) });
+    }
+
+    const locker = new ethers.Contract(lockerAddr, LOCKER_ABI, provider);
+    const tokenCache = new Map();
+    async function getTokenInfo(addr){
+      const key = addr.toLowerCase();
+      if(tokenCache.has(key)) return tokenCache.get(key);
+      try{
+        const erc = new ethers.Contract(addr, ERC20_ABI, provider);
+        const [dec, sym] = await Promise.all([erc.decimals(), erc.symbol()]);
+        const info = { decimals: Number(dec), symbol: sym };
+        tokenCache.set(key, info); return info;
+      }catch { const info = { decimals: 18, symbol: "?" }; tokenCache.set(key, info); return info; }
+    }
+
+    const tbody = $("locksBody"); tbody.innerHTML = "";
+    let i = 0, active = 0;
+    const now = Math.floor(Date.now()/1000);
+
+    for(const it of items){
+      let amount, unlock, nm;
+      try {
+        const res = await locker.getLock(it.token, it.user, it.lockId);
+        amount = res.amount !== undefined ? res.amount : res[0];
+        unlock = res.unlockTime !== undefined ? res.unlockTime : res[1];
+        nm     = res.name !== undefined ? res.name : res[2];
+      } catch {
+        try {
+          const res2 = await locker.lockedLiquidity(it.token, it.user);
+          amount = res2.amount !== undefined ? res2.amount : res2[0];
+          unlock = res2.unlockTime !== undefined ? res2.unlockTime : res2[1];
+          nm = it.name || "";
+        } catch { continue; }
+      }
+
+      if(amount && amount.toString() !== "0" && unlock.toNumber() > now){
+        active++;
+        const info = await getTokenInfo(it.token);
+        const tr = document.createElement('tr');
+        tr.className = (i % 2 ? 'bg-gray-900' : '');
+        tr.innerHTML = `
+          <td class='p-2'>${++i}</td>
+          <td class='p-2'>${it.user.slice(0,6)}…${it.user.slice(-4)}</td>
+          <td class='p-2'>${it.token.slice(0,6)}…${it.token.slice(-4)}</td>
+          <td class='p-2'>${nm ? nm : ''}</td>
+          <td class='p-2'>${info.symbol}</td>
+          <td class='p-2'>${ethers.utils.formatUnits(amount, info.decimals)}</td>
+          <td class='p-2'>${new Date(unlock.toNumber()*1000).toLocaleString()}</td>
+          <td class='p-2'>${it.lockId}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    $("status").textContent = `${active} active lock${active===1?'':'s'} found.`;
+  } catch(e){
+    console.error(e);
+    $("status").textContent = e && (e.data?.message || e.message) || String(e);
+  }
+}
+
+$("btnScan").onclick = scanLocks;
+</script>
+</body>
+</html>
