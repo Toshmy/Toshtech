@@ -11,19 +11,20 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
     .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .muted { opacity:.85; font-size:12px; }
-    button { cursor:pointer; border-radius:10px; }
+    button { cursor:pointer; border-radius:10px; padding:8px 12px; }
+    #fallbackConnect { background:#2563eb; color:#fff; border:0; }
   </style>
 
   <!-- ethers v5 (optional, handy for testing signer right here) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-  <!-- AppKit setup: use esm.sh (clean ESM + CORS) -->
+  <!-- AppKit bootstrapping -->
   <script type="module">
     import { createAppKit, getWalletProvider } from 'https://esm.sh/@reown/appkit@1.7.19';
     import { WagmiAdapter } from 'https://esm.sh/@reown/appkit-adapter-wagmi@1.1.4';
 
-    // ---- Your environment (hardcoded) ----
-    const projectId = '6e2df48125e4f633b093361ba0a87c81'; // WalletConnect project ID
+    // ---- Hardcoded env ----
+    const projectId = '6e2df48125e4f633b093361ba0a87c81';
     const pepuTestnet = {
       id: 97741,
       name: 'PEPU Testnet',
@@ -37,30 +38,36 @@
       icons: ['https://walletconnect.com/walletconnect-logo.png']
     };
 
-    // ---- Initialize AppKit BEFORE using <appkit-button> ----
+    // 1) Init AppKit BEFORE the button is used
+    console.log('[AppKit] Initializing…');
     const wagmi = new WagmiAdapter({ projectId, networks: [pepuTestnet] });
-    createAppKit({
+    const modal = createAppKit({
       adapters: [wagmi],
       networks: [pepuTestnet],
       projectId,
       metadata,
       features: { analytics: true }
     });
+    // Save reference so we can open it from a fallback button if needed
+    window.__appkitModal = modal;
 
-    // Expose EVM provider for the rest of your site
+    // 2) Expose the EVM provider for ethers
     window.toshlockProvider = getWalletProvider('eip155');
 
-    // Tiny status label
+    // 3) Connection status
     const setStatus = (msg) => (document.getElementById('status').textContent = msg);
 
-    // Update on connect / account change
     window.addEventListener('eip155:accountsChanged', (e) => {
       const a = e.detail?.accounts || [];
       setStatus(a.length ? `Connected: ${a[0].slice(0,6)}…${a[0].slice(-4)}` : 'Not connected');
     });
 
-    // If user was already connected, reflect it on load
     window.addEventListener('DOMContentLoaded', async () => {
+      // diagnostics
+      console.log('[AppKit] <appkit-button> defined?', !!customElements.get('appkit-button'));
+      console.log('[AppKit] provider present?', !!window.toshlockProvider);
+
+      // Already connected?
       try {
         const p = window.toshlockProvider;
         if (!p) return setStatus('Not connected');
@@ -69,9 +76,21 @@
       } catch {
         setStatus('Not connected');
       }
+
+      // If the web component isn't defined yet (edge case), retry shortly
+      if (!customElements.get('appkit-button')) {
+        setTimeout(() => {
+          console.log('[AppKit] retry define check:', !!customElements.get('appkit-button'));
+        }, 500);
+      }
     });
 
-    // Optional helper so you can test in console: await window.getSigner()
+    // 4) Fallback manual connect button (opens the AppKit modal)
+    window.__openAppKit = () => {
+      try { window.__appkitModal?.open(); } catch (e) { alert(e?.message || e); }
+    };
+
+    // 5) Helper for your code: get signer
     window.getSigner = async () => {
       const p = window.toshlockProvider;
       if (!p) throw new Error('Not connected');
@@ -87,6 +106,10 @@
       <div class="row">
         <!-- Official WalletConnect AppKit web component -->
         <appkit-button label="Connect Wallet"></appkit-button>
+
+        <!-- Fallback: if the web component doesn’t render for any reason -->
+        <button id="fallbackConnect" onclick="window.__openAppKit()">Connect</button>
+
         <div id="status" class="muted">Not connected</div>
       </div>
 
@@ -98,8 +121,7 @@
       </div>
 
       <p class="muted" style="margin-top:12px">
-        This is a static page using WalletConnect AppKit (Wagmi adapter). Once connected, use
-        <code>window.toshlockProvider</code> to build an <code>ethers</code> signer anywhere on your site.
+        If you don’t see the WalletConnect button, check the console for any network/CORS errors.
       </p>
     </div>
   </div>
