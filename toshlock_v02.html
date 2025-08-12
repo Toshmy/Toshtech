@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <title>ToshLock — Lock & Manage</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Flatpickr (calendar/time picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     /* ======= Brand / Theme ======= */
     :root{
@@ -28,9 +30,18 @@
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
     .muted{color:var(--muted);opacity:.9;font-size:12px}
     /* ======= Inputs / Buttons ======= */
-    input,button,select{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:12px}
+    *{box-sizing:border-box}
+    label{display:block;margin-bottom:6px;font-size:12px;color:var(--muted)}
+    input,button,select{
+      width:100%;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#0f1730;
+      color:#fff;
+      padding:12px;
+    }
     input:focus,button:focus{outline:2px solid var(--accent);}
-    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700}
+    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700;width:auto}
     .btn.blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#eef5ff}
     .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
     .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:var(--muted)}
@@ -39,20 +50,30 @@
     th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}
     th{background:var(--bg-2);text-align:left}
     .table-scroll{overflow:auto;border-radius:12px}
-    /* ======= Responsive grids ======= */
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:900px){.grid-2{grid-template-columns:1fr}}
-    /* align the date/amount inputs nicely on desktop */
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:900px){.form-row{grid-template-columns:1fr}}
-    /* Logs */
-    pre{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:12px;max-height:180px;overflow:auto}
+    /* ======= Responsive form grid ======= */
+    .form-row{
+      display:grid;
+      grid-template-columns: minmax(260px,1fr) minmax(260px,1fr);
+      gap:14px;
+      align-items:end;
+    }
+    @media (max-width:900px){
+      .form-row{grid-template-columns:1fr}
+    }
+    /* Keep hint below amount aligned and non-overlapping */
+    #amountHint{margin-top:6px;min-height:16px}
+    /* Flatpickr dark tweak */
+    .flatpickr-calendar{
+      background:#0f1730;border:1px solid var(--border);box-shadow:var(--shadow)
+    }
   </style>
 
   <!-- ethers v5 -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <!-- self-hosted WalletConnect bundle -->
+  <!-- WalletConnect (self-hosted UMD you built) -->
   <script src="assets/walletconnect.min.js"></script>
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 <body>
   <div class="wrap">
@@ -71,26 +92,25 @@
       <h2 style="margin:0 0 8px">Create a lock</h2>
 
       <div>
-        <div class="muted" style="margin-bottom:6px">Token address</div>
-        <input id="token" class="mono" placeholder="0x... token" style="width:100%">
+        <label for="token">Token address</label>
+        <input id="token" class="mono" placeholder="0x... token">
         <div id="tokenMeta" class="muted">—</div>
       </div>
 
-      <div class="form-row" style="margin-top:12px">
-        <div>
-          <div class="muted" style="margin-bottom:6px">Amount (human)</div>
-          <input id="amount" type="number" step="any" placeholder="e.g. 1000" style="width:100%">
-          <div id="amountHint" class="muted">—</div>
-        </div>
-        <div>
-          <div class="muted" style="margin-bottom:6px">Lock until (local date & time)</div>
-          <input id="when" type="datetime-local" style="width:100%">
-        </div>
-      </div>
+	<div style="margin-top:12px">
+	  <label for="amount">Amount (human)</label>
+	  <input id="amount" type="number" step="any" placeholder="e.g. 1000">
+	  <div id="amountHint" class="muted">—</div>
+	</div>
+
+	<div style="margin-top:12px">
+	  <label for="when">Lock until (local date & time)</label>
+	  <input id="when" placeholder="Select date & time">
+	</div>
 
       <div style="margin-top:12px">
-        <div class="muted" style="margin-bottom:6px">Lock name (optional)</div>
-        <input id="lname" placeholder="Liquidity Round #1" style="width:100%">
+        <label for="lname">Lock name (optional)</label>
+        <input id="lname" placeholder="Liquidity Round #1">
       </div>
 
       <div class="row" style="margin-top:14px">
@@ -104,14 +124,14 @@
     <section class="card">
       <div class="row between">
         <h2 style="margin:0">My Locks (by Token)</h2>
-        <div class="row">
+        <div class="row" style="gap:8px">
           <input id="myToken" class="mono" placeholder="0x... token" style="width:min(360px, 70vw)">
           <button id="scan" class="btn gray">Load</button>
         </div>
       </div>
 
-      <div class="grid-2" style="margin-top:12px">
-        <div>
+      <div class="row" style="margin-top:12px;gap:14px">
+        <div style="flex:1 1 480px">
           <h3 style="margin-top:0">Active</h3>
           <div class="table-scroll card" style="padding:0">
             <table>
@@ -125,7 +145,7 @@
             </table>
           </div>
         </div>
-        <div>
+        <div style="flex:1 1 480px">
           <h3 style="margin-top:0">Unlockable</h3>
           <div class="table-scroll card" style="padding:0">
             <table>
@@ -178,6 +198,21 @@ const setStatus = s => { $("status").textContent = s; };
 let providerType = null; // 'mm' | 'wc'
 let wcProvider, ethersProvider, signer;
 const roProvider = new ethers.providers.JsonRpcProvider(RPC);
+
+/* ========= Flatpickr init ========= */
+let whenPicker;
+document.addEventListener('DOMContentLoaded', () => {
+  whenPicker = flatpickr("#when", {
+    enableTime: true,
+    dateFormat: "Y-m-d H:i",
+    time_24hr: true,
+    minuteIncrement: 1,
+    altInput: true,
+    altFormat: "M j, Y — H:i",
+    defaultDate: new Date(Date.now() + 3600 * 1000), // +1h from now
+    minDate: "today"
+  });
+});
 
 /* ========= Connect ========= */
 $("mm").onclick = async () => {
@@ -248,9 +283,11 @@ $("approveLock").onclick = async () => {
     const amtHuman  = $("amount").value || "0";
     const amount    = ethers.utils.parseUnits(amtHuman, tokenDecimals||18);
 
-    const v = $("when").value; if(!v) throw new Error("Pick a future lock date/time");
-    const unlockTs = Math.floor(Date.parse(v)/1000);
-    if(!unlockTs || unlockTs <= Math.floor(Date.now()/1000)) throw new Error("Lock time must be in the future");
+    // read from flatpickr (epoch seconds)
+    const selectedDate = whenPicker && whenPicker.selectedDates[0];
+    if(!selectedDate) throw new Error("Pick a future lock date/time");
+    const unlockTs = Math.floor(selectedDate.getTime()/1000);
+    if(unlockTs <= Math.floor(Date.now()/1000)) throw new Error("Lock time must be in the future");
 
     const name = $("lname").value || "";
 
