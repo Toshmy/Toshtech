@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshLock — Dashboard (Active Locks)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
+    }
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    .pill{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+    .badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:#113327;border:1px solid var(--border);color:#00ffae}
+    input,button{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
+    input:focus,button:focus{outline:2px solid var(--accent)}
+    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700}
+    .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
+    th{text-align:left;background:var(--bg-2)}
+    .table-scroll{overflow:auto;border-radius:12px}
+    .section-title{margin:0 0 12px}
+    .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
+    td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
+
+    /* Supply Panel */
+    .grid{display:grid;gap:10px}
+    @media(min-width:720px){
+      .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    }
+    .kv{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:12px;padding:10px;background:#0f1730}
+    .small{font-size:12px;color:#bfeede}
+    .muted{color:#a8ffd9;opacity:.9}
+  </style>
+
+  <!-- ethers v5 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="glow-text">📊 ToshLock — Active Locks</h1>
+
+    <!-- Token Status -->
+    <section class="card" style="margin-bottom:18px">
+      <h2 class="section-title">Token Status</h2>
+      <div class="row">
+        <input id="token" class="mono" placeholder="0x... token" style="flex:1 1 380px;min-width:240px">
+        <button id="scan" class="btn">Load Active Locks</button>
+        <span id="count" class="pill">—</span>
+        <span id="total" class="pill">Total: —</span>
+      </div>
+
+      <div id="rankWrap" style="margin-top:8px;display:none">
+        <div class="row">
+          <span id="rankSummary" class="pill">Rank signals: —</span>
+        </div>
+        <div class="progress" style="margin-top:8px"><i id="totalFill"></i></div>
+      </div>
+
+      <!-- Supply Panel -->
+      <div id="supplyPanel" class="card" style="margin-top:12px;display:none">
+        <h3 style="margin:0 0 8px">Supply (Adjusted)</h3>
+        <div class="grid cols-3">
+          <div class="kv"><span>Total</span><strong id="supTotal">—</strong></div>
+          <div class="kv"><span>Burned (sum)</span><strong id="supBurned">—</strong></div>
+          <div class="kv"><span>Adjusted</span><strong id="supAdjusted">—</strong></div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="small muted" style="margin-bottom:6px">Burn / Dead addresses</div>
+          <div id="burnList" class="grid"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button id="exportCsv" class="btn gray">Download CSV</button>
+        <button id="exportJson" class="btn gray">Download JSON</button>
+        <span class="pill" title="Use URL like ?dev=0x... or &devs=0x..,0x.. to mark verified owners">Verified via URL</span>
+      </div>
+
+      <div class="table-scroll card" style="margin-top:12px;padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Unlock</th><th style="text-align:right">Amount</th><th>Symbol</th>
+              <th>Name</th><th>Owner</th><th>Lock ID</th><th>Proof</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <pre id="log" style="margin-top:12px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word"></pre>
+    </section>
+
+    <!-- Wallet + Token view -->
+    <section class="card">
+      <h2 class="section-title">Wallet Locks (by Token)</h2>
+      <div class="row">
+        <input id="token2" class="mono" placeholder="0x... token" style="flex:1 1 300px;min-width:220px">
+        <input id="wallet" class="mono" placeholder="0x... wallet" style="flex:1 1 300px;min-width:220px">
+        <button id="scanWallet" class="btn gray">Load</button>
+      </div>
+
+      <div class="table-scroll card" style="margin-top:12px;padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Unlock</th><th style="text-align:right">Amount</th><th>Symbol</th>
+              <th>Name</th><th>Owner</th><th>Lock ID</th>
+            </tr>
+          </thead>
+          <tbody id="rows2"></tbody>
+        </table>
+      </div>
+
+      <pre id="log2" style="margin-top:12px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word"></pre>
+    </section>
+  </div>
+
+<script>
+/* ===== Hardcoded env ===== */
+const LOCKER   = "0xccefe66507762370c2487dd198d7d1fefc6def8f";
+const RPC      = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz/";
+
+/* ===== ABIs ===== */
+const ERC20 = [
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)",
+  "function getUserLockIds(address user,address token,uint256 offset,uint256 limit) view returns (uint256[] memory)",
+  "function getLock(address token,uint256 lockId) view returns (address owner,uint256 amount,uint256 unlockTime,string name,bool active)"
+];
+
+const ro = new ethers.providers.JsonRpcProvider(RPC);
+const lockerRO = new ethers.Contract(LOCKER, LOCKER_ABI, ro);
+
+const $ = id=>document.getElementById(id);
+const log = (...a)=>{ $("log").textContent += a.join(" ")+"\n"; };
+const log2 = (...a)=>{ $("log2").textContent += a.join(" ")+"\n"; };
+
+/* ===== Query params & helpers ===== */
+const qs = new URLSearchParams(location.search);
+const PARAM_TOKEN  = qs.get('token');
+const PARAM_WALLET = qs.get('wallet');
+const PARAM_DEV    = qs.get('dev');
+const PARAM_DEVS   = (qs.get('devs')||"").split(',').filter(x=>/^0x[a-fA-F0-9]{40}$/.test(x));
+
+const PepuExplorer = {
+  address: (a) => `https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz/address/${a}`,
+  tx:      (h) => `https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz/tx/${h}`,
+};
+function dl(filename, text) {
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const head = Object.keys(rows[0]);
+  const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+  return [head.join(','), ...rows.map(r => head.map(k=>esc(r[k]??'')).join(','))].join('\n');
+}
+
+/* ===== Burn / Dead (adjusted supply) ===== */
+const BURN_ADDRESSES = [
+  "0xa9fD599cd8857e90059c83e4885Dc09986039085", // burn contract
+  "0x000000000000000000000000000000000000dEaD"  // dead wallet
+];
+
+// On-chain adjusted supply + per-address balances
+async function getAdjustedSupplyOnChain(token, provider) {
+  const erc = new ethers.Contract(token, ERC20, provider);
+  const [decimals, total, ...burns] = await Promise.all([
+    erc.decimals(),
+    erc.totalSupply(),
+    ...BURN_ADDRESSES.map(a => erc.balanceOf(a))
+  ]);
+  let burned = ethers.BigNumber.from(0);
+  const perAddr = {};
+  for (let i=0;i<BURN_ADDRESSES.length;i++){
+    burned = burned.add(burns[i]);
+    perAddr[BURN_ADDRESSES[i]] = burns[i];
+  }
+  return { decimals, total, burned, adjusted: total.sub(burned), perAddr };
+}
+
+// Explorer API fallback if needed (also returns per-address)
+async function fetchJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function getAdjustedSupplyViaAPI(token) {
+  const base = "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+  const tok = await fetchJson(`${base}/api/v2/tokens/${token}`);
+  const decimals = tok.decimals ?? tok.data?.attributes?.decimals ?? 18;
+  const totalRaw = tok.total_supply ?? tok.data?.attributes?.total_supply;
+  const total = ethers.BigNumber.from(String(totalRaw));
+  let burned = ethers.BigNumber.from(0);
+  const perAddr = {};
+  for (const addr of BURN_ADDRESSES) {
+    const js = await fetchJson(`${base}/api/v2/addresses/${addr}/tokens?type=ERC-20%2CERC-721%2CERC-1155`);
+    const items = js.items || js.data || [];
+    const entry = items.find(x =>
+      (x.token?.address?.hash || x.token?.address || x.address || x.contract)?.toLowerCase() === token.toLowerCase()
+    );
+    if (!entry) { perAddr[addr] = ethers.BigNumber.from(0); continue; }
+    const balRaw = entry.value || entry.balance || entry.token?.balance || entry.token?.value || entry.quantity || 0;
+    const bal = ethers.BigNumber.from(String(balRaw));
+    burned = burned.add(bal);
+    perAddr[addr] = bal;
+  }
+  return { decimals, total, burned, adjusted: total.sub(burned), perAddr };
+}
+async function getAdjustedSupply(token, provider) {
+  try { return await getAdjustedSupplyOnChain(token, provider); }
+  catch { return await getAdjustedSupplyViaAPI(token); }
+}
+
+/* ===== State ===== */
+const state = { activeRows: [] };
+
+/* ===== Token Status ===== */
+$("scan").onclick = async () => {
+  try{
+    $("rows").innerHTML=""; $("count").textContent="Loading…"; $("total").textContent="Total: —"; $("log").textContent="";
+    document.getElementById("rankWrap").style.display = "none";
+    document.getElementById("supplyPanel").style.display = "none";
+    state.activeRows = [];
+
+    const token = $("token").value.trim();
+    if(!/^0x[a-fA-F0-9]{40}$/.test(token)) throw new Error("Enter a valid token address");
+
+    const ercBasic = new ethers.Contract(token, ["function symbol() view returns (string)","function decimals() view returns (uint8)"], ro);
+    const [sym, dec] = await Promise.all([ercBasic.symbol().catch(()=>"?"), ercBasic.decimals().catch(()=>18)]);
+
+    const pageSize = 500, page = 0;
+    const [ids, owners, amounts, unlockTimes, names] =
+      await lockerRO.getActiveLocksByToken(token, page*pageSize, pageSize);
+
+    const rows = $("rows");
+    let total = ethers.BigNumber.from(0);
+    const now = Math.floor(Date.now()/1000);
+    const ownersCount = new Map();
+
+    for(let i=0;i<ids.length;i++){
+      total = total.add(amounts[i]);
+      const id    = ids[i];
+      const owner = owners[i];
+      const human = ethers.utils.formatUnits(amounts[i], dec);
+      const date  = new Date(Number(unlockTimes[i])*1000).toLocaleString();
+      const ownerDisp = owner.slice(0,6) + "…" + owner.slice(-4);
+
+      const verified = (PARAM_DEV && owner.toLowerCase() === PARAM_DEV.toLowerCase())
+                    || (PARAM_DEVS.length && PARAM_DEVS.map(x=>x.toLowerCase()).includes(owner.toLowerCase()));
+
+      state.activeRows.push({ unlock: date, amount: human, symbol: sym, name: names[i] || "", owner, lockId: id.toString() });
+      ownersCount.set(owner, (ownersCount.get(owner)||ethers.BigNumber.from(0)).add(amounts[i]));
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${date} ${Number(unlockTimes[i])>now?'<span class="pill">⏳</span>':'<span class="pill">✅</span>'}</td>
+        <td style="text-align:right">${Number(human).toLocaleString()}</td>
+        <td>${sym}</td>
+        <td>${names[i] || ""} ${verified? '<span class="badge" title="Verified dev">✅</span>':''}</td>
+        <td class="mono" title="${owner}">
+          <a href="${PepuExplorer.address(owner)}" target="_blank">${ownerDisp}</a>
+        </td>
+        <td>${id.toString()}</td>
+        <td><button class="btn gray" data-proof="${id.toString()}">Proof</button></td>
+      `;
+      rows.appendChild(tr);
+    }
+
+    $("count").textContent = `Active: ${ids.length}`;
+    $("total").textContent = `Total: ${ethers.utils.formatUnits(total, dec)} ${sym}`;
+
+    // ---- ToshRank with Adjusted Supply + Supply Panel ----
+    try {
+      const adj = await getAdjustedSupply(token, ro); // {decimals,total,burned,adjusted,perAddr}
+      const totalLockedHuman = Number(ethers.utils.formatUnits(total, dec));
+      const totalHuman       = Number(ethers.utils.formatUnits(adj.total, adj.decimals));
+      const burnedHuman      = Number(ethers.utils.formatUnits(adj.burned, adj.decimals));
+      const adjustedHuman    = Number(ethers.utils.formatUnits(adj.adjusted, adj.decimals));
+
+      if (adjustedHuman >= 0) {
+        document.getElementById("supplyPanel").style.display = "";
+        $("supTotal").textContent    = `${totalHuman.toLocaleString()} ${sym}`;
+        $("supBurned").textContent   = `${burnedHuman.toLocaleString()} ${sym}`;
+        $("supAdjusted").textContent = `${adjustedHuman.toLocaleString()} ${sym}`;
+
+        // Render per-address burn list
+        const list = document.getElementById("burnList");
+        list.innerHTML = "";
+        for (const addr of BURN_ADDRESSES) {
+          const bal = adj.perAddr?.[addr] || ethers.BigNumber.from(0);
+          const balHuman = Number(ethers.utils.formatUnits(bal, adj.decimals));
+          const row = document.createElement("div");
+          row.className = "kv";
+          row.innerHTML = `
+            <span><a class="mono" href="${PepuExplorer.address(addr)}" target="_blank">${addr.slice(0,8)}…${addr.slice(-6)}</a></span>
+            <strong>${balHuman.toLocaleString()} ${sym}</strong>
+          `;
+          list.appendChild(row);
+        }
+
+        // Rank bar + summary
+        let percentLocked = '—', avgDays = '—', dist = '—';
+        if (adjustedHuman > 0) {
+          percentLocked = (totalLockedHuman / adjustedHuman * 100).toFixed(2) + '%';
+          document.getElementById("rankWrap").style.display = "";
+          document.getElementById('totalFill').style.width =
+            Math.min(100, Math.max(0, totalLockedHuman / adjustedHuman * 100)).toFixed(2) + '%';
+        }
+
+        // Avg remaining
+        let sumSec = 0, cnt = 0;
+        for (let i=0;i<ids.length;i++){
+          const rem = Number(unlockTimes[i]) - now;
+          if (rem > 0) { sumSec += rem; cnt++; }
+        }
+        if (cnt>0) avgDays = (sumSec / cnt / 86400).toFixed(1) + 'd';
+
+        // Distribution
+        let totals = Array.from(ownersCount.values());
+        if (totals.length){
+          totals.sort((a,b)=> (a.gt(b)? -1 : (b.gt(a)? 1 : 0))); // desc
+          const top = totals[0];
+          const topHuman = Number(ethers.utils.formatUnits(top, dec));
+          const topPct = totalLockedHuman > 0 ? (topHuman / totalLockedHuman * 100).toFixed(1) : '0.0';
+          dist = `${ownersCount.size} owners • top ${topPct}%`;
+        }
+        $("rankSummary").textContent = `Locked: ${percentLocked} • Avg rem: ${avgDays} • Dist: ${dist}`;
+      }
+    } catch(e) {
+      console.warn("Adjusted supply failed:", e);
+    }
+
+    log("Done.");
+  }catch(e){ log("❌", e?.data?.message || e?.message || String(e)); }
+};
+
+/* ===== Proof button: open LiquidityLocked tx ===== */
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-proof]');
+  if (!btn) return;
+  btn.disabled = true; const lockId = btn.getAttribute('data-proof');
+  try{
+    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+    const topicLockId = ethers.utils.hexZeroPad(ethers.BigNumber.from(lockId).toHexString(), 32);
+    const filter = { address: LOCKER, topics: [topic0, null, null, topicLockId], fromBlock: 0, toBlock: "latest" };
+    const logs = await ro.getLogs(filter);
+    if (!logs.length) { alert("No event found for this lockId"); btn.disabled=false; return; }
+    const txh = logs[0].transactionHash;
+    window.open(PepuExplorer.tx(txh), "_blank");
+  }catch(err){ alert(err?.message || String(err)); }
+  finally{ btn.disabled=false; }
+});
+
+/* ===== Export buttons ===== */
+$("exportCsv").onclick = () => {
+  if (!state.activeRows.length) return alert("Load a token first");
+  const t = $("token").value.trim();
+  dl(`active_locks_${t.slice(0,10)}.csv`, toCSV(state.activeRows));
+};
+$("exportJson").onclick = () => {
+  if (!state.activeRows.length) return alert("Load a token first");
+  const t = $("token").value.trim();
+  dl(`active_locks_${t.slice(0,10)}.json`, JSON.stringify(state.activeRows, null, 2));
+};
+
+/* ===== Wallet + Token ===== */
+$("scanWallet").onclick = async () => {
+  try{
+    $("rows2").innerHTML=""; $("log2").textContent="";
+    const token = $("token2").value.trim();
+    const wallet = $("wallet").value.trim();
+    if(!/^0x[a-fA-F0-9]{40}$/.test(token)) throw new Error("Enter a valid token address");
+    if(!/^0x[a-fA-F0-9]{40}$/.test(wallet)) throw new Error("Enter a valid wallet address");
+
+    const erc = new ethers.Contract(token, ["function symbol() view returns (string)","function decimals() view returns (uint8)"], ro);
+    const [sym, dec] = await Promise.all([erc.symbol().catch(()=>"?"), erc.decimals().catch(()=>18)]);
+
+    const ids = await lockerRO.getUserLockIds(wallet, token, 0, 500);
+    const details = await Promise.all(ids.map(id => lockerRO.getLock(token, id)));
+    const rows = $("rows2");
+
+    for(let i=0;i<ids.length;i++){
+      const [owner, amount, unlockTime, name, active] = details[i];
+      const human = ethers.utils.formatUnits(amount, dec);
+      const date  = new Date(Number(unlockTime)*1000).toLocaleString();
+      const ownerDisp = owner.slice(0,6) + "…" + owner.slice(-4);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${date}</td>
+        <td style="text-align:right">${Number(human).toLocaleString()}</td>
+        <td>${sym}</td>
+        <td>${name || ""}</td>
+        <td class="mono" title="${owner}">
+          <a href="${PepuExplorer.address(owner)}" target="_blank">${ownerDisp}</a>
+        </td>
+        <td>${ids[i].toString()}</td>
+      `;
+      rows.appendChild(tr);
+    }
+    log2(`Locks loaded: ${ids.length}`);
+  }catch(e){ log2("❌", e?.data?.message || e?.message || String(e)); }
+};
+
+/* ===== Deep links ===== */
+if (PARAM_TOKEN) {
+  $("token").value = PARAM_TOKEN;
+  $("scan").click();
+}
+if (PARAM_TOKEN && PARAM_WALLET) {
+  $("token2").value = PARAM_TOKEN;
+  $("wallet").value = PARAM_WALLET;
+  $("scanWallet").click();
+}
+</script>
+</body>
+</html>
