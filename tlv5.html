@@ -369,34 +369,35 @@ async function scanMyLocks(){
 
 /* ---------- Pepu explorer search autocomplete ---------- */
 function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
-async function pepuSearch(q){
-  if(!q || q.length < 2) return [];
-  const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
-  try{
-    const r = await fetch(url);
-    if(!r.ok) return [];
-    const j = await r.json();
-    const items = j.items || [];
-    const seen = new Set(); const out = [];
-    for(const it of items){
-      const addr = (it.address || it.address_hash || "").toLowerCase();
-      if(!addr || seen.has(addr)) continue;
-      if((it.type === "token" || it.token_type === "ERC-20") && /^0x[a-fA-F0-9]{40}$/.test(addr)){
-        out.push({address: addr, name: it.name || "", symbol: it.symbol || ""});
-        seen.add(addr);
-      }
-    }
-    if(out.length === 0){
-      for(const it of items){
-        const addr = (it.address || it.address_hash || "").toLowerCase();
-        if(/^0x[a-fA-F0-9]{40}$/.test(addr) && !seen.has(addr)){
-          out.push({address: addr, name: it.name || "", symbol: it.symbol || ""});
-          seen.add(addr);
-        }
-      }
-    }
-    return out.slice(0,20);
-  }catch{return []}
+
+let LOCAL_INDEX = [];
+(async () => {
+  try {
+    const r = await fetch('tokens.json', { cache: 'no-cache' });
+    if (r.ok) LOCAL_INDEX = await r.json();
+    else console.warn('tokens.json not found or not ok', r.status);
+  } catch (e) {
+    console.warn('tokens.json load error', e);
+  }
+})();
+
+// Local-only search: by address / symbol / name
+async function pepuSearch(q) {
+  if (!q || (q = q.trim()).length < 2) return [];
+  // If address, return direct result or a single candidate
+  if (/^0x[a-fA-F0-9]{40}$/.test(q)) {
+    const hit = LOCAL_INDEX.find(x => x.address.toLowerCase() === q.toLowerCase());
+    return hit ? [hit] : [{ address: q, name: "", symbol: "" }];
+  }
+  // Text search: symbol or name or partial address
+  const lower = q.toLowerCase();
+  return LOCAL_INDEX
+    .filter(x =>
+      x.address.toLowerCase().includes(lower) ||
+      (x.symbol || '').toLowerCase().includes(lower) ||
+      (x.name || '').toLowerCase().includes(lower)
+    )
+    .slice(0, 20);
 }
 function attachTokenAutocomplete(inputId, listId){
   const inp = document.getElementById(inputId);
