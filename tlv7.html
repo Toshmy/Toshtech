@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshLock — Dashboard (Active Locks)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18);
+    }
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    .pill{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+    .badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:#113327;border:1px solid var(--border);color:#00ffae}
+    input,button{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
+    input:focus,button:focus{outline:2px solid var(--accent)}
+    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700}
+    .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
+    th{text-align:left;background:var(--bg-2)}
+    .table-scroll{overflow:auto;border-radius:12px}
+    .section-title{margin:0 0 12px}
+    .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
+    td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
+
+    /* Autocomplete */
+    .ac-wrap{position:relative}
+    .ac-list{
+      position:absolute; left:0; right:0; top:calc(100% + 4px);
+      background:#0f1730; border:1px solid rgba(0,255,174,.2); border-radius:12px;
+      box-shadow:0 10px 24px rgba(0,0,0,.35); z-index:50; max-height:280px; overflow:auto; display:none;
+    }
+    .ac-item{
+      display:flex; gap:8px; align-items:center; padding:10px 12px; cursor:pointer;
+      border-bottom:1px solid rgba(255,255,255,.06); font-size:13px;
+    }
+    .ac-item:last-child{border-bottom:0}
+    .ac-item:hover{background:#0b1329}
+    .ac-name{font-weight:600}
+    .ac-sym{color:#a8ffd9}
+    .ac-addr{margin-left:auto; font-family:ui-monospace,monospace; color:#9fb; opacity:.85}
+    .ac-empty{padding:10px 12px; color:#a8ffd9; font-size:12px}
+
+    /* Supply Panel */
+    .grid{display:grid;gap:10px}
+    @media(min-width:720px){ .grid.cols-3{grid-template-columns:repeat(3,1fr)} }
+    .kv{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:12px;padding:10px;background:#0f1730}
+    .small{font-size:12px;color:#bfeede}
+    .muted{color:#a8ffd9;opacity:.9}
+
+    /* Resolved token line */
+    .resolved{font-size:13px;color:#a8ffd9;margin-top:6px}
+    .warn{font-size:12px;color:#ffb4b4;margin-left:auto}
+  </style>
+
+  <!-- ethers v5 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="glow-text">📊 ToshLock — Active Locks</h1>
+
+    <!-- Token Status -->
+    <section class="card" style="margin-bottom:18px">
+      <h2 class="section-title">Token Status</h2>
+      <div class="row">
+        <div class="ac-wrap" style="flex:1 1 380px;min-width:240px">
+          <input id="token" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+          <div id="ac-token" class="ac-list"></div>
+          <div id="resolvedToken" class="resolved" style="display:none">—</div>
+          <div id="creatorLine" class="resolved" style="display:none">—</div>
+        </div>
+        <button id="scan" class="btn">Load Active Locks</button>
+        <span id="count" class="pill">—</span>
+        <span id="total" class="pill">Total: —</span>
+        <span id="corsNote" class="warn" style="display:none">Explorer blocked by CORS — showing guessed creator</span>
+      </div>
+
+      <div id="rankWrap" style="margin-top:8px;display:none">
+        <div class="row">
+          <span id="rankSummary" class="pill">Rank signals: —</span>
+        </div>
+        <div class="progress" style="margin-top:8px"><i id="totalFill"></i></div>
+      </div>
+
+      <!-- Supply Panel -->
+      <div id="supplyPanel" class="card" style="margin-top:12px;display:none">
+        <h3 style="margin:0 0 8px">Supply (Adjusted)</h3>
+        <div class="grid cols-3">
+          <div class="kv"><span>Total</span><strong id="supTotal">—</strong></div>
+          <div class="kv"><span>Burned (sum)</span><strong id="supBurned">—</strong></div>
+          <div class="kv"><span>Adjusted</span><strong id="supAdjusted">—</strong></div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="small muted" style="margin-bottom:6px">Burn / Dead addresses</div>
+          <div id="burnList" class="grid"></div>
+        </div>
+      </div>
+
+      <div class="table-scroll card" style="margin-top:12px;padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Unlock</th><th style="text-align:right">Amount</th><th>Symbol</th>
+              <th>Name</th><th>Owner</th><th>Lock ID</th><th>Proof</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <pre id="log" style="margin-top:12px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word"></pre>
+    </section>
+
+    <!-- Wallet + Token view -->
+    <section class="card">
+      <h2 class="section-title">Wallet Locks (by Token)</h2>
+      <div class="row">
+        <div class="ac-wrap" style="flex:1 1 300px;min-width:220px">
+          <input id="token2" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+          <div id="ac-token2" class="ac-list"></div>
+        </div>
+        <input id="wallet" class="mono" placeholder="0x... wallet" style="flex:1 1 300px;min-width:220px">
+        <button id="scanWallet" class="btn gray">Load</button>
+      </div>
+
+      <div class="table-scroll card" style="margin-top:12px;padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Unlock</th><th style="text-align:right">Amount</th><th>Symbol</th>
+              <th>Name</th><th>Owner</th><th>Lock ID</th>
+            </tr>
+          </thead>
+          <tbody id="rows2"></tbody>
+        </table>
+      </div>
+
+      <pre id="log2" style="margin-top:12px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word"></pre>
+    </section>
+  </div>
+
+<script>
+/* ===== Hardcoded env =====
+ * RPC = your chain RPC (currently Pepu TESTNET).
+ * CREATOR_EXPLORER_BASE = explorer used to query creation tx.
+ * You showed MAINNET in your example. Pick the one that matches your token.
+ */
+const LOCKER   = "0x189ef775DcC7782802ca16b870Da7B5FaE3C8524";
+const RPC      = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+
+/* ===== Explorer bases ===== */
+const EXPLORER_BASE_TESTNET = "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+const EXPLORER_BASE_MAINNET = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz";
+
+/* Use MAINNET explorer for creator example (switch to TESTNET if needed) */
+const CREATOR_EXPLORER_BASE = EXPLORER_BASE_MAINNET;
+/* Table links: use the same base as creator explorer for consistency */
+const EXPLORER_BASE = CREATOR_EXPLORER_BASE;
+
+/* Optional: if you later add a tiny same-origin CORS relay (e.g. /relay?url=...),
+   set USE_RELAY=true and RELAY_PATH to your endpoint; otherwise we try direct fetch */
+const USE_RELAY = false;
+const RELAY_PATH = "/relay?url=";
+
+/* ===== ABIs ===== */
+const ERC20 = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)",
+  "function getUserLockIds(address user,address token,uint256 offset,uint256 limit) view returns (uint256[])",
+  "function getLock(address token,uint256 lockId) view returns (address owner,uint256 amount,uint256 unlockTime,string name,bool active)"
+];
+
+const ro = new ethers.providers.JsonRpcProvider(RPC);
+const lockerRO = new ethers.Contract(LOCKER, LOCKER_ABI, ro);
+
+const $ = id=>document.getElementById(id);
+const log = (...a)=>{ $("log").textContent += a.join(" ")+"\n"; };
+const log2 = (...a)=>{ $("log2").textContent += a.join(" ")+"\n"; };
+
+const qs = new URLSearchParams(location.search);
+const PARAM_TOKEN  = qs.get('token');
+const PARAM_WALLET = qs.get('wallet');
+
+const PepuExplorer = {
+  address: (a) => `${EXPLORER_BASE}/address/${a}`,
+  tx:      (h) => `${EXPLORER_BASE}/transactions/${h}` /* some explorers use /tx/, this one uses /transactions/ */
+};
+function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
+function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
+
+/* ===== Local index for autocomplete (optional) ===== */
+let LOCAL_INDEX = [];
+(async () => {
+  try {
+    const r = await fetch('tokens.json', { cache: 'no-cache' });
+    if (r.ok) LOCAL_INDEX = await r.json();
+  } catch {}
+})();
+async function pepuSearch(q) {
+  if (!q || (q = q.trim()).length < 2) return [];
+  if (/^0x[a-fA-F0-9]{40}$/.test(q)) return [{ address: q, name: "", symbol: "" }];
+  const lower = q.toLowerCase();
+  return LOCAL_INDEX
+    .filter(x =>
+      x.address.toLowerCase().includes(lower) ||
+      (x.symbol || '').toLowerCase().includes(lower) ||
+      (x.name || '').toLowerCase().includes(lower)
+    ).slice(0, 20);
+}
+function attachTokenAutocomplete(inputId, listId){
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(!inp || !list) return;
+  const hide=()=>list.style.display="none";
+  const show=()=>list.style.display="block";
+  hide();
+  const esc = s => s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const render = items=>{
+    if(!items.length){ list.innerHTML = `<div class="ac-empty">No matches</div>`; show(); return; }
+    list.innerHTML = items.map(it=>{
+      const name = it.name ? `<span class="ac-name">${esc(it.name)}</span>` : '';
+      const sym  = it.symbol ? `<span class="ac-sym">(${esc(it.symbol)})</span>` : '';
+      const short = it.address.slice(0,8)+"…"+it.address.slice(-6);
+      return `<div class="ac-item" data-addr="${it.address}">${name} ${sym}<span class="ac-addr">${short}</span></div>`;
+    }).join("");
+    show();
+  };
+  const onType = debounce(async ()=>{
+    const q = inp.value.trim();
+    if(!q){ hide(); return; }
+    if(/^0x[a-fA-F0-9]{40}$/.test(q)){ render([{address:q.toLowerCase(), name:"", symbol:""}]); return; }
+    render(await pepuSearch(q));
+  }, 220);
+  inp.addEventListener('input', onType);
+  inp.addEventListener('focus', ()=>{ if(list.innerHTML) show(); });
+  document.addEventListener('click', (e)=>{ if(!list.contains(e.target) && e.target!==inp) hide(); });
+  list.addEventListener('click', (e)=>{
+    const item = e.target.closest('.ac-item'); if(!item) return;
+    const addr = item.getAttribute('data-addr');
+    inp.value = addr; hide();
+    inp.dispatchEvent(new Event('change')); inp.dispatchEvent(new Event('blur'));
+  });
+}
+
+/* ===== Resolved token line ===== */
+async function resolveTokenMeta(addr){
+  const out = { name:"?", symbol:"?", decimals:18 };
+  try{
+    const c = new ethers.Contract(addr, ERC20, ro);
+    const [n,s,d] = await Promise.all([c.name().catch(()=>"?"), c.symbol().catch(()=>"?"), c.decimals().catch(()=>18)]);
+    out.name=n; out.symbol=s; out.decimals=d;
+  }catch{}
+  return out;
+}
+async function showResolvedLine(addr){
+  const el = $("resolvedToken");
+  if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){ el.style.display="none"; return; }
+  const m = await resolveTokenMeta(addr);
+  el.textContent = `Resolved: ${m.name} (${m.symbol}) • decimals ${m.decimals}`;
+  el.style.display = "";
+}
+
+/* ===== Creator via Explorer ===== */
+async function fetchJsonCORS(url){
+  // try direct
+  try{
+    const r = await fetch(url, { cache: "no-cache" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }catch(err){
+    // If you add a same-origin relay (e.g. Cloudflare Worker, Vercel API) set USE_RELAY=true
+    if (USE_RELAY){
+      const r2 = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
+      if (!r2.ok) throw new Error(`Relay HTTP ${r2.status}`);
+      return await r2.json();
+    }
+    throw err;
+  }
+}
+
+/** Returns {creator, creationTx} or null if unknown (CORS or not found) */
+async function getCreatorFromExplorer(token){
+  try{
+    const addrJs = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/addresses/${token}`);
+    const creationTx = addrJs.creation_transaction_hash || addrJs.data?.attributes?.creation_transaction_hash;
+    if(!creationTx) return null;
+
+    const txJs = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/tx/${creationTx}`);
+    const creator = txJs.from?.hash || txJs.data?.attributes?.from?.hash; // depending on explorer shape
+    if(!creator) return null;
+    return { creator, creationTx };
+  }catch(e){
+    // Likely CORS blocked or 404
+    console.warn("Creator fetch failed:", e);
+    return null;
+  }
+}
+
+/* ===== Supply (on-chain) ===== */
+const BURN_ADDRESSES = [
+  "0xa9fD599cd8857e90059c83e4885Dc09986039085",
+  "0x000000000000000000000000000000000000dEaD"
+];
+async function getAdjustedSupply(token){
+  const erc = new ethers.Contract(token, ERC20, ro);
+  const [decimals, total, ...burns] = await Promise.all([
+    erc.decimals(), erc.totalSupply(), ...BURN_ADDRESSES.map(a => erc.balanceOf(a))
+  ]);
+  let burned = ethers.BigNumber.from(0);
+  const perAddr = {};
+  for (let i=0;i<BURN_ADDRESSES.length;i++){
+    burned = burned.add(burns[i]);
+    perAddr[BURN_ADDRESSES[i]] = burns[i];
+  }
+  return { decimals, total, burned, adjusted: total.sub(burned), perAddr };
+}
+
+/* ===== State ===== */
+const state = { activeRows: [], creator: null, creationTx: null, guessedCreator: null };
+
+/* ===== Main scan ===== */
+$("scan").onclick = async () => {
+  try{
+    $("rows").innerHTML=""; $("count").textContent="Loading…"; $("total").textContent="Total: —"; $("log").textContent="";
+    $("corsNote").style.display = "none";
+    $("creatorLine").style.display = "none";
+    document.getElementById("rankWrap").style.display = "none";
+    document.getElementById("supplyPanel").style.display = "none";
+    state.activeRows = []; state.creator=null; state.creationTx=null; state.guessedCreator=null;
+
+    const token = $("token").value.trim();
+    if(!/^0x[a-fA-F0-9]{40}$/.test(token)) throw new Error("Enter a valid token address");
+
+    await showResolvedLine(token);
+
+    // Try to fetch creator from explorer
+    const creatorInfo = await getCreatorFromExplorer(token);
+    if (creatorInfo && creatorInfo.creator){
+      state.creator   = creatorInfo.creator.toLowerCase();
+      state.creationTx= creatorInfo.creationTx;
+      $("creatorLine").innerHTML =
+        `Creator: <a class="mono" href="${PepuExplorer.address(creatorInfo.creator)}" target="_blank">${creatorInfo.creator}</a> • ` +
+        `Creation TX: <a class="mono" href="${PepuExplorer.tx(creatorInfo.creationTx)}" target="_blank">${creatorInfo.creationTx.slice(0,10)}…</a>`;
+      $("creatorLine").style.display = "";
+    } else {
+      // If failed (probably CORS), show note (we will still guess later)
+      $("corsNote").style.display = "";
+    }
+
+    // Token meta for formatting
+    const ercBasic = new ethers.Contract(token, ["function symbol() view returns (string)","function decimals() view returns (uint8)"], ro);
+    const [sym, dec] = await Promise.all([ercBasic.symbol().catch(()=>"?"), ercBasic.decimals().catch(()=>18)]);
+
+    // Load active locks
+    const [ids, owners, amounts, unlockTimes, names] =
+      await lockerRO.getActiveLocksByToken(token, 0, 1000);
+
+    const rows = $("rows");
+    let total = ethers.BigNumber.from(0);
+    const ownersTotals = new Map();
+    const now = Math.floor(Date.now()/1000);
+
+    for(let i=0;i<ids.length;i++){
+      total = total.add(amounts[i]);
+      const id=ids[i], owner=owners[i];
+      ownersTotals.set(owner, (ownersTotals.get(owner)||ethers.BigNumber.from(0)).add(amounts[i]));
+    }
+
+    // If no explicit creator (CORS or missing), guess by largest total locked
+    if (!state.creator && ownersTotals.size){
+      let best=null, bestAmt=ethers.BigNumber.from(0);
+      for (const [addr,amt] of ownersTotals.entries()){
+        if (amt.gt(bestAmt)){ best=addr; bestAmt=amt; }
+      }
+      state.creator = best?.toLowerCase() || null;
+      state.guessedCreator = state.creator;
+      if (state.creator) {
+        $("creatorLine").innerHTML =
+          `Creator (guessed by top locked): <a class="mono" href="${PepuExplorer.address(best)}" target="_blank">${best}</a>`;
+        $("creatorLine").style.display = "";
+      }
+    }
+
+    // Render rows
+    for(let i=0;i<ids.length;i++){
+      const id    = ids[i];
+      const owner = owners[i];
+      const human = ethers.utils.formatUnits(amounts[i], dec);
+      const date  = new Date(Number(unlockTimes[i])*1000).toLocaleString();
+      const ownerDisp = shortAddr(owner);
+      const isCreator = state.creator && owner.toLowerCase() === state.creator;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${date} ${Number(unlockTimes[i])>now?'<span class="pill">⏳</span>':'<span class="pill">✅</span>'}</td>
+        <td style="text-align:right">${Number(human).toLocaleString()}</td>
+        <td>${sym}</td>
+        <td>${names[i] || ""}</td>
+        <td class="mono" title="${owner}">
+          <a href="${PepuExplorer.address(owner)}" target="_blank">${ownerDisp}</a>
+          ${isCreator ? '<span class="badge" title="Creator from explorer">Creator</span>' :
+            (state.guessedCreator && owner.toLowerCase()===state.guessedCreator ? '<span class="badge" title="Guessed by top locked amount">Top locker (guessed)</span>' : '')}
+        </td>
+        <td>${id.toString()}</td>
+        <td><button class="btn gray" data-proof="${id.toString()}">Proof</button></td>
+      `;
+      rows.appendChild(tr);
+
+      state.activeRows.push({ unlock: date, amount: human, symbol: sym, name: names[i] || "", owner, lockId: id.toString() });
+    }
+
+    $("count").textContent = `Active: ${ids.length}`;
+    $("total").textContent = `Total: ${ethers.utils.formatUnits(total, dec)} ${sym}`;
+
+    // Adjusted supply + ToshRank summary
+    try {
+      const adj = await getAdjustedSupply(token);
+      const totalLockedHuman = Number(ethers.utils.formatUnits(total, dec));
+      const totalHuman       = Number(ethers.utils.formatUnits(adj.total, adj.decimals));
+      const burnedHuman      = Number(ethers.utils.formatUnits(adj.burned, adj.decimals));
+      const adjustedHuman    = Number(ethers.utils.formatUnits(adj.adjusted, adj.decimals));
+
+      if (adjustedHuman >= 0) {
+        document.getElementById("supplyPanel").style.display = "";
+        $("supTotal").textContent    = `${totalHuman.toLocaleString()} ${sym}`;
+        $("supBurned").textContent   = `${burnedHuman.toLocaleString()} ${sym}`;
+        $("supAdjusted").textContent = `${adjustedHuman.toLocaleString()} ${sym}`;
+
+        const list = document.getElementById("burnList");
+        list.innerHTML = "";
+        for (const addr of BURN_ADDRESSES) {
+          const bal = adj.perAddr?.[addr] || ethers.BigNumber.from(0);
+          const balHuman = Number(ethers.utils.formatUnits(bal, adj.decimals));
+          const row = document.createElement("div");
+          row.className = "kv";
+          row.innerHTML = `
+            <span><a class="mono" href="${PepuExplorer.address(addr)}" target="_blank">${addr.slice(0,8)}…${addr.slice(-6)}</a></span>
+            <strong>${balHuman.toLocaleString()} ${sym}</strong>
+          `;
+          list.appendChild(row);
+        }
+
+        let percentLocked = '—', avgDays = '—', dist = '—';
+        if (adjustedHuman > 0) {
+          percentLocked = (totalLockedHuman / adjustedHuman * 100).toFixed(2) + '%';
+          document.getElementById("rankWrap").style.display = "";
+          document.getElementById('totalFill').style.width =
+            Math.min(100, Math.max(0, totalLockedHuman / adjustedHuman * 100)).toFixed(2) + '%';
+        }
+
+        // Avg remaining
+        const nowSec = Math.floor(Date.now()/1000);
+        let sumSec = 0, cnt = 0;
+        for (let i=0;i<ids.length;i++){
+          const rem = Number(unlockTimes[i]) - nowSec;
+          if (rem > 0) { sumSec += rem; cnt++; }
+        }
+        if (cnt>0) avgDays = (sumSec / cnt / 86400).toFixed(1) + 'd';
+
+        // Distribution (by owner)
+        let totals = Array.from(ownersTotals.values());
+        if (totals.length){
+          totals.sort((a,b)=> (a.gt(b)? -1 : (b.gt(a)? 1 : 0)));
+          const top = totals[0];
+          const topHuman = Number(ethers.utils.formatUnits(top, dec));
+          const topPct = totalLockedHuman > 0 ? (topHuman / totalLockedHuman * 100).toFixed(1) : '0.0';
+          dist = `${ownersTotals.size} owners • top ${topPct}%`;
+        }
+        $("rankSummary").textContent = `Locked: ${percentLocked} • Avg rem: ${avgDays} • Dist: ${dist}`;
+      }
+    } catch(e) {
+      console.warn("Adjusted supply failed:", e);
+    }
+
+    log("Done.");
+  }catch(e){ log("❌", e?.data?.message || e?.message || String(e)); }
+};
+
+/* Proof button (LiquidityLocked event) */
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-proof]');
+  if (!btn) return;
+  btn.disabled = true; const lockId = btn.getAttribute('data-proof');
+  try{
+    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+    const topicLockId = ethers.utils.hexZeroPad(ethers.BigNumber.from(lockId).toHexString(), 32);
+    const filter = { address: LOCKER, topics: [topic0, null, null, topicLockId], fromBlock: 0, toBlock: "latest" };
+    const logs = await ro.getLogs(filter);
+    if (!logs.length) { alert("No event found for this lockId"); btn.disabled=false; return; }
+    const txh = logs[0].transactionHash;
+    window.open(PepuExplorer.tx(txh), "_blank");
+  }catch(err){ alert(err?.message || String(err)); }
+  finally{ btn.disabled=false; }
+});
+
+/* Wallet + Token view */
+$("scanWallet").onclick = async () => {
+  try{
+    $("rows2").innerHTML=""; $("log2").textContent="";
+    const token = $("token2").value.trim();
+    const wallet = $("wallet").value.trim();
+    if(!/^0x[a-fA-F0-9]{40}$/.test(token)) throw new Error("Enter a valid token address");
+    if(!/^0x[a-fA-F0-9]{40}$/.test(wallet)) throw new Error("Enter a valid wallet address");
+
+    const erc = new ethers.Contract(token, ["function symbol() view returns (string)","function decimals() view returns (uint8)"], ro);
+    const [sym, dec] = await Promise.all([erc.symbol().catch(()=>"?"), erc.decimals().catch(()=>18)]);
+
+    const ids = await lockerRO.getUserLockIds(wallet, token, 0, 500);
+    const details = await Promise.all(ids.map(id => lockerRO.getLock(token, id)));
+    const rows = $("rows2");
+
+    for(let i=0;i<ids.length;i++){
+      const [owner, amount, unlockTime, name, active] = details[i];
+      const human = ethers.utils.formatUnits(amount, dec);
+      const date  = new Date(Number(unlockTime)*1000).toLocaleString();
+      const ownerDisp = shortAddr(owner);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${date}</td>
+        <td style="text-align:right">${Number(human).toLocaleString()}</td>
+        <td>${sym}</td>
+        <td>${name || ""}</td>
+        <td class="mono" title="${owner}">
+          <a href="${PepuExplorer.address(owner)}" target="_blank">${ownerDisp}</a>
+        </td>
+        <td>${ids[i].toString()}</td>
+      `;
+      rows.appendChild(tr);
+    }
+    log2(`Locks loaded: ${ids.length}`);
+  }catch(e){ log2("❌", e?.data?.message || e?.message || String(e)); }
+};
+
+/* Show resolved meta when token field changes */
+$("token").addEventListener('change', e => showResolvedLine(e.target.value.trim()));
+$("token").addEventListener('blur',   e => showResolvedLine(e.target.value.trim()));
+
+/* Init */
+document.addEventListener('DOMContentLoaded', ()=>{
+  attachTokenAutocomplete('token','ac-token');
+  attachTokenAutocomplete('token2','ac-token2');
+
+  if (PARAM_TOKEN) {
+    $("token").value = PARAM_TOKEN;
+    $("scan").click();
+  }
+  if (PARAM_TOKEN && PARAM_WALLET) {
+    $("token2").value = PARAM_TOKEN;
+    $("wallet").value = PARAM_WALLET;
+    $("scanWallet").click();
+  }
+});
+</script>
+</body>
+</html>
