@@ -82,7 +82,7 @@
         <button id="scan" class="btn">Load Active Locks</button>
         <span id="count" class="pill">—</span>
         <span id="total" class="pill">Total: —</span>
-        <span id="corsNote" class="warn" style="display:none">Explorer blocked by CORS — showing guessed creator</span>
+        <span id="corsNote" class="warn" style="display:none">Explorer blocked — guessed creator shown</span>
       </div>
 
       <div id="rankWrap" style="margin-top:8px;display:none">
@@ -150,30 +150,22 @@
   </div>
 
 <script>
-/* ===== Hardcoded env =====
- * RPC = your chain RPC (currently Pepu TESTNET).
- * CREATOR_EXPLORER_BASE = explorer used to query creation tx.
- * You showed MAINNET in your example. Pick the one that matches your token.
- */
-const LOCKER_test   = "0x0c42901e39f8B88E67a4A93dc4Fc84F4e8f1193c";
-const RPC_test      = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
-const LOCKER   = "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F";
+/* ===================== CONFIG ===================== */
+const LOCKER   = "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F"; // your locker (mainnet)
 const RPC      = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
-/* ===== Explorer bases ===== */
+
+// Pepu explorers
 const EXPLORER_BASE_TESTNET = "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
 const EXPLORER_BASE_MAINNET = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz";
 
-/* Use MAINNET explorer for creator example (switch to TESTNET if needed) */
+// Use MAINNET explorer here (switch to testnet if needed)
 const CREATOR_EXPLORER_BASE = EXPLORER_BASE_TESTNET;
-/* Table links: use the same base as creator explorer for consistency */
 const EXPLORER_BASE = CREATOR_EXPLORER_BASE;
 
-/* Optional: if you later add a tiny same-origin CORS relay (e.g. /relay?url=...),
-   set USE_RELAY=true and RELAY_PATH to your endpoint; otherwise we try direct fetch */
-const USE_RELAY = true;
+// Cloudflare Worker relay (CORS)
 const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
 
-/* ===== ABIs ===== */
+/* ===================== ETHERS & ABIs ===================== */
 const ERC20 = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
@@ -190,74 +182,44 @@ const LOCKER_ABI = [
 const ro = new ethers.providers.JsonRpcProvider(RPC);
 const lockerRO = new ethers.Contract(LOCKER, LOCKER_ABI, ro);
 
+/* ===================== HELPERS ===================== */
 const $ = id=>document.getElementById(id);
 const log = (...a)=>{ $("log").textContent += a.join(" ")+"\n"; };
 const log2 = (...a)=>{ $("log2").textContent += a.join(" ")+"\n"; };
-
 const qs = new URLSearchParams(location.search);
 const PARAM_TOKEN  = qs.get('token');
 const PARAM_WALLET = qs.get('wallet');
 
 const PepuExplorer = {
   address: (a) => `${EXPLORER_BASE}/address/${a}`,
-  tx:      (h) => `${EXPLORER_BASE}/tx/${h}` /* some explorers use /tx/, this one uses /transactions/ */
+  tx:      (h) => `${EXPLORER_BASE}/tx/${h}` // <<< use /tx/ per your request
 };
 function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
 function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
 
-/* ===== Local index for autocomplete (optional) ===== */
-const TOKENS_JSON_URL = "https://www.toshtech.xyz/tokens.json";
-let LOCAL_INDEX = [];
-(async () => {
-  try {
-    const r = await fetch(TOKENS_JSON_URL, { cache: 'no-cache' });
-    if (r.ok) LOCAL_INDEX = await r.json();
-  } catch (e) {
-    console.warn('tokens.json load error', e);
-  }
-})();
-
-async function pepuSearch(q) {
-  if (!q || (q = q.trim()).length < 2) return [];
-  // Address → use directly
-  if (/^0x[a-fA-F0-9]{40}$/.test(q)) return [{ address: q, name: "", symbol: "" }];
-  // If no local index, just return empty (user can paste address)
-  if (!LOCAL_INDEX.length) return [];
-  const lower = q.toLowerCase();
-  return LOCAL_INDEX
-    .filter(x =>
-      x.address.toLowerCase().includes(lower) ||
-      (x.symbol || '').toLowerCase().includes(lower) ||
-      (x.name || '').toLowerCase().includes(lower)
-    )
-    .slice(0, 20);
+async function fetchJsonCORS(url) {
+  const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
+  if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
+  return r.json();
 }
 
-// --- Remote explorer search (via Worker) ---
+/* ===================== REMOTE SEARCH (no local JSON) ===================== */
 async function pepuSearchRemote(q) {
   if (!q || (q = q.trim()).length < 2) return [];
-
-  // If user pasted an address, return it immediately as a single option.
   if (/^0x[a-fA-F0-9]{40}$/.test(q)) {
     return [{ address: q, name: "", symbol: "" }];
   }
-
-  // Hit the explorer's search API through your Worker.
-  // NOTE: endpoint is /api/v2/search?q=<query>
   const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
   try {
     const js = await fetchJsonCORS(url);
     const items = js.items || [];
-
-    // Normalize to {address, name, symbol}
     return items
-      .filter(it => it.type === 'token' || it.token_type === 'ERC-20' || it.address) // prefer tokens
+      .filter(it => it.type === 'token' || it.token_type === 'ERC-20' || it.address)
       .map(it => ({
         address: (it.address || it.address_hash || "").toLowerCase(),
         name: it.name || "",
         symbol: it.symbol || ""
       }))
-      // Remove dupes by address
       .filter((it, i, arr) => it.address && arr.findIndex(x => x.address === it.address) === i)
       .slice(0, 20);
   } catch (e) {
@@ -266,11 +228,7 @@ async function pepuSearchRemote(q) {
   }
 }
 
-// Debounce helper
-function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-
-
-
+/* ===================== AUTOCOMPLETE ===================== */
 function attachTokenAutocomplete(inputId, listId){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -278,7 +236,7 @@ function attachTokenAutocomplete(inputId, listId){
   const hide=()=>list.style.display="none";
   const show=()=>list.style.display="block";
   hide();
-  const esc = s => s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const esc = s => String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
   const render = items=>{
     if(!items.length){ list.innerHTML = `<div class="ac-empty">No matches</div>`; show(); return; }
     list.innerHTML = items.map(it=>{
@@ -293,7 +251,7 @@ function attachTokenAutocomplete(inputId, listId){
     const q = inp.value.trim();
     if(!q){ hide(); return; }
     if(/^0x[a-fA-F0-9]{40}$/.test(q)){ render([{address:q.toLowerCase(), name:"", symbol:""}]); return; }
-    render(await pepuSearch(q));
+    render(await pepuSearchRemote(q));
   }, 220);
   inp.addEventListener('input', onType);
   inp.addEventListener('focus', ()=>{ if(list.innerHTML) show(); });
@@ -306,44 +264,37 @@ function attachTokenAutocomplete(inputId, listId){
   });
 }
 
-/* ===== Resolved token line ===== */
+/* ===================== TOKEN META LINE ===================== */
 async function resolveTokenMeta(token) {
-  // Try on-chain first via ethers (symbol/decimals)
   try {
     const erc = new ethers.Contract(token, [
       "function symbol() view returns (string)",
-      "function name() view returns (string)"
+      "function name() view returns (string)",
+      "function decimals() view returns (uint8)"
     ], ro);
-    const [symbol, name] = await Promise.all([
+    const [symbol, name, decimals] = await Promise.all([
       erc.symbol().catch(()=>""), 
-      erc.name().catch(()=>"")
+      erc.name().catch(()=>""),
+      erc.decimals().catch(()=>null)
     ]);
-    if (symbol || name) return { symbol, name };
+    if (symbol || name || decimals !== null) return { symbol, name, decimals };
   } catch {}
-
-  // Fallback: one search hit
+  // Fallback: try a search hit (decimals unknown)
   const res = await pepuSearchRemote(token);
   const item = res.find(x => x.address.toLowerCase() === token.toLowerCase()) || res[0];
-  return { symbol: item?.symbol || "", name: item?.name || "" };
+  return { symbol: item?.symbol || "", name: item?.name || "", decimals: null };
 }
-
 
 async function showResolvedLine(addr){
   const el = $("resolvedToken");
   if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){ el.style.display="none"; return; }
   const m = await resolveTokenMeta(addr);
-  el.textContent = `Resolved: ${m.name} (${m.symbol}) • decimals ${m.decimals}`;
+  const decTxt = (m.decimals===null || m.decimals===undefined) ? "" : ` • decimals ${m.decimals}`;
+  el.textContent = `Resolved: ${m.name || "?"} (${m.symbol || "?"})${decTxt}`;
   el.style.display = "";
 }
 
-/* ===== Creator via Explorer ===== */
-async function fetchJsonCORS(url) {
-  const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
-  if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
-  return r.json();
-}
-
-/** Returns {creator, creationTx} or null if unknown (CORS or not found) */
+/* ===================== CREATOR (via Explorer) ===================== */
 async function getCreatorFromExplorer(tokenAddress) {
   // 1) address → creation tx hash
   const a = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/addresses/${tokenAddress}`);
@@ -352,7 +303,6 @@ async function getCreatorFromExplorer(tokenAddress) {
   if (!creationTx) throw new Error("No creation tx on explorer response");
 
   // 2) transaction → from.hash (creator)
-  // IMPORTANT: endpoint is /transactions/<hash>, not /tx/<hash>
   const t = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/transactions/${creationTx}`);
   const creator = t.from?.hash || t.data?.attributes?.from?.hash;
   if (!creator) throw new Error("No creator found in transaction response");
@@ -360,8 +310,7 @@ async function getCreatorFromExplorer(tokenAddress) {
   return { creator, creationTx };
 }
 
-
-/* ===== Supply (on-chain) ===== */
+/* ===================== SUPPLY (on-chain) ===================== */
 const BURN_ADDRESSES = [
   "0xa9fD599cd8857e90059c83e4885Dc09986039085",
   "0x000000000000000000000000000000000000dEaD"
@@ -380,10 +329,10 @@ async function getAdjustedSupply(token){
   return { decimals, total, burned, adjusted: total.sub(burned), perAddr };
 }
 
-/* ===== State ===== */
+/* ===================== STATE ===================== */
 const state = { activeRows: [], creator: null, creationTx: null, guessedCreator: null };
 
-/* ===== Main scan ===== */
+/* ===================== MAIN SCAN ===================== */
 $("scan").onclick = async () => {
   try{
     $("rows").innerHTML=""; $("count").textContent="Loading…"; $("total").textContent="Total: —"; $("log").textContent="";
@@ -399,16 +348,18 @@ $("scan").onclick = async () => {
     await showResolvedLine(token);
 
     // Try to fetch creator from explorer
-    const creatorInfo = await getCreatorFromExplorer(token);
-    if (creatorInfo && creatorInfo.creator){
-      state.creator   = creatorInfo.creator.toLowerCase();
-      state.creationTx= creatorInfo.creationTx;
-      $("creatorLine").innerHTML =
-        `Creator: <a class="mono" href="${PepuExplorer.address(creatorInfo.creator)}" target="_blank">${creatorInfo.creator}</a> • ` +
-        `Creation TX: <a class="mono" href="${PepuExplorer.tx(creatorInfo.creationTx)}" target="_blank">${creatorInfo.creationTx.slice(0,10)}…</a>`;
-      $("creatorLine").style.display = "";
-    } else {
-      // If failed (probably CORS), show note (we will still guess later)
+    try {
+      const creatorInfo = await getCreatorFromExplorer(token);
+      if (creatorInfo && creatorInfo.creator){
+        state.creator   = creatorInfo.creator.toLowerCase();
+        state.creationTx= creatorInfo.creationTx;
+        $("creatorLine").innerHTML =
+          `Creator: <a class="mono" href="${PepuExplorer.address(creatorInfo.creator)}" target="_blank">${creatorInfo.creator}</a> • ` +
+          `Creation TX: <a class="mono" href="${PepuExplorer.tx(creatorInfo.creationTx)}" target="_blank">${creatorInfo.creationTx.slice(0,10)}…</a>`;
+        $("creatorLine").style.display = "";
+      }
+    } catch {
+      // Will attempt a guess later
       $("corsNote").style.display = "";
     }
 
@@ -427,7 +378,7 @@ $("scan").onclick = async () => {
 
     for(let i=0;i<ids.length;i++){
       total = total.add(amounts[i]);
-      const id=ids[i], owner=owners[i];
+      const owner=owners[i];
       ownersTotals.set(owner, (ownersTotals.get(owner)||ethers.BigNumber.from(0)).add(amounts[i]));
     }
 
@@ -463,8 +414,7 @@ $("scan").onclick = async () => {
         <td>${names[i] || ""}</td>
         <td class="mono" title="${owner}">
           <a href="${PepuExplorer.address(owner)}" target="_blank">${ownerDisp}</a>
-          ${isCreator ? '<span class="badge" title="Creator from explorer">Creator</span>' :
-            (state.guessedCreator && owner.toLowerCase()===state.guessedCreator ? '<span class="badge" title="Guessed by top locked amount">Top locker (guessed)</span>' : '')}
+          ${isCreator ? '<span class="badge" title="Creator from explorer/guess">Creator</span>' : ''}
         </td>
         <td>${id.toString()}</td>
         <td><button class="btn gray" data-proof="${id.toString()}">Proof</button></td>
@@ -541,7 +491,7 @@ $("scan").onclick = async () => {
   }catch(e){ log("❌", e?.data?.message || e?.message || String(e)); }
 };
 
-/* Proof button (LiquidityLocked event) */
+/* ===================== Proof button (LiquidityLocked event) ===================== */
 document.addEventListener('click', async (e)=>{
   const btn = e.target.closest('[data-proof]');
   if (!btn) return;
@@ -553,12 +503,12 @@ document.addEventListener('click', async (e)=>{
     const logs = await ro.getLogs(filter);
     if (!logs.length) { alert("No event found for this lockId"); btn.disabled=false; return; }
     const txh = logs[0].transactionHash;
-    window.open(PepuExplorer.tx(txh), "_blank");
+    window.open(PepuExplorer.tx(txh), "_blank"); // ← /tx/<hash>
   }catch(err){ alert(err?.message || String(err)); }
   finally{ btn.disabled=false; }
 });
 
-/* Wallet + Token view */
+/* ===================== Wallet + Token view ===================== */
 $("scanWallet").onclick = async () => {
   try{
     $("rows2").innerHTML=""; $("log2").textContent="";
@@ -596,11 +546,11 @@ $("scanWallet").onclick = async () => {
   }catch(e){ log2("❌", e?.data?.message || e?.message || String(e)); }
 };
 
-/* Show resolved meta when token field changes */
+/* ===================== Resolved line events ===================== */
 $("token").addEventListener('change', e => showResolvedLine(e.target.value.trim()));
 $("token").addEventListener('blur',   e => showResolvedLine(e.target.value.trim()));
 
-/* Init */
+/* ===================== Init ===================== */
 document.addEventListener('DOMContentLoaded', ()=>{
   attachTokenAutocomplete('token','ac-token');
   attachTokenAutocomplete('token2','ac-token2');
