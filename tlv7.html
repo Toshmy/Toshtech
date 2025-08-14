@@ -155,15 +155,16 @@
  * CREATOR_EXPLORER_BASE = explorer used to query creation tx.
  * You showed MAINNET in your example. Pick the one that matches your token.
  */
-const LOCKER   = "0x189ef775DcC7782802ca16b870Da7B5FaE3C8524";
-const RPC      = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
-
+const LOCKER_test   = "0x189ef775DcC7782802ca16b870Da7B5FaE3C8524";
+const RPC_test      = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+const LOCKER   = "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F";
+const RPC      = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
 /* ===== Explorer bases ===== */
 const EXPLORER_BASE_TESTNET = "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
 const EXPLORER_BASE_MAINNET = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz";
 
 /* Use MAINNET explorer for creator example (switch to TESTNET if needed) */
-const CREATOR_EXPLORER_BASE = EXPLORER_BASE_TESTNET;
+const CREATOR_EXPLORER_BASE = EXPLORER_BASE_MAINNET;
 /* Table links: use the same base as creator explorer for consistency */
 const EXPLORER_BASE = CREATOR_EXPLORER_BASE;
 
@@ -205,24 +206,71 @@ function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
 function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
 
 /* ===== Local index for autocomplete (optional) ===== */
+const TOKENS_JSON_URL = "https://www.toshtech.xyz/tokens.json";
 let LOCAL_INDEX = [];
 (async () => {
   try {
-    const r = await fetch('tokens.json', { cache: 'no-cache' });
+    const r = await fetch(TOKENS_JSON_URL, { cache: 'no-cache' });
     if (r.ok) LOCAL_INDEX = await r.json();
-  } catch {}
+  } catch (e) {
+    console.warn('tokens.json load error', e);
+  }
 })();
+
 async function pepuSearch(q) {
   if (!q || (q = q.trim()).length < 2) return [];
+  // Address → use directly
   if (/^0x[a-fA-F0-9]{40}$/.test(q)) return [{ address: q, name: "", symbol: "" }];
+  // If no local index, just return empty (user can paste address)
+  if (!LOCAL_INDEX.length) return [];
   const lower = q.toLowerCase();
   return LOCAL_INDEX
     .filter(x =>
       x.address.toLowerCase().includes(lower) ||
       (x.symbol || '').toLowerCase().includes(lower) ||
       (x.name || '').toLowerCase().includes(lower)
-    ).slice(0, 20);
+    )
+    .slice(0, 20);
 }
+
+// --- Remote explorer search (via Worker) ---
+async function pepuSearchRemote(q) {
+  if (!q || (q = q.trim()).length < 2) return [];
+
+  // If user pasted an address, return it immediately as a single option.
+  if (/^0x[a-fA-F0-9]{40}$/.test(q)) {
+    return [{ address: q, name: "", symbol: "" }];
+  }
+
+  // Hit the explorer's search API through your Worker.
+  // NOTE: endpoint is /api/v2/search?q=<query>
+  const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
+  try {
+    const js = await fetchJsonCORS(url);
+    const items = js.items || [];
+
+    // Normalize to {address, name, symbol}
+    return items
+      .filter(it => it.type === 'token' || it.token_type === 'ERC-20' || it.address) // prefer tokens
+      .map(it => ({
+        address: (it.address || it.address_hash || "").toLowerCase(),
+        name: it.name || "",
+        symbol: it.symbol || ""
+      }))
+      // Remove dupes by address
+      .filter((it, i, arr) => it.address && arr.findIndex(x => x.address === it.address) === i)
+      .slice(0, 20);
+  } catch (e) {
+    console.warn("search failed", e);
+    return [];
+  }
+}
+
+// Debounce helper
+function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+
+
 function attachTokenAutocomplete(inputId, listId){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -259,15 +307,27 @@ function attachTokenAutocomplete(inputId, listId){
 }
 
 /* ===== Resolved token line ===== */
-async function resolveTokenMeta(addr){
-  const out = { name:"?", symbol:"?", decimals:18 };
-  try{
-    const c = new ethers.Contract(addr, ERC20, ro);
-    const [n,s,d] = await Promise.all([c.name().catch(()=>"?"), c.symbol().catch(()=>"?"), c.decimals().catch(()=>18)]);
-    out.name=n; out.symbol=s; out.decimals=d;
-  }catch{}
-  return out;
+async function resolveTokenMeta(token) {
+  // Try on-chain first via ethers (symbol/decimals)
+  try {
+    const erc = new ethers.Contract(token, [
+      "function symbol() view returns (string)",
+      "function name() view returns (string)"
+    ], ro);
+    const [symbol, name] = await Promise.all([
+      erc.symbol().catch(()=>""), 
+      erc.name().catch(()=>"")
+    ]);
+    if (symbol || name) return { symbol, name };
+  } catch {}
+
+  // Fallback: one search hit
+  const res = await pepuSearchRemote(token);
+  const item = res.find(x => x.address.toLowerCase() === token.toLowerCase()) || res[0];
+  return { symbol: item?.symbol || "", name: item?.name || "" };
 }
+
+
 async function showResolvedLine(addr){
   const el = $("resolvedToken");
   if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){ el.style.display="none"; return; }
@@ -284,22 +344,22 @@ async function fetchJsonCORS(url) {
 }
 
 /** Returns {creator, creationTx} or null if unknown (CORS or not found) */
-async function getCreatorFromExplorer(token){
-  try{
-    const addrJs = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/addresses/${token}`);
-    const creationTx = addrJs.creation_transaction_hash || addrJs.data?.attributes?.creation_transaction_hash;
-    if(!creationTx) return null;
+async function getCreatorFromExplorer(tokenAddress) {
+  // 1) address → creation tx hash
+  const a = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/addresses/${tokenAddress}`);
+  const creationTx = a.creation_transaction_hash
+                  || a.data?.attributes?.creation_transaction_hash;
+  if (!creationTx) throw new Error("No creation tx on explorer response");
 
-    const txJs = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/tx/${creationTx}`);
-    const creator = txJs.from?.hash || txJs.data?.attributes?.from?.hash; // depending on explorer shape
-    if(!creator) return null;
-    return { creator, creationTx };
-  }catch(e){
-    // Likely CORS blocked or 404
-    console.warn("Creator fetch failed:", e);
-    return null;
-  }
+  // 2) transaction → from.hash (creator)
+  // IMPORTANT: endpoint is /transactions/<hash>, not /tx/<hash>
+  const t = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/transactions/${creationTx}`);
+  const creator = t.from?.hash || t.data?.attributes?.from?.hash;
+  if (!creator) throw new Error("No creator found in transaction response");
+
+  return { creator, creationTx };
 }
+
 
 /* ===== Supply (on-chain) ===== */
 const BURN_ADDRESSES = [
