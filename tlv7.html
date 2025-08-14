@@ -163,7 +163,7 @@ const EXPLORER_BASE_TESTNET = "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.con
 const EXPLORER_BASE_MAINNET = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz";
 
 /* Use MAINNET explorer for creator example (switch to TESTNET if needed) */
-const CREATOR_EXPLORER_BASE = EXPLORER_BASE_MAINNET;
+const CREATOR_EXPLORER_BASE = EXPLORER_BASE_TESTNET;
 /* Table links: use the same base as creator explorer for consistency */
 const EXPLORER_BASE = CREATOR_EXPLORER_BASE;
 
@@ -199,7 +199,7 @@ const PARAM_WALLET = qs.get('wallet');
 
 const PepuExplorer = {
   address: (a) => `${EXPLORER_BASE}/address/${a}`,
-  tx:      (h) => `${EXPLORER_BASE}/transactions/${h}` /* some explorers use /tx/, this one uses /transactions/ */
+  tx:      (h) => `${EXPLORER_BASE}/tx/${h}` /* some explorers use /tx/, this one uses /transactions/ */
 };
 function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
 function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
