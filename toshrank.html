@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshLock — Project Ranking (Top 10)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18); }
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1150px;margin:24px auto;padding:0 16px}
+    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;padding:.25rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700;border-radius:12px;padding:10px 12px}
+    .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+    .muted{color:var(--muted);opacity:.92}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
+    th{text-align:left;background:var(--bg-2)}
+    .table-scroll{overflow:auto;border-radius:12px}
+    .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
+    .kvs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    @media(min-width:780px){ .kvs{grid-template-columns:repeat(4,1fr)} }
+    .kv{border:1px solid var(--border);border-radius:12px;padding:10px;background:#0f1730;display:flex;justify-content:space-between}
+    .small{font-size:12px;color:#bfeede}
+    .center{display:flex;align-items:center;justify-content:center;padding:18px;color:#bfeede}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h1 class="glow-text" style="margin:0">🏆 ToshLock — Project Ranking</h1>
+      <div class="row">
+        <select id="net" class="btn gray" title="Network">
+          <option value="testnet" selected>Pepu Testnet</option>
+          <option value="mainnet">Pepu Mainnet</option>
+        </select>
+        <select id="sortBy" class="btn gray" title="Sort by">
+          <option value="lockedPct" selected>Sort by Locked %</option>
+          <option value="tvl">Sort by TVL</option>
+        </select>
+        <label class="pill" style="display:flex;align-items:center;gap:6px">
+          <input id="inclZero" type="checkbox" checked> Include 0% rows
+        </label>
+        <button id="scan" class="btn">Build Ranking</button>
+      </div>
+    </header>
+
+    <section class="card" style="margin-bottom:14px">
+      <div class="row" style="gap:12px">
+        <span class="pill" id="status">Ready</span>
+        <span class="pill" id="note">Data: pools_chache.json + on-chain locks</span>
+        <span class="pill" id="count">—</span>
+      </div>
+      <div class="kvs" style="margin-top:12px">
+        <div class="kv"><span>Total Projects Scanned</span><strong id="scanned">—</strong></div>
+        <div class="kv"><span>Projects with Locks</span><strong id="withLocks">—</strong></div>
+        <div class="kv"><span>Total Locked (Top 10)</span><strong id="sumLockedTop">—</strong></div>
+        <div class="kv"><span>Total TVL (Top 10)</span><strong id="sumTVLTop">—</strong></div>
+      </div>
+    </section>
+
+    <section class="table-scroll card" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Token</th>
+            <th>Symbol</th>
+            <th>Event Date</th>
+            <th>Locked %</th>
+            <th>Unlock Date</th>
+            <th style="text-align:right">Locked</th>
+            <th style="text-align:right">TVL (USD)</th>
+            <th style="text-align:right">Supply</th>
+            <th style="text-align:right">Burned</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="center" style="display:none">No rows to display.</div>
+    </section>
+
+    <pre id="log" style="margin-top:12px" class="card muted"></pre>
+  </div>
+
+<script>
+/* ============== CONFIG ============== */
+const CONFIGS = {
+  testnet: {
+    LOCKER: "0x0c42901e39f8B88E67a4A93dc4Fc84F4e8f1193c",
+    RPC:    "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz",
+    EXPLORER: "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz"
+  },
+  mainnet: {
+    LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
+    RPC:    "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
+    EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"
+  }
+};
+
+/* pools_chache source (exact filename) */
+const POOLS_JSON_URL = 'pools_cache.json';
+
+/* Burn addresses */
+const BURN_ADDRS = [
+  "0xa9fD599cd8857e90059c83e4885Dc09986039085",
+  "0x000000000000000000000000000000000000dEaD"
+];
+
+/* ABIs */
+const ERC20 = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "event LiquidityLocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount,uint256 unlockTime,string name)",
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
+];
+
+/* ============== HELPERS ============== */
+const $ = id => document.getElementById(id);
+const log = (...a)=>{ $("log").textContent += a.join(" ")+"\n"; };
+function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
+function fmtNum(n){ return Number(n).toLocaleString(); }
+function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, decimals)); }catch{ return 0; } }
+function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
+
+/* USD price from pools_chache row: usd = price * quote_token_price_usd */
+function deriveUsdPrice(pool){
+  const p = Number(pool.price || 0);
+  const quoteUsd = Number(pool.quote_token_price_usd || 0);
+  if (p > 0 && quoteUsd > 0) return p * quoteUsd;
+  return 0;
+}
+
+/* small concurrency limiter */
+function pLimit(max){
+  let running = 0, queue = [];
+  const next = () => { running--; if (queue.length) queue.shift()(); };
+  return fn => new Promise((resolve,reject)=>{
+    const run = () => {
+      running++;
+      Promise.resolve().then(fn).then(v=>{ resolve(v); next(); }, e=>{ reject(e); next(); });
+    };
+    if (running < max) run(); else queue.push(run);
+  });
+}
+
+/* ============== CORE ============== */
+let net = "testnet";
+let ro, locker;
+
+function setNet(n){
+  net = n;
+  const cfg = CONFIGS[net];
+  ro = new ethers.providers.JsonRpcProvider(cfg.RPC);
+  locker = new ethers.Contract(cfg.LOCKER, LOCKER_ABI, ro);
+}
+setNet($("net").value);
+$("net").addEventListener("change", e => setNet(e.target.value));
+
+/* Token meta + adjusted supply */
+async function getTokenMetaAndSupply(token){
+  const t = new ethers.Contract(token, ERC20, ro);
+  const [name, symbol, decimals, total, ...burns] = await Promise.all([
+    t.name().catch(()=>""), t.symbol().catch(()=>""), t.decimals().catch(()=>18),
+    t.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+    ...BURN_ADDRS.map(a => t.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
+  ]);
+  let burned = ethers.BigNumber.from(0);
+  for (const b of burns) burned = burned.add(b);
+  const adjusted = total.sub(burned);
+  return { name, symbol, decimals: Number(decimals), total, burned, adjusted };
+}
+
+/* Locks summary (active) + latest event timestamp */
+async function getLocksSummary(token){
+  const [ids, owners, amounts, unlockTimes] =
+    await locker.getActiveLocksByToken(token, 0, 1000).catch(()=>[[],[],[],[]]);
+
+  let sum = ethers.BigNumber.from(0);
+  let earliestUnlock = null;
+  for (let i=0;i<ids.length;i++){
+    sum = sum.add(amounts[i]);
+    const ut = Number(unlockTimes[i]);
+    if (!earliestUnlock || ut < earliestUnlock) earliestUnlock = ut;
+  }
+
+  // Latest LiquidityLocked event (limit to recent window)
+  let latestTs = null;
+  try{
+    const latestBlock = await ro.getBlockNumber();
+    const fromBlock = Math.max(0, latestBlock - 300000);
+    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+    const tokenTopic = ethers.utils.hexZeroPad(token, 32);
+    const logs = await ro.getLogs({ address: locker.address, topics: [topic0, tokenTopic], fromBlock, toBlock: "latest" });
+    if (logs.length){
+      const last = logs.reduce((a,b)=> a.blockNumber > b.blockNumber ? a : b);
+      const blk = await ro.getBlock(last.blockNumber);
+      latestTs = blk?.timestamp || null;
+    }
+  }catch(e){ /* non-fatal */ }
+
+  return { locks: (ids||[]).length, sumLocked: sum, earliestUnlock: earliestUnlock||null, latestEvent: latestTs||null };
+}
+
+function toLower(a){ try{ return ethers.utils.getAddress(a).toLowerCase(); }catch{ return (a||"").toLowerCase(); } }
+function dedupeByAddress(list){
+  const m = new Map();
+  for (const it of list || []){
+    const addr = (it.address || it.token || it.token_address || "").toLowerCase();
+    if (!addr || !/^0x[a-fA-F0-9]{40}$/.test(addr)) continue;
+    if (!m.has(addr)) m.set(addr, it);
+  }
+  return Array.from(m.values());
+}
+
+/* Scan button */
+$("scan").onclick = async ()=>{
+  try{
+    $("rows").innerHTML=""; $("empty").style.display="none"; $("log").textContent="";
+    $("status").textContent="Loading pools_chache.json …";
+    const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
+    if (!r.ok) throw new Error(`Failed to load pools_chache.json: HTTP ${r.status}`);
+    const js = await r.json();
+
+    const list = Array.isArray(js) ? js : (js.data || []);
+    const tokens = dedupeByAddress(list).map(x => ({
+      address: toLower(x.address),
+      symbol: x.symbol || "",
+      name: x.name || "",
+      usdPrice: deriveUsdPrice(x),
+      poolReserveUSD: Number(x.reserve_in_usd || 0) // not used for "locked TVL", kept for reference
+    }));
+
+    $("scanned").textContent = fmtNum(tokens.length);
+    if (!tokens.length){
+      $("status").textContent = "No tokens found in pools_chache.json";
+      $("empty").style.display = "";
+      $("count").textContent = "—";
+      return;
+    }
+
+    $("status").textContent = "Scanning on-chain locks & supplies …";
+    const limit = pLimit(5);
+
+    const inclZero = $("inclZero").checked;
+    const results = await Promise.all(tokens.map(tok => limit(async ()=>{
+      try{
+        const meta  = await getTokenMetaAndSupply(tok.address);
+        const locks = await getLocksSummary(tok.address);
+
+        const lockedHuman   = bnToNum(locks.sumLocked, meta.decimals);
+        const adjustedHuman = bnToNum(meta.adjusted, meta.decimals);
+        const burnedHuman   = bnToNum(meta.burned, meta.decimals);
+        const totalHuman    = bnToNum(meta.total, meta.decimals);
+        const lockedPct     = adjustedHuman > 0 ? (lockedHuman / adjustedHuman * 100) : 0;
+        const tvl           = lockedHuman * (tok.usdPrice || 0);
+
+        // If we only want projects with actual lock > 0
+        if (!inclZero && lockedHuman <= 0) return null;
+
+        return {
+          address: tok.address,
+          symbol: meta.symbol || tok.symbol,
+          name: meta.name || tok.name,
+          decimals: meta.decimals,
+          lockedHuman, adjustedHuman, burnedHuman, totalHuman,
+          lockedPct, tvl,
+          latestEvent: locks.latestEvent,
+          nextUnlock: locks.earliestUnlock
+        };
+      }catch(e){
+        log("skip", tok.address, e.message || String(e));
+        return null;
+      }
+    })));
+
+    const rows = results.filter(Boolean);
+    $("withLocks").textContent = fmtNum(rows.filter(r => r.lockedHuman > 0).length);
+
+    if (!rows.length){
+      $("status").textContent = "No rows to display (try enabling 'Include 0% rows').";
+      $("empty").style.display = "";
+      $("count").textContent = "—";
+      return;
+    }
+
+    const sortBy = $("sortBy").value; // default lockedPct
+    rows.sort((a,b)=> sortBy === "lockedPct"
+      ? (b.lockedPct - a.lockedPct)
+      : (b.tvl - a.tvl));
+
+    const top = rows.slice(0, 10);
+
+    const sumLockedTop = top.reduce((acc,x)=> acc + x.lockedHuman, 0);
+    const sumTVLTop    = top.reduce((acc,x)=> acc + x.tvl, 0);
+    $("sumLockedTop").textContent = fmtNum(sumLockedTop);
+    $("sumTVLTop").textContent    = "$" + fmtNum(sumTVLTop.toFixed(2));
+    $("count").textContent = `Top 10 by ${sortBy === "lockedPct" ? "Locked %" : "TVL"}`;
+
+    const explorer = CONFIGS[net].EXPLORER;
+    const tbody = $("rows");
+    tbody.innerHTML = "";
+    top.forEach((p, i) => {
+      const pct = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
+      const latest = p.latestEvent ? new Date(p.latestEvent*1000).toLocaleString() : "—";
+      const nextU  = p.nextUnlock ? new Date(p.nextUnlock*1000).toLocaleString() : "—";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>
+          <a class="mono" href="${explorer}/address/${p.address}" target="_blank">${shortAddr(p.address)}</a>
+          <div class="small">${escapeHtml(p.name || "")}</div>
+        </td>
+        <td>${escapeHtml(p.symbol || "")}</td>
+        <td>${latest}</td>
+        <td style="min-width:180px">
+          <div class="progress"><i style="width:${pct.toFixed(2)}%"></i></div>
+          <div class="small">${pct.toFixed(2)}%</div>
+        </td>
+        <td>${nextU}</td>
+        <td style="text-align:right">${fmtNum(p.lockedHuman)}</td>
+        <td style="text-align:right">$${fmtNum(p.tvl.toFixed(2))}</td>
+        <td style="text-align:right" title="Total (pre-burn)">${fmtNum(p.totalHuman)}</td>
+        <td style="text-align:right">${fmtNum(p.burnedHuman)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    $("status").textContent = "Done.";
+  }catch(e){
+    $("status").textContent = "❌ " + (e.message || String(e));
+    log(e.stack || String(e));
+    $("empty").style.display = "";
+  }
+};
+
+/* Auto-run on load: Testnet + Locked % + include 0% */
+document.addEventListener('DOMContentLoaded', ()=>{
+  $("net").value = "testnet";
+  $("sortBy").value = "lockedPct";
+  $("inclZero").checked = true;
+  setNet("testnet");
+  $("scan").click();
+});
+</script>
+</body>
+</html>
