@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ToshLock — Project Ranking (Top 10)</title>
+  <title>ToshLock — Projects with Active Locks (Top 10)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{ --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
@@ -36,7 +36,7 @@
 <body>
   <div class="wrap">
     <header class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h1 class="glow-text" style="margin:0">🏆 ToshLock — Project Ranking</h1>
+      <h1 class="glow-text" style="margin:0">🏆 ToshLock — Projects with Active Locks</h1>
       <div class="row">
         <select id="net" class="btn gray" title="Network">
           <option value="testnet" selected>Pepu Testnet</option>
@@ -46,9 +46,6 @@
           <option value="lockedPct" selected>Sort by Locked %</option>
           <option value="tvl">Sort by TVL</option>
         </select>
-        <label class="pill" style="display:flex;align-items:center;gap:6px">
-          <input id="inclZero" type="checkbox" checked> Include 0% rows
-        </label>
         <button id="scan" class="btn">Build Ranking</button>
       </div>
     </header>
@@ -56,12 +53,12 @@
     <section class="card" style="margin-bottom:14px">
       <div class="row" style="gap:12px">
         <span class="pill" id="status">Ready</span>
-        <span class="pill" id="note">Data: pools_chache.json + on-chain locks</span>
+        <span class="pill" id="note">Enumerating tokens from Locker events; price from cache</span>
         <span class="pill" id="count">—</span>
       </div>
       <div class="kvs" style="margin-top:12px">
-        <div class="kv"><span>Total Projects Scanned</span><strong id="scanned">—</strong></div>
-        <div class="kv"><span>Projects with Locks</span><strong id="withLocks">—</strong></div>
+        <div class="kv"><span>Unique Tokens Seen</span><strong id="seen">—</strong></div>
+        <div class="kv"><span>Projects with Active Locks</span><strong id="withLocks">—</strong></div>
         <div class="kv"><span>Total Locked (Top 10)</span><strong id="sumLockedTop">—</strong></div>
         <div class="kv"><span>Total TVL (Top 10)</span><strong id="sumTVLTop">—</strong></div>
       </div>
@@ -85,7 +82,7 @@
         </thead>
         <tbody id="rows"></tbody>
       </table>
-      <div id="empty" class="center" style="display:none">No rows to display.</div>
+      <div id="empty" class="center" style="display:none">No active locks found.</div>
     </section>
 
     <pre id="log" style="margin-top:12px" class="card muted"></pre>
@@ -135,6 +132,7 @@ function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
 function fmtNum(n){ return Number(n).toLocaleString(); }
 function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, decimals)); }catch{ return 0; } }
 function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
+function toLower(a){ try{ return ethers.utils.getAddress(a).toLowerCase(); }catch{ return (a||"").toLowerCase(); } }
 
 /* USD price from pools_chache row: usd = price * quote_token_price_usd */
 function deriveUsdPrice(pool){
@@ -158,8 +156,8 @@ function pLimit(max){
 }
 
 /* ============== CORE ============== */
-let net = "testnet";
-let ro, locker;
+let net = "mainnet", ro, locker;
+let priceIndex = new Map();
 
 function setNet(n){
   net = n;
@@ -170,9 +168,53 @@ function setNet(n){
 setNet($("net").value);
 $("net").addEventListener("change", e => setNet(e.target.value));
 
-/* Token meta + adjusted supply */
+/* Build a quick price index from pools_chache.json */
+async function loadPriceIndex(){
+  priceIndex.clear();
+  try{
+    const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const js = await r.json();
+    const list = Array.isArray(js) ? js : (js.data || []);
+    for (const row of list){
+      const addr = (row.address || "").toLowerCase();
+      if(/^0x[a-fA-F0-9]{40}$/.test(addr)){
+        priceIndex.set(addr, { usd: deriveUsdPrice(row), reserveUSD: Number(row.reserve_in_usd || 0), name: row.name || "", symbol: row.symbol || "" });
+      }
+    }
+    $("note").textContent = `Price source loaded: ${priceIndex.size} tokens`;
+  }catch(e){
+    $("note").textContent = `Price source missing/unreadable`;
+  }
+}
+
+/* Discover tokens via locker logs */
+async function discoverLockedTokens(){
+  const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+  const latest = await ro.getBlockNumber();
+  // Scan a generous window; widen if needed
+  const fromBlock = Math.max(0, latest - 800_000);
+  $("status").textContent = `Scanning logs ${fromBlock} → ${latest} …`;
+
+  const logs = await ro.getLogs({
+    address: locker.address,
+    topics: [topic0],
+    fromBlock, toBlock: "latest"
+  });
+
+  const tokens = new Set();
+  for (const lg of logs){
+    // topic[1] = token (indexed)
+    const token = "0x" + lg.topics[1].slice(26); // last 20 bytes
+    tokens.add(token.toLowerCase());
+  }
+  return Array.from(tokens);
+}
+
+/* token meta & adjusted supply */
+const ERC20_ABI = ERC20;
 async function getTokenMetaAndSupply(token){
-  const t = new ethers.Contract(token, ERC20, ro);
+  const t = new ethers.Contract(token, ERC20_ABI, ro);
   const [name, symbol, decimals, total, ...burns] = await Promise.all([
     t.name().catch(()=>""), t.symbol().catch(()=>""), t.decimals().catch(()=>18),
     t.totalSupply().catch(()=>ethers.BigNumber.from(0)),
@@ -184,7 +226,7 @@ async function getTokenMetaAndSupply(token){
   return { name, symbol, decimals: Number(decimals), total, burned, adjusted };
 }
 
-/* Locks summary (active) + latest event timestamp */
+/* Locks summary (active) + first unlock + latest event time */
 async function getLocksSummary(token){
   const [ids, owners, amounts, unlockTimes] =
     await locker.getActiveLocksByToken(token, 0, 1000).catch(()=>[[],[],[],[]]);
@@ -197,84 +239,69 @@ async function getLocksSummary(token){
     if (!earliestUnlock || ut < earliestUnlock) earliestUnlock = ut;
   }
 
-  // Latest LiquidityLocked event (limit to recent window)
+  // Latest event time (block timestamp)
   let latestTs = null;
   try{
-    const latestBlock = await ro.getBlockNumber();
-    const fromBlock = Math.max(0, latestBlock - 300000);
     const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
     const tokenTopic = ethers.utils.hexZeroPad(token, 32);
-    const logs = await ro.getLogs({ address: locker.address, topics: [topic0, tokenTopic], fromBlock, toBlock: "latest" });
+    const logs = await ro.getLogs({ address: locker.address, topics: [topic0, tokenTopic], fromBlock: Math.max(0, (await ro.getBlockNumber())-300000), toBlock: "latest" });
     if (logs.length){
       const last = logs.reduce((a,b)=> a.blockNumber > b.blockNumber ? a : b);
       const blk = await ro.getBlock(last.blockNumber);
       latestTs = blk?.timestamp || null;
     }
-  }catch(e){ /* non-fatal */ }
+  }catch{}
 
-  return { locks: (ids||[]).length, sumLocked: sum, earliestUnlock: earliestUnlock||null, latestEvent: latestTs||null };
+  return { sumLocked: sum, earliestUnlock: earliestUnlock||null, latestEvent: latestTs||null };
 }
 
-function toLower(a){ try{ return ethers.utils.getAddress(a).toLowerCase(); }catch{ return (a||"").toLowerCase(); } }
-function dedupeByAddress(list){
-  const m = new Map();
-  for (const it of list || []){
-    const addr = (it.address || it.token || it.token_address || "").toLowerCase();
-    if (!addr || !/^0x[a-fA-F0-9]{40}$/.test(addr)) continue;
-    if (!m.has(addr)) m.set(addr, it);
-  }
-  return Array.from(m.values());
-}
-
-/* Scan button */
 $("scan").onclick = async ()=>{
   try{
     $("rows").innerHTML=""; $("empty").style.display="none"; $("log").textContent="";
-    $("status").textContent="Loading pools_chache.json …";
-    const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
-    if (!r.ok) throw new Error(`Failed to load pools_chache.json: HTTP ${r.status}`);
-    const js = await r.json();
+    await loadPriceIndex();
 
-    const list = Array.isArray(js) ? js : (js.data || []);
-    const tokens = dedupeByAddress(list).map(x => ({
-      address: toLower(x.address),
-      symbol: x.symbol || "",
-      name: x.name || "",
-      usdPrice: deriveUsdPrice(x),
-      poolReserveUSD: Number(x.reserve_in_usd || 0) // not used for "locked TVL", kept for reference
-    }));
+    $("status").textContent = "Enumerating tokens from Locker…";
+    const tokenList = await discoverLockedTokens();
+    $("seen").textContent = fmtNum(tokenList.length);
 
-    $("scanned").textContent = fmtNum(tokens.length);
-    if (!tokens.length){
-      $("status").textContent = "No tokens found in pools_chache.json";
+    if (!tokenList.length){
+      $("status").textContent = "No tokens found in recent logs.";
       $("empty").style.display = "";
       $("count").textContent = "—";
       return;
     }
 
-    $("status").textContent = "Scanning on-chain locks & supplies …";
+    $("status").textContent = "Summarizing active locks…";
     const limit = pLimit(5);
 
-    const inclZero = $("inclZero").checked;
-    const results = await Promise.all(tokens.map(tok => limit(async ()=>{
+    const rows = (await Promise.all(tokenList.map(addr => limit(async ()=>{
       try{
-        const meta  = await getTokenMetaAndSupply(tok.address);
-        const locks = await getLocksSummary(tok.address);
+        // How much is currently locked?
+        const locks = await getLocksSummary(addr);
+        if (!locks.sumLocked || locks.sumLocked.isZero()) return null;
 
+        // Meta & supply
+        const meta  = await getTokenMetaAndSupply(addr);
         const lockedHuman   = bnToNum(locks.sumLocked, meta.decimals);
+        if (lockedHuman <= 0) return null;
+
         const adjustedHuman = bnToNum(meta.adjusted, meta.decimals);
         const burnedHuman   = bnToNum(meta.burned, meta.decimals);
         const totalHuman    = bnToNum(meta.total, meta.decimals);
         const lockedPct     = adjustedHuman > 0 ? (lockedHuman / adjustedHuman * 100) : 0;
-        const tvl           = lockedHuman * (tok.usdPrice || 0);
 
-        // If we only want projects with actual lock > 0
-        if (!inclZero && lockedHuman <= 0) return null;
+        // Price (may be 0 if missing in file)
+        const px = priceIndex.get(addr.toLowerCase());
+        const usdPrice = px?.usd || 0;
+        const tvl = lockedHuman * usdPrice;
+
+        // Prefer JSON name/symbol if token metadata is empty
+        const name   = meta.name   || px?.name   || "";
+        const symbol = meta.symbol || px?.symbol || "";
 
         return {
-          address: tok.address,
-          symbol: meta.symbol || tok.symbol,
-          name: meta.name || tok.name,
+          address: addr.toLowerCase(),
+          symbol, name,
           decimals: meta.decimals,
           lockedHuman, adjustedHuman, burnedHuman, totalHuman,
           lockedPct, tvl,
@@ -282,26 +309,22 @@ $("scan").onclick = async ()=>{
           nextUnlock: locks.earliestUnlock
         };
       }catch(e){
-        log("skip", tok.address, e.message || String(e));
+        log("skip", addr, e.message || String(e));
         return null;
       }
-    })));
+    })))).filter(Boolean);
 
-    const rows = results.filter(Boolean);
-    $("withLocks").textContent = fmtNum(rows.filter(r => r.lockedHuman > 0).length);
-
+    $("withLocks").textContent = fmtNum(rows.length);
     if (!rows.length){
-      $("status").textContent = "No rows to display (try enabling 'Include 0% rows').";
+      $("status").textContent = "No projects with active locks.";
       $("empty").style.display = "";
       $("count").textContent = "—";
       return;
     }
 
-    const sortBy = $("sortBy").value; // default lockedPct
-    rows.sort((a,b)=> sortBy === "lockedPct"
-      ? (b.lockedPct - a.lockedPct)
-      : (b.tvl - a.tvl));
-
+    // Sort and render
+    const sortBy = $("sortBy").value;
+    rows.sort((a,b)=> sortBy === "lockedPct" ? (b.lockedPct - a.lockedPct) : (b.tvl - a.tvl));
     const top = rows.slice(0, 10);
 
     const sumLockedTop = top.reduce((acc,x)=> acc + x.lockedHuman, 0);
@@ -347,11 +370,10 @@ $("scan").onclick = async ()=>{
   }
 };
 
-/* Auto-run on load: Testnet + Locked % + include 0% */
+/* Auto-run on load: Testnet + Locked % */
 document.addEventListener('DOMContentLoaded', ()=>{
   $("net").value = "testnet";
   $("sortBy").value = "lockedPct";
-  $("inclZero").checked = true;
   setNet("testnet");
   $("scan").click();
 });
