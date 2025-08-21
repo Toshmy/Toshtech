@@ -33,6 +33,16 @@
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     th.sortable{cursor:pointer}
     th.sortable .dir{opacity:.75;font-size:12px;margin-left:4px}
+
+    /* NEW: make the supply cell more compact & mobile-friendly */
+    td.supply-cell{min-width:180px;white-space:normal}
+    @media (max-width: 640px){
+      td.supply-cell{min-width:140px}
+      td.supply-cell .small{font-size:11px;line-height:1.25}
+      /* allow token cell to wrap CA nicely on small screens */
+      td.token-cell{white-space:normal}
+      td.token-cell .mono{word-break:break-all}
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
@@ -100,7 +110,7 @@ function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, 
 function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
 function toLower(a){ try{ return ethers.utils.getAddress(a).toLowerCase(); }catch{ return (a||"").toLowerCase(); } }
 
-/* time ago formatter */
+/* time formatters */
 function timeAgo(ts){
   if (!ts) return "—";
   const s = Math.max(1, Math.floor((Date.now()/1000 - ts)));
@@ -110,6 +120,17 @@ function timeAgo(ts){
   if (h>=1)  return `${h} hour${h>1?'s':''} ago`;
   if (m>=1)  return `${m} min${m>1?'s':''} ago`;
   return `${s} sec ago`;
+}
+/* NEW: symmetric formatter for future/past (so Unlock Date matches Event Date style) */
+function timeFromNow(ts){
+  if (!ts) return "—";
+  const now = Math.floor(Date.now()/1000);
+  const diff = ts - now;
+  const abs = Math.abs(diff);
+  const m = Math.floor(abs/60), h=Math.floor(m/60), d=Math.floor(h/24), mo=Math.floor(d/30);
+  const unit = mo>=1 ? [mo,"month"] : d>=1 ? [d,"day"] : h>=1 ? [h,"hour"] : m>=1 ? [m,"min"] : [abs,"sec"];
+  const [val, label] = unit;
+  return diff >= 0 ? `in ${val} ${label}${val>1?'s':''}` : `${val} ${label}${val>1?'s':''} ago`;
 }
 
 /* ============== Providers/Contracts ============== */
@@ -213,6 +234,22 @@ function pLimit(max){
 let DATA = []; // rows to render
 let tvlSortDir = -1; // -1 desc, 1 asc
 
+function tokenCellHTML(p){
+  const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
+  const nameLine = `<div class="small">${escapeHtml(p.name||'')}</div>`;
+  const caLine = `
+    <div class="small mono">
+      <a href="${explorerLink}" target="_blank" rel="noopener noreferrer" title="${p.address}">
+        ${p.address}
+      </a>
+    </div>`;
+  return `
+    <a href="https://www.toshtech.xyz/tdbv8.html?token=${p.address}" class="mono" target="_blank">${escapeHtml(p.symbol||'')}</a>
+    ${nameLine}
+    ${caLine}
+  `;
+}
+
 function render(){
   const rowsEl = $("rows");
   rowsEl.innerHTML = "";
@@ -224,7 +261,7 @@ function render(){
 
   byLocked.forEach((p,i)=>{
     const latest = p.latestEvent ? timeAgo(p.latestEvent) : "—";
-    const nextU  = p.nextUnlock ? new Date(p.nextUnlock*1000).toLocaleString() : "—";
+    const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
     const lockedPctClamped = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
 
     const totalHuman  = p.totalHuman;
@@ -237,9 +274,8 @@ function render(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${i+1}</td>
-      <td>
-        <a href="https://www.toshtech.xyz/tdbv8.html?token=${p.address}" class="mono" target="_blank">${escapeHtml(p.symbol||'')}</a>
-        <div class="small">${escapeHtml(p.name||'')}</div>
+      <td class="token-cell">
+        ${tokenCellHTML(p)}
       </td>
       <td>${latest}</td>
       <td style="min-width:160px">
@@ -248,7 +284,7 @@ function render(){
       </td>
       <td>${nextU}</td>
       <td data-tvl="${p.tvl}" style="text-align:right">$${fmtNum((p.tvl||0).toFixed(2))}</td>
-      <td style="min-width:220px">
+      <td class="supply-cell">
         <div class="supplybar">
           <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
           <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
@@ -269,7 +305,7 @@ function resortByTVL(){
   DATA.sort((a,b)=> dir * ((b.tvl||0) - (a.tvl||0)));
   const arrow = dir === -1 ? "▼" : "▲";
   $("dirTVL").textContent = arrow;
-  // Re-render preserving new rank order based on current DATA
+
   const rowsEl = $("rows");
   rowsEl.innerHTML = "";
   if (!DATA.length){ $("empty").style.display=""; return; }
@@ -277,7 +313,7 @@ function resortByTVL(){
 
   DATA.forEach((p,i)=>{
     const latest = p.latestEvent ? timeAgo(p.latestEvent) : "—";
-    const nextU  = p.nextUnlock ? new Date(p.nextUnlock*1000).toLocaleString() : "—";
+    const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
     const lockedPctClamped = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
 
     const totalHuman  = p.totalHuman;
@@ -290,9 +326,8 @@ function resortByTVL(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${i+1}</td>
-      <td>
-        <a href="https://www.toshtech.xyz/tdbv8.html?token=${p.address}" class="mono" target="_blank">${escapeHtml(p.symbol||'')}</a>
-        <div class="small">${escapeHtml(p.name||'')}</div>
+      <td class="token-cell">
+        ${tokenCellHTML(p)}
       </td>
       <td>${latest}</td>
       <td style="min-width:160px">
@@ -301,7 +336,7 @@ function resortByTVL(){
       </td>
       <td>${nextU}</td>
       <td style="text-align:right">$${fmtNum((p.tvl||0).toFixed(2))}</td>
-      <td style="min-width:220px">
+      <td class="supply-cell">
         <div class="supplybar">
           <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
           <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
@@ -352,7 +387,6 @@ async function build(){
         tvl
       };
     }catch(e){
-      // log("skip", addr, e.message || String(e));
       return null;
     }
   })))).filter(Boolean);
