@@ -8,25 +8,20 @@
     :root{
       --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
       --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
-      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18);
     }
-    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);
-      color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
     a{color:#93c5fd;text-decoration:none}
     .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
     .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
-    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);
-      border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-    .pill{display:inline-block;padding:.25rem .65rem;border-radius:999px;
-      background:#081021;border:1px solid var(--border);color:#a8ffd9}
-    .badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;
-      background:#113327;border:1px solid var(--border);color:#00ffae}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    .pill{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+    .badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:#113327;border:1px solid var(--border);color:#00ffae}
     input,button{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
     input:focus,button:focus{outline:2px solid var(--accent)}
-    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));
-      color:#00251b;border:0;font-weight:700}
+    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700}
     .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
@@ -38,16 +33,16 @@
     td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
 
     /* Autocomplete */
-    .ac-wrap{position:relative;flex:1 1 640px;min-width:280px;max-width:900px}
-    .ac-wrap > input{width:95%}
+    .ac-wrap{position:relative}
     .ac-list{
       position:absolute; left:0; right:0; top:calc(100% + 4px);
       background:#0f1730; border:1px solid rgba(0,255,174,.2); border-radius:12px;
-      box-shadow:0 10px 24px rgba(0,0,0,.35); z-index:50; max-height:280px;
-      overflow:auto; display:none;
+      box-shadow:0 10px 24px rgba(0,0,0,.35); z-index:50; max-height:280px; overflow:auto; display:none;
     }
-    .ac-item{display:flex; gap:8px; align-items:center; padding:10px 12px; cursor:pointer;
-      border-bottom:1px solid rgba(255,255,255,.06); font-size:13px;}
+    .ac-item{
+      display:flex; gap:8px; align-items:center; padding:10px 12px; cursor:pointer;
+      border-bottom:1px solid rgba(255,255,255,.06); font-size:13px;
+    }
     .ac-item:last-child{border-bottom:0}
     .ac-item:hover{background:#0b1329}
     .ac-name{font-weight:600}
@@ -58,23 +53,16 @@
     /* Supply Panel */
     .grid{display:grid;gap:10px}
     @media(min-width:720px){ .grid.cols-3{grid-template-columns:repeat(3,1fr)} }
-    .kv{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--border);
-      border-radius:12px;padding:10px;background:#0f1730}
+    .kv{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:12px;padding:10px;background:#0f1730}
     .small{font-size:12px;color:#bfeede}
     .muted{color:#a8ffd9;opacity:.9}
 
     /* Resolved token line */
     .resolved{font-size:13px;color:#a8ffd9;margin-top:6px}
     .warn{font-size:12px;color:#ffb4b4;margin-left:auto}
-
-    /* Toolbar layout */
-    .toolbar-wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .toolbar-right{display:flex;flex-wrap:wrap;gap:10px;flex:0 0 auto}
-    .toolbar-right > *{flex:0 0 auto}
-    @media(max-width:900px){
-      .toolbar-right{width:100%;justify-content:flex-start}
-    }
   </style>
+
+  <!-- ethers v5 -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
@@ -84,23 +72,20 @@
     <!-- Token Status -->
     <section class="card" style="margin-bottom:18px">
       <h2 class="section-title">Token Status</h2>
+      <div class="row">
 
-      <div class="toolbar-wrap">
-        <div class="ac-wrap">
-          <input id="token" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
-          <div id="ac-token" class="ac-list"></div>
-        </div>
+		<div class="ac-wrap" style="flex:1 1 680px;min-width:240px">
+		  <input id="token" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+		  <div id="ac-token" class="ac-list"></div>
+		</div>
+		<div id="resolvedToken" class="resolved" style="display:none">—</div>
+		<div id="creatorLine" class="resolved" style="display:none">—</div>		  
 
-        <div class="toolbar-right">
-          <button id="scan" class="btn">Load Active Locks</button>
-          <span id="count" class="pill">—</span>
-          <span id="total" class="pill">Total: —</span>
-          <span id="corsNote" class="warn" style="display:none">Explorer blocked — guessed creator shown</span>
-        </div>
+        <button id="scan" class="btn">Load Active Locks</button>
+        <span id="count" class="pill">—</span>
+        <span id="total" class="pill">Total: —</span>
+        <span id="corsNote" class="warn" style="display:none">Explorer blocked — guessed creator shown</span>
       </div>
-
-      <div id="resolvedToken" class="resolved" style="display:none">—</div>
-      <div id="creatorLine" class="resolved" style="display:none">—</div>
 
       <div id="rankWrap" style="margin-top:8px;display:none">
         <div class="row">
@@ -134,6 +119,7 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
+
       <pre id="log" style="margin-top:12px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word"></pre>
     </section>
 
@@ -141,12 +127,12 @@
     <section class="card">
       <h2 class="section-title">Wallet Locks (by Token)</h2>
       <div class="row">
-        <div class="ac-wrap">
-          <input id="token2" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
-          <div id="ac-token2" class="ac-list"></div>
-        </div>
 
-        <input id="wallet" class="mono" placeholder="0x... wallet" style="flex:1 1 320px;min-width:220px">
+		<div class="ac-wrap" style="flex:1 1 300px;min-width:220px">
+		  <input id="token2" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+		  <div id="ac-token2" class="ac-list"></div>
+		</div>
+        <input id="wallet" class="mono" placeholder="0x... wallet" style="flex:1 1 300px;min-width:220px">
         <button id="scanWallet" class="btn gray">Load</button>
       </div>
 
@@ -161,6 +147,7 @@
           <tbody id="rows2"></tbody>
         </table>
       </div>
+
       <pre id="log2" style="margin-top:12px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word"></pre>
     </section>
   </div>
@@ -208,7 +195,7 @@ const PARAM_WALLET = qs.get('wallet');
 
 const PepuExplorer = {
   address: (a) => `${EXPLORER_BASE}/address/${a}`,
-  tx:      (h) => `${EXPLORER_BASE}/tx/${h}`
+  tx:      (h) => `${EXPLORER_BASE}/tx/${h}` // <<< use /tx/ per your request
 };
 function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
 function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
@@ -223,7 +210,7 @@ async function fetchJsonCORS(url) {
 async function pepuSearchRemote(q) {
   if (!q || (q = q.trim()).length < 2) return [];
   if (/^0x[a-fA-F0-9]{40}$/.test(q)) {
-    return [{ address: q.toLowerCase(), name: "", symbol: "" }];
+    return [{ address: q, name: "", symbol: "" }];
   }
   const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
   try {
@@ -249,11 +236,8 @@ function attachTokenAutocomplete(inputId, listId){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
   if(!inp || !list) return;
-
-  // Make sure the list sits right below its input (HTML already wraps in .ac-wrap)
-  const hide=()=>{ list.style.display="none"; };
-  const show=()=>{ list.style.display="block"; };
-
+  const hide=()=>list.style.display="none";
+  const show=()=>list.style.display="block";
   hide();
   const esc = s => String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
   const render = items=>{
@@ -266,18 +250,15 @@ function attachTokenAutocomplete(inputId, listId){
     }).join("");
     show();
   };
-
   const onType = debounce(async ()=>{
     const q = inp.value.trim();
     if(!q){ hide(); return; }
     if(/^0x[a-fA-F0-9]{40}$/.test(q)){ render([{address:q.toLowerCase(), name:"", symbol:""}]); return; }
     render(await pepuSearchRemote(q));
   }, 220);
-
   inp.addEventListener('input', onType);
   inp.addEventListener('focus', ()=>{ if(list.innerHTML) show(); });
   document.addEventListener('click', (e)=>{ if(!list.contains(e.target) && e.target!==inp) hide(); });
-
   list.addEventListener('click', (e)=>{
     const item = e.target.closest('.ac-item'); if(!item) return;
     const addr = item.getAttribute('data-addr');
@@ -296,11 +277,12 @@ async function resolveTokenMeta(token) {
     ], ro);
     const [symbol, name, decimals] = await Promise.all([
       erc.symbol().catch(()=>""), 
-      erc.name().catch(()=>""), 
+      erc.name().catch(()=>""),
       erc.decimals().catch(()=>null)
     ]);
     if (symbol || name || decimals !== null) return { symbol, name, decimals };
   } catch {}
+  // Fallback: try a search hit (decimals unknown)
   const res = await pepuSearchRemote(token);
   const item = res.find(x => x.address.toLowerCase() === token.toLowerCase()) || res[0];
   return { symbol: item?.symbol || "", name: item?.name || "", decimals: null };
@@ -317,10 +299,13 @@ async function showResolvedLine(addr){
 
 /* ===================== CREATOR (via Explorer) ===================== */
 async function getCreatorFromExplorer(tokenAddress) {
+  // 1) address → creation tx hash
   const a = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/addresses/${tokenAddress}`);
-  const creationTx = a.creation_transaction_hash || a.data?.attributes?.creation_transaction_hash;
+  const creationTx = a.creation_transaction_hash
+                  || a.data?.attributes?.creation_transaction_hash;
   if (!creationTx) throw new Error("No creation tx on explorer response");
 
+  // 2) transaction → from.hash (creator)
   const t = await fetchJsonCORS(`${CREATOR_EXPLORER_BASE}/api/v2/transactions/${creationTx}`);
   const creator = t.from?.hash || t.data?.attributes?.from?.hash;
   if (!creator) throw new Error("No creator found in transaction response");
@@ -377,6 +362,7 @@ $("scan").onclick = async () => {
         $("creatorLine").style.display = "";
       }
     } catch {
+      // Will attempt a guess later
       $("corsNote").style.display = "";
     }
 
@@ -480,6 +466,7 @@ $("scan").onclick = async () => {
             Math.min(100, Math.max(0, totalLockedHuman / adjustedHuman * 100)).toFixed(2) + '%';
         }
 
+        // Avg remaining
         const nowSec = Math.floor(Date.now()/1000);
         let sumSec = 0, cnt = 0;
         for (let i=0;i<ids.length;i++){
@@ -488,6 +475,7 @@ $("scan").onclick = async () => {
         }
         if (cnt>0) avgDays = (sumSec / cnt / 86400).toFixed(1) + 'd';
 
+        // Distribution (by owner)
         let totals = Array.from(ownersTotals.values());
         if (totals.length){
           totals.sort((a,b)=> (a.gt(b)? -1 : (b.gt(a)? 1 : 0)));
@@ -518,7 +506,7 @@ document.addEventListener('click', async (e)=>{
     const logs = await ro.getLogs(filter);
     if (!logs.length) { alert("No event found for this lockId"); btn.disabled=false; return; }
     const txh = logs[0].transactionHash;
-    window.open(PepuExplorer.tx(txh), "_blank");
+    window.open(PepuExplorer.tx(txh), "_blank"); // ← /tx/<hash>
   }catch(err){ alert(err?.message || String(err)); }
   finally{ btn.disabled=false; }
 });
