@@ -37,6 +37,23 @@
     td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
     #amountHint{margin-top:6px;min-height:16px}
     .flatpickr-calendar{background:#0f1730;border:1px solid var(--border);box-shadow:var(--shadow)}
+    /* Autocomplete */
+    .ac-wrap{position:relative}
+    .ac-list{
+      position:absolute; left:0; right:0; top:calc(100% + 4px);
+      background:#0f1730; border:1px solid rgba(0,255,174,.2); border-radius:12px;
+      box-shadow:0 10px 24px rgba(0,0,0,.35); z-index:50; max-height:280px; overflow:auto; display:none;
+    }
+    .ac-item{
+      display:flex; gap:8px; align-items:center; padding:10px 12px; cursor:pointer;
+      border-bottom:1px solid rgba(255,255,255,.06); font-size:13px;
+    }
+    .ac-item:last-child{border-bottom:0}
+    .ac-item:hover{background:#0b1329}
+    .ac-name{font-weight:600}
+    .ac-sym{color:#a8ffd9}
+    .ac-addr{margin-left:auto; font-family:ui-monospace,monospace; color:#9fb; opacity:.85}
+    .ac-empty{padding:10px 12px; color:#a8ffd9; font-size:12px}
   </style>
 
   <!-- ethers v5 -->
@@ -64,7 +81,10 @@
 
       <div>
         <label for="token">Token address</label>
-        <input id="token" class="mono" placeholder="0x... token">
+        <div class="ac-wrap">
+          <input id="token" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+          <div id="ac-token" class="ac-list"></div>
+        </div>
         <div id="tokenMeta" class="muted">—</div>
       </div>
 
@@ -86,7 +106,7 @@
 
       <div class="row" style="margin-top:14px">
         <button id="approveLock" class="btn">Approve & Lock</button>
-        <span class="pill">Fee ~3% → owner • remainder locked</span>
+        <span class="pill">Fee ~1% → (50% burned)</span>
       </div>
       <pre id="txlog" style="margin-top:12px"></pre>
     </section>
@@ -95,8 +115,11 @@
     <section class="card">
       <div class="row between">
         <h2 style="margin:0">My Locks (by Token)</h2>
-        <div class="row" style="gap:8px">
-          <input id="myToken" class="mono" placeholder="0x... token" style="width:min(360px, 70vw)">
+        <div class="row" style="gap:8px;width:min(360px, 70vw)">
+          <div class="ac-wrap" style="width:100%">
+            <input id="myToken" class="mono" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+            <div id="ac-myToken" class="ac-list"></div>
+          </div>
           <button id="scan" class="btn gray">Load</button>
         </div>
       </div>
@@ -138,10 +161,14 @@
 
 <script>
 /* ========= Hardcoded env ========= */
-const LOCKER = "0x189ef775DcC7782802ca16b870Da7B5FaE3C8524";
-const RPC    = "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz";
+const LOCKER = "0xccefe66507762370c2487dd198d7d1fefc6def8f"; // ToshLockV4 prod
+const RPC    = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
 const CHAIN  = 97741;
 const WC_PID = "6e2df48125e4f633b093361ba0a87c81";
+const EXPLORER_BASE = "https://pepuscan.com";
+
+// Cloudflare Worker relay (for explorer APIs / search)
+const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
 
 /* ========= ABIs ========= */
 const ERC20 = [
@@ -166,9 +193,14 @@ const logTx = (...a)=>{ $("txlog").textContent += a.join(" ")+"\n"; };
 const logScan = (...a)=>{ $("scanlog").textContent += a.join(" ")+"\n"; };
 const setStatus = s => { $("status").textContent = s; };
 const PepuExplorer = {
-  tx: (h) => `https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz/tx/${h}`,
-  address: (a) => `https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz/address/${a}`
+  tx: (h) => `${EXPLORER_BASE}/tx/${h}`,
+  address: (a) => `${EXPLORER_BASE}/address/${a}`
 };
+async function fetchJsonCORS(url) {
+  const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
+  if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
+  return r.json();
+}
 
 let providerType = null; // 'mm' | 'wc'
 let wcProvider, ethersProvider, signer;
@@ -239,7 +271,16 @@ async function refreshTokenMeta(){
     $("tokenMeta").textContent = `${name} (${symbol}), decimals=${tokenDecimals}`;
     const human = $("amount").value || "0";
     $("amountHint").textContent = `= ${ethers.utils.parseUnits(human, tokenDecimals).toString()} base units`;
-  }catch{ $("tokenMeta").textContent="⚠️ cannot read token"; tokenDecimals=null; }
+  }catch{
+    // fallback: try remote search to at least show name/symbol (decimals unknown)
+    try{
+      const meta = await searchBestMatchByAddress(addr);
+      tokenName = meta?.name || ""; tokenSymbol = meta?.symbol || ""; tokenDecimals = null;
+      $("tokenMeta").textContent = `${tokenName || "?"} (${tokenSymbol || "?"})`;
+    }catch{
+      $("tokenMeta").textContent="⚠️ cannot read token"; tokenDecimals=null;
+    }
+  }
 }
 $("token").addEventListener("change", refreshTokenMeta);
 $("token").addEventListener("blur", refreshTokenMeta);
@@ -307,7 +348,6 @@ async function scanMyLocks(){
       const human = ethers.utils.formatUnits(amount, dec);
       const date  = new Date(Number(unlockTime)*1000).toLocaleString();
       const ownerDisp = user.slice(0,6)+"…"+user.slice(-4);
-      const tokenLink = `<a href="${PepuExplorer.address(tokenAddr)}" target="_blank">${tokenAddr.slice(0,6)}…${tokenAddr.slice(-4)}</a>`;
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -343,6 +383,85 @@ async function scanMyLocks(){
     logScan("Done.");
   }catch(e){ logScan("❌", e?.data?.message || e?.message || String(e)); }
 }
+
+/* ========= Explorer SEARCH via your Worker (no tokens.json) ========= */
+async function pepuSearchRemote(q) {
+  if (!q || (q = q.trim()).length < 2) return [];
+  if (/^0x[a-fA-F0-9]{40}$/.test(q)) return [{ address: q, name: "", symbol: "" }];
+
+  const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
+  try {
+    const js = await fetchJsonCORS(url);
+    const items = js.items || [];
+    return items
+      .filter(it => it.type === 'token' || it.token_type === 'ERC-20' || it.address)
+      .map(it => ({
+        address: (it.address || it.address_hash || "").toLowerCase(),
+        name: it.name || "",
+        symbol: it.symbol || ""
+      }))
+      .filter((it, i, arr) => it.address && arr.findIndex(x => x.address === it.address) === i)
+      .slice(0, 20);
+  } catch (e) {
+    console.warn("search failed", e);
+    return [];
+  }
+}
+
+// Helper: when user pastes an address, try to pull one matching search item for name/symbol
+async function searchBestMatchByAddress(addr){
+  try{
+    const res = await pepuSearchRemote(addr);
+    return res.find(x => x.address.toLowerCase()===addr.toLowerCase()) || res[0] || null;
+  }catch{ return null; }
+}
+
+function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
+
+function attachTokenAutocomplete(inputId, listId){
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(!inp || !list) return;
+  function hide(){ list.style.display="none"; }
+  function show(){ list.style.display="block"; }
+  hide();
+  const esc = s => String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const render = (items)=>{
+    if(items.length===0){
+      list.innerHTML = `<div class="ac-empty">No matches</div>`; show(); return;
+    }
+    list.innerHTML = items.map(it=>{
+      const name = it.name ? `<span class="ac-name">${esc(it.name)}</span>` : '';
+      const sym  = it.symbol ? `<span class="ac-sym">(${esc(it.symbol)})</span>` : '';
+      const short = it.address.slice(0,8)+"…"+it.address.slice(-6);
+      return `<div class="ac-item" data-addr="${it.address}">
+        ${name} ${sym}
+        <span class="ac-addr">${short}</span>
+      </div>`;
+    }).join("");
+    show();
+  };
+  const onType = debounce(async ()=>{
+    const q = inp.value.trim();
+    if(!q){ hide(); return; }
+    if(/^0x[a-fA-F0-9]{40}$/.test(q)){ render([{address:q.toLowerCase(), name:"", symbol:""}]); return; }
+    const items = await pepuSearchRemote(q); render(items);
+  }, 220);
+  inp.addEventListener('input', onType);
+  inp.addEventListener('focus', ()=>{ if(list.innerHTML) show(); });
+  document.addEventListener('click', (e)=>{ if(!list.contains(e.target) && e.target!==inp) hide(); });
+  list.addEventListener('click', (e)=>{
+    const item = e.target.closest('.ac-item'); if(!item) return;
+    const addr = item.getAttribute('data-addr');
+    inp.value = addr; hide();
+    inp.dispatchEvent(new Event('change')); inp.dispatchEvent(new Event('blur'));
+  });
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  attachTokenAutocomplete('token','ac-token');
+  attachTokenAutocomplete('myToken','ac-myToken');
+});
 </script>
 </body>
 </html>

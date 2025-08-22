@@ -11,6 +11,7 @@
       --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18);
       --green:#00ffae; --red:#ff6b6b;
     }
+    *,*::before,*::after{box-sizing:border-box}
     html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
     a{color:#93c5fd;text-decoration:none}
     .wrap{max-width:1150px;margin:24px auto;padding:0 16px}
@@ -18,15 +19,19 @@
     .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .pill{display:inline-block;padding:.25rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
     th{text-align:left;background:var(--bg-2);position:sticky;top:0}
     .table-scroll{overflow:auto;border-radius:12px}
+
     .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
     .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
+
     .supplybar{height:10px;background:#0f1730;border:1px solid var(--border);border-radius:6px;display:flex;overflow:hidden}
     .supplybar .circ{background:var(--green);height:100%}
     .supplybar .burn{background:var(--red);height:100%}
+
     .muted{color:var(--muted);opacity:.92}
     .small{font-size:12px;color:#bfeede}
     .center{display:flex;align-items:center;justify-content:center;padding:18px;color:#bfeede}
@@ -34,14 +39,69 @@
     th.sortable{cursor:pointer}
     th.sortable .dir{opacity:.75;font-size:12px;margin-left:4px}
 
-    /* NEW: make the supply cell more compact & mobile-friendly */
+    /* Token cell */
+    td.token-cell{white-space:normal}
+    .token-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .token-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+    .token-logo{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:#0b1226;flex:0 0 36px}
+    .token-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .token-ca a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
+
+    .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:.22rem .6rem;background:#081021}
+    .chip .emoji{font-size:12px;opacity:.9}
+    .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
     td.supply-cell{min-width:180px;white-space:normal}
+
+    /* Mobile toolbar */
+    .mobile-toolbar{display:none; gap:8px; align-items:center; margin:8px 0 0;}
+    .btn{cursor:pointer; border:1px solid var(--border); background:#081021; color:#a8ffd9; border-radius:999px; padding:.4rem .8rem; font-size:12px;}
+    .btn:active{transform:translateY(1px)}
+
+    /* ===== Mobile: stacked cards ===== */
     @media (max-width: 640px){
-      td.supply-cell{min-width:140px}
-      td.supply-cell .small{font-size:11px;line-height:1.25}
-      /* allow token cell to wrap CA nicely on small screens */
-      td.token-cell{white-space:normal}
-      td.token-cell .mono{word-break:break-all}
+      .table-scroll{ overflow:visible }
+      thead{ display:none }
+      table, tbody, tr, td{ display:block; width:100% }
+      tr{
+        margin:12px 0; border:1px solid var(--border); border-radius:12px;
+        background:var(--card); box-shadow:var(--shadow); padding:10px
+      }
+      .mobile-toolbar{display:flex}
+      tr .row-index{ display:none } /* hide # */
+
+      /* Token header uses FULL width — no "TOKEN" label */
+      td.token-cell{ padding-bottom:8px }
+      td.token-cell[data-label]{ /* if someone leaves the attr by mistake, hide it */
+        --dummy: 0;
+      }
+      td.token-cell::before{ content:none !important }  /* ensure no label shows */
+
+      /* Make action wrap under header, socials on separate full-width line */
+      .token-head{flex-wrap:wrap;gap:10px}
+      .token-actions{flex:1 0 100%;display:flex;justify-content:flex-start}
+      .token-links{width:100%;justify-content:flex-start}
+      .chip{ font-size:11px; padding:.22rem .55rem; max-width:100% }
+
+      /* Key-value rows */
+      td[data-label]{
+        display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:8px 4px
+      }
+      td[data-label]::before{
+        content:attr(data-label);
+        flex:0 0 42%;
+        max-width:220px;
+        font-size:11px; color:#bfeede; opacity:.8; text-transform:uppercase; letter-spacing:.03em;
+        padding-top:3px;
+      }
+      .cell-val{
+        flex:1; min-width:0; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+        overflow-wrap:anywhere;
+      }
+      .cell-val .progress{ width:100% }
+      td.supply-cell{ min-width:auto }
+      .mono{ word-break:normal } /* keep CA as one line with ellipsis */
+      th.sortable .dir{ display:none }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -52,6 +112,12 @@
       <h1 class="glow-text" style="margin:0">🏆 ToshLock — Projects with Active Locks</h1>
       <span id="status" class="pill">Loading…</span>
     </header>
+
+    <!-- Mobile toolbar -->
+    <div class="mobile-toolbar">
+      <button id="btnSortTVL" class="btn">Sort by TVL</button>
+      <span class="small" id="sortHint"></span>
+    </div>
 
     <section class="table-scroll card" style="padding:0">
       <table>
@@ -74,21 +140,19 @@
   </div>
 
 <script>
-
-/* ============== CONFIG (Testnet default) ============== */
+/* ===== CONFIG ===== */
 const CONFIG = {
-    LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
-    RPC:    "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
-    EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"
+  LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
+  RPC: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
+  EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
+  GQL_URL: "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad"
 };
-/* pools cache file */
+const GQL_QUERY = `query PresalesLogos { presales(first: 1000) { data token } }`;
 const POOLS_JSON_URL = "pools_cache.json";
-/* burn addresses */
 const BURN_ADDRS = [
   "0xa9fD599cd8857e90059c83e4885Dc09986039085",
   "0x000000000000000000000000000000000000dEaD"
 ];
-/* ABIs */
 const ERC20 = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
@@ -101,27 +165,18 @@ const LOCKER_ABI = [
   "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
 ];
 
-/* ============== HELPERS ============== */
+/* ===== HELPERS ===== */
 const $ = id => document.getElementById(id);
-const log = (...a)=>{ const el=$("log"); el.style.display='block'; el.textContent += a.join(" ")+"\n"; };
-function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
+const log = (...a)=>{ const el=$("log"); el.style.display='block'; el.textContent += a.join(" ")+"\\n"; };
+
+function shortAddr(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
 function fmtNum(n){ return Number(n).toLocaleString(); }
 function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, decimals)); }catch{ return 0; } }
-function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
-function toLower(a){ try{ return ethers.utils.getAddress(a).toLowerCase(); }catch{ return (a||"").toLowerCase(); } }
-
-/* time formatters */
-function timeAgo(ts){
-  if (!ts) return "—";
-  const s = Math.max(1, Math.floor((Date.now()/1000 - ts)));
-  const m = Math.floor(s/60), h=Math.floor(m/60), d=Math.floor(h/24), mo=Math.floor(d/30);
-  if (mo>=1) return `${mo} month${mo>1?'s':''} ago`;
-  if (d>=1)  return `${d} day${d>1?'s':''} ago`;
-  if (h>=1)  return `${h} hour${h>1?'s':''} ago`;
-  if (m>=1)  return `${m} min${m>1?'s':''} ago`;
-  return `${s} sec ago`;
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[m]));
 }
-/* NEW: symmetric formatter for future/past (so Unlock Date matches Event Date style) */
 function timeFromNow(ts){
   if (!ts) return "—";
   const now = Math.floor(Date.now()/1000);
@@ -133,15 +188,21 @@ function timeFromNow(ts){
   return diff >= 0 ? `in ${val} ${label}${val>1?'s':''}` : `${val} ${label}${val>1?'s':''} ago`;
 }
 
-/* ============== Providers/Contracts ============== */
+/* ===== Providers/Contracts ===== */
 const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
 const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 
-/* ============== Load market caps ============== */
-let marketCaps = new Map(); // address-> {mc, name, symbol}
+/* ===== External caches ===== */
+let marketCaps = new Map();
+let tokenMetaFromGQL = new Map();
+
 async function loadMarketCaps(){
   marketCaps.clear();
   try{
+    if (location.protocol === "file:") {
+      console.warn("pools_cache.json blocked on file:// — run a local server to load it.");
+      return;
+    }
     const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
     if (!r.ok) return;
     const js = await r.json();
@@ -156,14 +217,38 @@ async function loadMarketCaps(){
         });
       }
     }
-  }catch(e){ /* silent if file missing */ }
+  }catch(e){}
 }
 
-/* ============== Discover tokens with active locks ============== */
+async function loadTokenLogos(){
+  tokenMetaFromGQL.clear();
+  try{
+    const r = await fetch(CONFIG.GQL_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({ query: GQL_QUERY })
+    });
+    if (!r.ok) { console.warn("GQL fetch failed:", r.status); return; }
+    const js = await r.json();
+    const presales = js?.data?.presales || [];
+    for (const p of presales){
+      const addr = (p.token || "").toLowerCase();
+      if(!/^0x[a-fA-F0-9]{40}$/.test(addr)) continue;
+      let parsed = {};
+      try{ parsed = JSON.parse(p.data || "{}"); }catch{}
+      const iconUrl = parsed.iconUrl || "";
+      const websiteUrl = parsed.websiteUrl || "";
+      const xUrl = parsed.xUrl || parsed.twitterUrl || "";
+      const telegramUrl = parsed.telegramUrl || "";
+      tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
+    }
+  }catch(e){ console.warn("GQL error:", e); }
+}
+
 async function discoverLockedTokens(){
   const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
   const latest = await ro.getBlockNumber();
-  const fromBlock = Math.max(0, latest - 800_000); // window
+  const fromBlock = Math.max(0, latest - 800_000);
   const logs = await ro.getLogs({ address: locker.address, topics: [topic0], fromBlock, toBlock: "latest" });
   const tokens = new Set();
   for (const lg of logs){
@@ -173,7 +258,6 @@ async function discoverLockedTokens(){
   return Array.from(tokens);
 }
 
-/* ============== Token meta / supply / locks ============== */
 async function getTokenMetaAndSupply(token){
   const t = new ethers.Contract(token, ERC20, ro);
   const [name, symbol, decimals, total, ...burns] = await Promise.all([
@@ -183,14 +267,12 @@ async function getTokenMetaAndSupply(token){
   ]);
   let burned = ethers.BigNumber.from(0);
   for (const b of burns) burned = burned.add(b);
-  const adjusted = total.sub(burned);
-  return { name, symbol, decimals:Number(decimals), total, burned, adjusted };
+  return { name, symbol, decimals:Number(decimals), total, burned };
 }
 
 async function getLocksSummary(token){
   const [ids, owners, amounts, unlockTimes] =
     await locker.getActiveLocksByToken(token, 0, 1000).catch(()=>[[],[],[],[]]);
-
   let sum = ethers.BigNumber.from(0);
   let earliestUnlock = null;
   for (let i=0;i<ids.length;i++){
@@ -198,29 +280,9 @@ async function getLocksSummary(token){
     const ut = Number(unlockTimes[i]);
     if (!earliestUnlock || ut < earliestUnlock) earliestUnlock = ut;
   }
-
-  // Latest lock event timestamp for this token
-  let latestTs = null;
-  try{
-    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
-    const tokenTopic = ethers.utils.hexZeroPad(token, 32);
-    const logs = await ro.getLogs({
-      address: locker.address,
-      topics: [topic0, tokenTopic],
-      fromBlock: Math.max(0, (await ro.getBlockNumber()) - 300_000),
-      toBlock: "latest"
-    });
-    if (logs.length){
-      const last = logs.reduce((a,b)=> a.blockNumber > b.blockNumber ? a : b);
-      const blk = await ro.getBlock(last.blockNumber);
-      latestTs = blk?.timestamp || null;
-    }
-  }catch{}
-
-  return { sumLocked: sum, earliestUnlock: earliestUnlock || null, latestEvent: latestTs || null };
+  return { sumLocked: sum, earliestUnlock: earliestUnlock || null };
 }
 
-/* small concurrency control */
 function pLimit(max){
   let running=0, queue=[];
   const next=()=>{ running--; if(queue.length) queue.shift()(); };
@@ -230,26 +292,44 @@ function pLimit(max){
   });
 }
 
-/* ============== Render ============== */
-let DATA = []; // rows to render
-let tvlSortDir = -1; // -1 desc, 1 asc
-
+/* ===== UI helpers ===== */
 function tokenCellHTML(p){
   const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
-  const detailsLink = `https://www.toshtech.xyz/tdbv8.html?token=${p.address}`;
+  const detailsLink  = `https://www.toshtech.xyz/toshdashboard.html?token=${p.address}`;
+  const meta = tokenMetaFromGQL.get(p.address) || {};
+  const logo = meta.iconUrl || "";
+  const web = meta.websiteUrl || "";
+  const x   = meta.xUrl || "";
+  const tg  = meta.telegramUrl || "";
 
   return `
-    <div class="small">${escapeHtml(p.name || p.symbol || '')}</div>
-    <div class="small">
-      <a href="${detailsLink}" target="_blank" rel="noopener noreferrer">🔒 Active Locks</a>
+    <div class="token-head">
+      <div class="token-left">
+        ${logo ? `<img class="token-logo" src="${logo}" alt="" onerror="this.style.display='none'">` : `<div class="token-logo" style="display:inline-block"></div>`}
+        <div style="min-width:0">
+          <div class="token-name">${escapeHtml(p.name || p.symbol || '')}</div>
+          <div class="small mono token-ca">
+            <a href="${explorerLink}" target="_blank" rel="noopener noreferrer" title="${p.address}">
+              ${shortAddr(p.address)}
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="token-actions">
+        <a class="chip" href="${detailsLink}" target="_blank" rel="noopener noreferrer"><span class="emoji">🔒</span> Active Locks</a>
+      </div>
     </div>
-    <div class="small mono">
-      <a href="${detailsLink}" target="_blank" rel="noopener noreferrer" title="${p.address}">
-        ${shortAddr(p.address)}
-      </a>
+    <div class="token-links">
+      ${web ? `<a class="chip" href="${web}" target="_blank" rel="noopener noreferrer"><span class="emoji">🕸️</span> Website</a>` : ""}
+      ${x   ? `<a class="chip" href="${x}"   target="_blank" rel="noopener noreferrer"><span class="emoji">𝕏</span> X</a>` : ""}
+      ${tg  ? `<a class="chip" href="${tg}"  target="_blank" rel="noopener noreferrer"><span class="emoji">💬</span> Telegram</a>` : ""}
     </div>
   `;
 }
+
+/* ===== Render ===== */
+let DATA = [];
+let tvlSortDir = -1; // -1 desc, 1 asc
 
 function render(){
   const rowsEl = $("rows");
@@ -257,11 +337,9 @@ function render(){
   if (!DATA.length){ $("empty").style.display=""; return; }
   $("empty").style.display="none";
 
-  // default order by Locked % desc
   const byLocked = [...DATA].sort((a,b)=> b.lockedPct - a.lockedPct);
 
   byLocked.forEach((p,i)=>{
-    const latest = p.latestEvent ? timeAgo(p.latestEvent) : "—";
     const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
     const lockedPctClamped = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
 
@@ -274,23 +352,40 @@ function render(){
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${i+1}</td>
+      <td data-label="#" class="row-index">${i+1}</td>
+
+      <!-- IMPORTANT: no data-label on the token cell (full-width header on mobile) -->
       <td class="token-cell">
         ${tokenCellHTML(p)}
       </td>
-      <td style="min-width:160px">
-        <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
-        <div class="small">${lockedPctClamped.toFixed(2)}%</div>
-      </td>
-      <td>${nextU}</td>
-      <td data-tvl="${p.tvl}" style="text-align:right">$${fmtNum((p.tvl||0).toFixed(2))}</td>
-      <td class="supply-cell">
-        <div class="supplybar">
-          <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
-          <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
+
+      <td data-label="Locked %">
+        <div class="cell-val">
+          <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
+          <div class="small">${lockedPctClamped.toFixed(2)}%</div>
         </div>
-        <div class="small">
-          Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
+      </td>
+
+      <td data-label="Unlock Date">
+        <div class="cell-val">${nextU}</div>
+      </td>
+
+      <td data-label="TVL" data-tvl="${p.tvl}">
+        <div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div>
+      </td>
+
+      <td data-label="Supply (Adjusted)" class="supply-cell">
+        <div class="cell-val">
+          <div class="supplybar">
+            <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
+            <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
+          </div>
+          <div class="small">
+            ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
+          </div>
+          <div class="small">
+            Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} <br> Total: ${fmtNum(totalHuman)}
+          </div>
         </div>
       </td>
     `;
@@ -298,13 +393,13 @@ function render(){
   });
 
   $("status").textContent = `Projects: ${byLocked.length}`;
+  updateSortHint();
 }
 
 function resortByTVL(){
-  const dir = tvlSortDir; // -1 desc, 1 asc
+  const dir = tvlSortDir;
   DATA.sort((a,b)=> dir * ((b.tvl||0) - (a.tvl||0)));
-  const arrow = dir === -1 ? "▼" : "▲";
-  $("dirTVL").textContent = arrow;
+  $("dirTVL").textContent = dir === -1 ? "▼" : "▲";
 
   const rowsEl = $("rows");
   rowsEl.innerHTML = "";
@@ -312,7 +407,6 @@ function resortByTVL(){
   $("empty").style.display="none";
 
   DATA.forEach((p,i)=>{
-    const latest = p.latestEvent ? timeAgo(p.latestEvent) : "—";
     const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
     const lockedPctClamped = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
 
@@ -325,35 +419,43 @@ function resortByTVL(){
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${i+1}</td>
+      <td data-label="#" class="row-index">${i+1}</td>
       <td class="token-cell">
         ${tokenCellHTML(p)}
       </td>
-
-      <td style="min-width:160px">
-        <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
-        <div class="small">${lockedPctClamped.toFixed(2)}%</div>
-      </td>
-      <td>${nextU}</td>
-      <td style="text-align:right">$${fmtNum((p.tvl||0).toFixed(2))}</td>
-      <td class="supply-cell">
-        <div class="supplybar">
-          <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
-          <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
+      <td data-label="Locked %">
+        <div class="cell-val">
+          <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
+          <div class="small">${lockedPctClamped.toFixed(2)}%</div>
         </div>
-        <div class="small">
-          Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
+      </td>
+      <td data-label="Unlock Date"><div class="cell-val">${nextU}</div></td>
+      <td data-label="TVL"><div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div></td>
+      <td data-label="Supply (Adjusted)" class="supply-cell">
+        <div class="cell-val">
+          <div class="supplybar">
+            <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
+            <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
+          </div>
+          <div class="small">
+            ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
+          </div>
+          <div class="small">
+            Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)}<br> Total: ${fmtNum(totalHuman)}
+          </div>
         </div>
       </td>
     `;
     rowsEl.appendChild(tr);
   });
+
+  updateSortHint();
 }
 
-/* ============== Load + Build ============== */
+/* ===== Build ===== */
 async function build(){
   $("status").textContent = "Loading…";
-  await loadMarketCaps();
+  await Promise.all([loadMarketCaps(), loadTokenLogos()]);
 
   const tokenList = await discoverLockedTokens();
   if (!tokenList.length){ $("empty").style.display=""; $("status").textContent="No active locks"; return; }
@@ -361,47 +463,47 @@ async function build(){
   const limit = pLimit(5);
   const results = (await Promise.all(tokenList.map(addr => limit(async ()=>{
     try{
-      const { sumLocked, earliestUnlock, latestEvent } = await getLocksSummary(addr);
+      const { sumLocked, earliestUnlock } = await getLocksSummary(addr);
       if (!sumLocked || sumLocked.isZero()) return null;
 
-      const meta  = await getTokenMetaAndSupply(addr);
-      const lockedHuman = bnToNum(sumLocked, meta.decimals);
+      const t = new ethers.Contract(addr, ERC20, ro);
+      const [name, symbol, decimals, total, ...burns] = await Promise.all([
+        t.name().catch(()=>""), t.symbol().catch(()=>""), t.decimals().catch(()=>18),
+        t.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+        ...BURN_ADDRS.map(a => t.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
+      ]);
+      let burned = ethers.BigNumber.from(0); for (const b of burns) burned = burned.add(b);
+
+      const lockedHuman = bnToNum(sumLocked, Number(decimals));
       if (lockedHuman <= 0) return null;
 
-      const totalHuman    = bnToNum(meta.total, meta.decimals);
-      const burnedHuman   = bnToNum(meta.burned, meta.decimals);
-      const adjustedHuman = Math.max(0, totalHuman - burnedHuman);
-      const lockedPct     = adjustedHuman > 0 ? (lockedHuman / adjustedHuman * 100) : 0;
+      const totalHuman  = bnToNum(total, Number(decimals));
+      const burnedHuman = bnToNum(burned, Number(decimals));
+      const adjusted    = Math.max(0, totalHuman - burnedHuman);
+      const lockedPct   = adjusted > 0 ? (lockedHuman / adjusted * 100) : 0;
 
       const m = marketCaps.get(addr.toLowerCase());
-      const tvl = m?.mc || 0; // TVL from market_cap in pools_chache.json
-      const name = meta.name || m?.name || "";
-      const symbol = meta.symbol || m?.symbol || "";
+      const tvl = m?.mc || 0;
 
       return {
         address: addr.toLowerCase(),
-        name, symbol,
-        totalHuman, burnedHuman, adjustedHuman,
-        lockedHuman, lockedPct,
-        latestEvent, nextUnlock: earliestUnlock,
+        name: name || m?.name || "",
+        symbol: symbol || m?.symbol || "",
+        totalHuman, burnedHuman, lockedHuman, lockedPct,
+        nextUnlock: earliestUnlock,
         tvl
       };
-    }catch(e){
-      return null;
-    }
+    }catch(e){ return null; }
   })))).filter(Boolean);
 
   DATA = results;
   render();
 }
 
-/* ============== Events ============== */
-document.getElementById("thTVL").addEventListener("click", ()=>{
-  tvlSortDir *= -1;
-  resortByTVL();
-});
+/* ===== Events ===== */
+document.getElementById("thTVL").addEventListener("click", ()=>{ tvlSortDir *= -1; resortByTVL(); });
+document.getElementById("btnSortTVL").addEventListener("click", ()=>{ tvlSortDir *= -1; resortByTVL(); });
 
-/* ============== Init ============== */
 document.addEventListener("DOMContentLoaded", build);
 </script>
 </body>
