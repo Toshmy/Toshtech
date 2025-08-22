@@ -134,27 +134,58 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     .animate-fadeIn {
       animation: fadeIn 1.2s ease forwards;
     }
-	/* Desktop dropdown for ToshLock */
-	.nav-has-dropdown { position: relative; }
-	.nav-dropdown{
-	  position:absolute; right:0; top:100%; margin-top:.5rem;
-	  background: rgba(255,255,255,.05);
-	  border: 1px solid rgba(0,255,174,.2);
-	  backdrop-filter: blur(6px);
-	  border-radius: .75rem;
-	  box-shadow: 0 10px 30px rgba(0,255,174,.18);
-	  padding:.5rem; min-width:14rem;
-	  opacity:0; visibility:hidden; transform: translateY(6px);
-	  transition: opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
-	  z-index:70; /* above the nav's z-60 */
-	}
-	.nav-has-dropdown:hover .nav-dropdown,
-	.nav-has-dropdown:focus-within .nav-dropdown{
-	  opacity:1; visibility:visible; transform: translateY(0);
-	  transition-delay:0s;
-	}
-	.nav-dropdown a{ display:block; padding:.5rem .75rem; border-radius:.5rem; }
-	.nav-dropdown a:hover{ background: rgba(255,255,255,.10); }	
+/* Desktop dropdown for ToshLock */
+  .nav-has-dropdown { position: relative; }
+  .nav-dropdown{
+    position:absolute; right:0; top:100%; margin-top:.5rem;
+    /* darker, more opaque glass for readability */
+    background: rgba(3, 10, 22, 0.92);
+    border: 1px solid rgba(0,255,174,.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: .75rem;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,255,174,.08) inset;
+    padding:.5rem; min-width:14rem;
+    opacity:0; visibility:hidden; transform: translateY(6px);
+    transition: opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
+    z-index: 80; /* above nav & banner */
+  }
+  .nav-has-dropdown:hover .nav-dropdown,
+  .nav-has-dropdown:focus-within .nav-dropdown{
+    opacity:1; visibility:visible; transform: translateY(0);
+    transition-delay:0s;
+  }
+  .nav-dropdown a{
+    display:block; padding:.6rem .8rem; border-radius:.6rem;
+    color:#eafff7; /* strong contrast */
+  }
+  .nav-dropdown a:hover{ background: rgba(255,255,255,.08); }
+
+  /* 2) Mobile: center the ToshLock area and its links */
+  @media (max-width: 768px){
+    /* Center the accordion toggle row content */
+    #ml-toshlock-toggle{
+      justify-content: center !important;
+      text-align:center;
+    }
+    /* Center the panel and its items */
+    #ml-toshlock-panel{
+      text-align:center;
+      padding-left: 0 !important; /* remove left indent */
+    }
+    #ml-toshlock-panel a{
+      display:inline-block;
+      width: 90%;
+      max-width: 420px;
+      margin: 0 auto;
+      text-align:center;
+      padding:.6rem .9rem;
+      border:1px solid rgba(0,255,174,.18);
+      background: rgba(3,10,22,.75);
+      border-radius:.6rem;
+    }
+    #ml-toshlock-panel a + a{ margin-top:.4rem; }
+  }
   </style>
 
 </head>
@@ -218,13 +249,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <!-- ToshLock accordion -->
   <div class="text-left px-4">
-    <button id="ml-toshlock-toggle"
-            class="w-full flex items-center justify-between py-2 px-3 rounded bg-black bg-opacity-30 hover:bg-opacity-40">
-      <span>ToshLock</span>
-      <svg id="ml-toshlock-caret" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-      </svg>
-    </button>
+
+	<button id="ml-toshlock-toggle"
+	  class="w-full flex items-center justify-between md:justify-between justify-center
+			 py-2 px-3 rounded bg-black bg-opacity-30 hover:bg-opacity-40">
+	  <span>ToshLock</span>
+	  <svg id="ml-toshlock-caret" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+	  </svg>
+	</button>
+	
     <div id="ml-toshlock-panel" class="hidden pl-3 mt-2 space-y-2">
       <a href="toshlock.html" class="block py-2 px-3 rounded hover:bg-white hover:bg-opacity-10">ToshLock (Locker)</a>
       <a href="toshdashboard.html" class="block py-2 px-3 rounded hover:bg-white hover:bg-opacity-10">ToshDashboard</a>
