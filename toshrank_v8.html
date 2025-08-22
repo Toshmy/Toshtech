@@ -11,7 +11,7 @@
       --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18);
       --green:#00ffae; --red:#ff6b6b;
     }
-    * , *::before , *::after { box-sizing: border-box; }
+    *,*::before,*::after{box-sizing:border-box}
     html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
     a{color:#93c5fd;text-decoration:none}
     .wrap{max-width:1150px;margin:24px auto;padding:0 16px}
@@ -39,14 +39,16 @@
     th.sortable{cursor:pointer}
     th.sortable .dir{opacity:.75;font-size:12px;margin-left:4px}
 
-    /* Token cell visuals (desktop) */
+    /* Token cell (desktop baseline) */
     td.token-cell{white-space:normal}
-    .token-head{display:flex;align-items:center;gap:10px}
+    .token-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .token-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
     .token-logo{
-      width:28px;height:28px;border-radius:8px;object-fit:cover;
-      border:1px solid var(--border);background:#0b1226;flex:0 0 28px
+      width:36px;height:36px;border-radius:8px;object-fit:cover;
+      border:1px solid var(--border);background:#0b1226;flex:0 0 36px
     }
-    .token-name{font-weight:600}
+    .token-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .token-ca a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
     .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
     .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:.22rem .6rem;background:#081021}
     .chip .emoji{font-size:12px;opacity:.9}
@@ -72,15 +74,10 @@
       /* hide # index on mobile to save space */
       tr .row-index{ display:none }
 
-      /* Token header (logo + name + CA on left, action on right) */
-      td.token-cell{ padding-bottom:6px }
-      .token-head{
-        display:flex; justify-content:space-between; align-items:center; gap:10px;
-      }
-      .token-left{ display:flex; align-items:center; gap:10px; min-width:0; flex:1 }
-      .token-name{ font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100% }
-      .token-ca{ margin-top:2px }
-      .token-actions{ flex:0 0 auto }
+      /* Token header: allow the action to wrap underneath on small widths */
+      td.token-cell{ padding-bottom:8px }
+      .token-head{flex-wrap:wrap;gap:10px}
+      .token-actions{flex:1 0 100%;display:flex;justify-content:flex-start}
       .chip{ font-size:11px; padding:.22rem .55rem; max-width:100% }
       .token-links{ margin-top:8px }
       .token-links .chip{ font-size:11px; padding:.18rem .5rem }
@@ -92,7 +89,7 @@
       td[data-label]::before{
         content:attr(data-label);
         flex:0 0 42%;
-        max-width:200px;
+        max-width:220px;
         font-size:11px; color:#bfeede; opacity:.8; text-transform:uppercase; letter-spacing:.03em;
         padding-top:3px;
       }
@@ -102,7 +99,7 @@
       }
       .cell-val .progress{ width:100% }
       td.supply-cell{ min-width:auto }
-      .mono{ word-break:break-all }
+      .mono{ word-break:normal } /* keep CA on one line with ellipsis */
       th.sortable .dir{ display:none }
     }
   </style>
@@ -149,13 +146,7 @@ const CONFIG = {
   EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
   GQL_URL: "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad/graphql"
 };
-const GQL_QUERY = `
-query {
-  presales(first: 1000) {
-    data
-    token
-  }
-}`;
+const GQL_QUERY = `query PresalesLogos { presales(first: 1000) { data token } }`;
 
 /* pools cache file */
 const POOLS_JSON_URL = "pools_cache.json";
@@ -208,13 +199,18 @@ const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
 const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 
 /* ============== External data caches ============== */
-let marketCaps = new Map(); // address-> {mc, name, symbol}
+let marketCaps = new Map();      // address-> {mc, name, symbol}
 let tokenMetaFromGQL = new Map(); // address-> {iconUrl, websiteUrl, xUrl, telegramUrl}
 
 /* Load market caps/name/symbol from local cache */
 async function loadMarketCaps(){
   marketCaps.clear();
   try{
+    // If opened from file://, this will be blocked. Warn and skip.
+    if (location.protocol === "file:") {
+      console.warn("pools_cache.json blocked by browser when using file:// — run a local server or host over http(s).");
+      return;
+    }
     const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
     if (!r.ok) return;
     const js = await r.json();
@@ -229,7 +225,7 @@ async function loadMarketCaps(){
         });
       }
     }
-  }catch(e){}
+  }catch(e){ /* ignore */ }
 }
 
 /* Load token logos & links from GraphQL */
@@ -238,10 +234,13 @@ async function loadTokenLogos(){
   try{
     const r = await fetch(CONFIG.GQL_URL, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "accept": "application/json"
+      },
       body: JSON.stringify({ query: GQL_QUERY })
     });
-    if (!r.ok) return;
+    if (!r.ok) { console.warn("GQL fetch failed:", r.status); return; }
     const js = await r.json();
     const presales = js?.data?.presales || [];
     for (const p of presales){
@@ -255,7 +254,7 @@ async function loadTokenLogos(){
       const telegramUrl = parsed.telegramUrl || "";
       tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
     }
-  }catch(e){}
+  }catch(e){ console.warn("GQL error:", e); }
 }
 
 /* ============== Discover tokens with active locks ============== */
@@ -297,26 +296,7 @@ async function getLocksSummary(token){
     const ut = Number(unlockTimes[i]);
     if (!earliestUnlock || ut < earliestUnlock) earliestUnlock = ut;
   }
-
-  // keep latestEvent if needed later (not shown now)
-  let latestTs = null;
-  try{
-    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
-    const tokenTopic = ethers.utils.hexZeroPad(token, 32);
-    const logs = await ro.getLogs({
-      address: locker.address,
-      topics: [topic0, tokenTopic],
-      fromBlock: Math.max(0, (await ro.getBlockNumber()) - 300_000),
-      toBlock: "latest"
-    });
-    if (logs.length){
-      const last = logs.reduce((a,b)=> a.blockNumber > b.blockNumber ? a : b);
-      const blk = await ro.getBlock(last.blockNumber);
-      latestTs = blk?.timestamp || null;
-    }
-  }catch{}
-
-  return { sumLocked: sum, earliestUnlock: earliestUnlock || null, latestEvent: latestTs || null };
+  return { sumLocked: sum, earliestUnlock: earliestUnlock || null };
 }
 
 /* small concurrency control */
@@ -410,6 +390,9 @@ function render(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
+            ${circPct.toFixed(0)}% circ • ${burnPct.toFixed(0)}% burned
+          </div>
+          <div class="small">
             Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
           </div>
         </div>
@@ -467,6 +450,9 @@ function resortByTVL(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
+            ${circPct.toFixed(0)}% circ • ${burnPct.toFixed(0)}% burned
+          </div>
+          <div class="small">
             Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
           </div>
         </div>
@@ -515,7 +501,7 @@ async function build(){
       return {
         address: addr.toLowerCase(),
         name, symbol,
-        totalHuman, burnedHuman, adjustedHuman,
+        totalHuman, burnedHuman,
         lockedHuman, lockedPct,
         nextUnlock: earliestUnlock,
         tvl
