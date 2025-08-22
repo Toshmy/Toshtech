@@ -202,26 +202,6 @@ async function fetchJsonCORS(url) {
   return r.json();
 }
 
-/* ---- Number formatting helpers (human & compact) ---- */
-function fmtWithCommasStr(s){
-  const str = String(s ?? "0");
-  const [int, frac=""] = str.split(".");
-  const withCommas = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const trimmedFrac = frac.replace(/0+$/,"");
-  return trimmedFrac ? `${withCommas}.${trimmedFrac}` : withCommas;
-}
-function fmtCompactSafe(s, dp=2){
-  const n = Number(s);
-  if (!isFinite(n)) return "";
-  return n.toLocaleString("en-US", { notation:"compact", maximumFractionDigits: dp });
-}
-function humanDisplay(amountStr, symbol=""){
-  const full = fmtWithCommasStr(amountStr);
-  const cmp  = fmtCompactSafe(amountStr, 2);
-  const sym  = symbol ? ` ${symbol}` : "";
-  return cmp ? `${full}${sym} <span class="muted">(≈ ${cmp}${sym})</span>` : `${full}${sym}`;
-}
-
 let providerType = null; // 'mm' | 'wc'
 let wcProvider, ethersProvider, signer;
 const roProvider = new ethers.providers.JsonRpcProvider(RPC);
@@ -289,21 +269,16 @@ async function refreshTokenMeta(){
     const [name,symbol,dec] = await Promise.all([t.name(), t.symbol(), t.decimals()]);
     tokenName=name; tokenSymbol=symbol; tokenDecimals=Number(dec);
     $("tokenMeta").textContent = `${name} (${symbol}), decimals=${tokenDecimals}`;
-
-    // Refresh the hint using the current input value
     const human = $("amount").value || "0";
-    $("amountHint").innerHTML = humanDisplay(human, tokenSymbol);
-
+    $("amountHint").textContent = `= ${ethers.utils.parseUnits(human, tokenDecimals).toString()} base units`;
   }catch{
+    // fallback: try remote search to at least show name/symbol (decimals unknown)
     try{
       const meta = await searchBestMatchByAddress(addr);
       tokenName = meta?.name || ""; tokenSymbol = meta?.symbol || ""; tokenDecimals = null;
       $("tokenMeta").textContent = `${tokenName || "?"} (${tokenSymbol || "?"})`;
-      const human = $("amount").value || "0";
-      $("amountHint").innerHTML = humanDisplay(human, tokenSymbol);
     }catch{
       $("tokenMeta").textContent="⚠️ cannot read token"; tokenDecimals=null;
-      $("amountHint").textContent="—";
     }
   }
 }
@@ -311,8 +286,7 @@ $("token").addEventListener("change", refreshTokenMeta);
 $("token").addEventListener("blur", refreshTokenMeta);
 $("amount").addEventListener("input", ()=>{
   if(tokenDecimals==null){ $("amountHint").textContent="enter a valid token first"; return; }
-  const val = $("amount").value || "0";
-  $("amountHint").innerHTML = humanDisplay(val, tokenSymbol);
+  try{ $("amountHint").textContent = `= ${ethers.utils.parseUnits($("amount").value||"0", tokenDecimals).toString()} base units`; }catch{ $("amountHint").textContent="—"; }
 });
 
 /* ========= Approve & Lock ========= */
@@ -378,7 +352,7 @@ async function scanMyLocks(){
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${date}</td>
-        <td style="text-align:right">${humanDisplay(human, sym)}</td>
+        <td style="text-align:right">${Number(human).toLocaleString()}</td>
         <td>${sym}</td>
         <td>${lname||""}</td>
         <td class="mono" title="${user}">${ownerDisp}</td>
