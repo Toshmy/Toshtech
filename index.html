@@ -102,7 +102,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 	  animation: sip 10s infinite, slightShake 2s infinite;
 	  z-index: 20;
 	}
-
+	@media (max-width: 1024px){
+	  .nav-has-dropdown .nav-dropdown{
+		left: 50%;
+		right: auto;
+		transform: translate(-50%, 6px);
+		min-width: 16rem;
+		text-align:center;
+	  }
+	}
 	@media (max-width: 768px) {
 	  #cup-arm { 
 		top: 55%;
@@ -340,11 +348,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
   const hoverSound = document.getElementById('hover-sound');
 
-  hoverSound.volume = 0;
+  hoverSound.volume = 0.1;
   hoverSound.play().catch(() => {});
   hoverSound.pause();
   hoverSound.currentTime = 0;
-  hoverSound.volume = 1;
+
 
   const playIntro = () => {
     introSound.volume = 0.5;
