@@ -39,19 +39,17 @@
     th.sortable{cursor:pointer}
     th.sortable .dir{opacity:.75;font-size:12px;margin-left:4px}
 
-    /* Token cell (desktop baseline) */
+    /* Token cell */
     td.token-cell{white-space:normal}
     .token-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
     .token-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
-    .token-logo{
-      width:36px;height:36px;border-radius:8px;object-fit:cover;
-      border:1px solid var(--border);background:#0b1226;flex:0 0 36px
-    }
+    .token-logo{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:#0b1226;flex:0 0 36px}
     .token-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
     .token-ca a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
-    .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+
     .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:.22rem .6rem;background:#081021}
     .chip .emoji{font-size:12px;opacity:.9}
+    .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 
     td.supply-cell{min-width:180px;white-space:normal}
 
@@ -70,17 +68,20 @@
         background:var(--card); box-shadow:var(--shadow); padding:10px
       }
       .mobile-toolbar{display:flex}
+      tr .row-index{ display:none } /* hide # */
 
-      /* hide # index on mobile to save space */
-      tr .row-index{ display:none }
-
-      /* Token header: allow the action to wrap underneath on small widths */
+      /* Token header uses FULL width — no "TOKEN" label */
       td.token-cell{ padding-bottom:8px }
+      td.token-cell[data-label]{ /* if someone leaves the attr by mistake, hide it */
+        --dummy: 0;
+      }
+      td.token-cell::before{ content:none !important }  /* ensure no label shows */
+
+      /* Make action wrap under header, socials on separate full-width line */
       .token-head{flex-wrap:wrap;gap:10px}
       .token-actions{flex:1 0 100%;display:flex;justify-content:flex-start}
+      .token-links{width:100%;justify-content:flex-start}
       .chip{ font-size:11px; padding:.22rem .55rem; max-width:100% }
-      .token-links{ margin-top:8px }
-      .token-links .chip{ font-size:11px; padding:.18rem .5rem }
 
       /* Key-value rows */
       td[data-label]{
@@ -99,7 +100,7 @@
       }
       .cell-val .progress{ width:100% }
       td.supply-cell{ min-width:auto }
-      .mono{ word-break:normal } /* keep CA on one line with ellipsis */
+      .mono{ word-break:normal } /* keep CA as one line with ellipsis */
       th.sortable .dir{ display:none }
     }
   </style>
@@ -139,7 +140,7 @@
   </div>
 
 <script>
-/* ============== CONFIG ============== */
+/* ===== CONFIG ===== */
 const CONFIG = {
   LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
   RPC: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
@@ -147,15 +148,11 @@ const CONFIG = {
   GQL_URL: "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad"
 };
 const GQL_QUERY = `query PresalesLogos { presales(first: 1000) { data token } }`;
-
-/* pools cache file */
 const POOLS_JSON_URL = "pools_cache.json";
-/* burn addresses */
 const BURN_ADDRS = [
   "0xa9fD599cd8857e90059c83e4885Dc09986039085",
   "0x000000000000000000000000000000000000dEaD"
 ];
-/* ABIs */
 const ERC20 = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
@@ -168,7 +165,7 @@ const LOCKER_ABI = [
   "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
 ];
 
-/* ============== HELPERS ============== */
+/* ===== HELPERS ===== */
 const $ = id => document.getElementById(id);
 const log = (...a)=>{ const el=$("log"); el.style.display='block'; el.textContent += a.join(" ")+"\\n"; };
 
@@ -180,9 +177,6 @@ function escapeHtml(s){
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
   }[m]));
 }
-function toLower(a){ try{ return ethers.utils.getAddress(a).toLowerCase(); }catch{ return (a||"").toLowerCase(); } }
-
-/* time formatters */
 function timeFromNow(ts){
   if (!ts) return "—";
   const now = Math.floor(Date.now()/1000);
@@ -194,21 +188,19 @@ function timeFromNow(ts){
   return diff >= 0 ? `in ${val} ${label}${val>1?'s':''}` : `${val} ${label}${val>1?'s':''} ago`;
 }
 
-/* ============== Providers/Contracts ============== */
+/* ===== Providers/Contracts ===== */
 const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
 const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 
-/* ============== External data caches ============== */
-let marketCaps = new Map();      // address-> {mc, name, symbol}
-let tokenMetaFromGQL = new Map(); // address-> {iconUrl, websiteUrl, xUrl, telegramUrl}
+/* ===== External caches ===== */
+let marketCaps = new Map();
+let tokenMetaFromGQL = new Map();
 
-/* Load market caps/name/symbol from local cache */
 async function loadMarketCaps(){
   marketCaps.clear();
   try{
-    // If opened from file://, this will be blocked. Warn and skip.
     if (location.protocol === "file:") {
-      console.warn("pools_cache.json blocked by browser when using file:// — run a local server or host over http(s).");
+      console.warn("pools_cache.json blocked on file:// — run a local server to load it.");
       return;
     }
     const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
@@ -225,19 +217,15 @@ async function loadMarketCaps(){
         });
       }
     }
-  }catch(e){ /* ignore */ }
+  }catch(e){}
 }
 
-/* Load token logos & links from GraphQL */
 async function loadTokenLogos(){
   tokenMetaFromGQL.clear();
   try{
     const r = await fetch(CONFIG.GQL_URL, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "accept": "application/json"
-      },
+      headers: { "content-type": "application/json", "accept": "application/json" },
       body: JSON.stringify({ query: GQL_QUERY })
     });
     if (!r.ok) { console.warn("GQL fetch failed:", r.status); return; }
@@ -257,7 +245,6 @@ async function loadTokenLogos(){
   }catch(e){ console.warn("GQL error:", e); }
 }
 
-/* ============== Discover tokens with active locks ============== */
 async function discoverLockedTokens(){
   const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
   const latest = await ro.getBlockNumber();
@@ -271,7 +258,6 @@ async function discoverLockedTokens(){
   return Array.from(tokens);
 }
 
-/* ============== Token meta / supply / locks ============== */
 async function getTokenMetaAndSupply(token){
   const t = new ethers.Contract(token, ERC20, ro);
   const [name, symbol, decimals, total, ...burns] = await Promise.all([
@@ -281,14 +267,12 @@ async function getTokenMetaAndSupply(token){
   ]);
   let burned = ethers.BigNumber.from(0);
   for (const b of burns) burned = burned.add(b);
-  const adjusted = total.sub(burned);
-  return { name, symbol, decimals:Number(decimals), total, burned, adjusted };
+  return { name, symbol, decimals:Number(decimals), total, burned };
 }
 
 async function getLocksSummary(token){
   const [ids, owners, amounts, unlockTimes] =
     await locker.getActiveLocksByToken(token, 0, 1000).catch(()=>[[],[],[],[]]);
-
   let sum = ethers.BigNumber.from(0);
   let earliestUnlock = null;
   for (let i=0;i<ids.length;i++){
@@ -299,7 +283,6 @@ async function getLocksSummary(token){
   return { sumLocked: sum, earliestUnlock: earliestUnlock || null };
 }
 
-/* small concurrency control */
 function pLimit(max){
   let running=0, queue=[];
   const next=()=>{ running--; if(queue.length) queue.shift()(); };
@@ -309,7 +292,7 @@ function pLimit(max){
   });
 }
 
-/* ============== UI helpers ============== */
+/* ===== UI helpers ===== */
 function tokenCellHTML(p){
   const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
   const detailsLink  = `https://www.toshtech.xyz/tdbv8.html?token=${p.address}`;
@@ -344,8 +327,8 @@ function tokenCellHTML(p){
   `;
 }
 
-/* ============== Render ============== */
-let DATA = []; // rows to render
+/* ===== Render ===== */
+let DATA = [];
 let tvlSortDir = -1; // -1 desc, 1 asc
 
 function render(){
@@ -370,19 +353,27 @@ function render(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td data-label="#" class="row-index">${i+1}</td>
-      <td data-label="Token" class="token-cell">
+
+      <!-- IMPORTANT: no data-label on the token cell (full-width header on mobile) -->
+      <td class="token-cell">
         ${tokenCellHTML(p)}
       </td>
+
       <td data-label="Locked %">
         <div class="cell-val">
           <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
           <div class="small">${lockedPctClamped.toFixed(2)}%</div>
         </div>
       </td>
-      <td data-label="Unlock Date"><div class="cell-val">${nextU}</div></td>
+
+      <td data-label="Unlock Date">
+        <div class="cell-val">${nextU}</div>
+      </td>
+
       <td data-label="TVL" data-tvl="${p.tvl}">
         <div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div>
       </td>
+
       <td data-label="Supply (Adjusted)" class="supply-cell">
         <div class="cell-val">
           <div class="supplybar">
@@ -390,7 +381,7 @@ function render(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
-            ${circPct.toFixed(0)}% circ • ${burnPct.toFixed(0)}% burned
+            ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
           </div>
           <div class="small">
             Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
@@ -406,10 +397,9 @@ function render(){
 }
 
 function resortByTVL(){
-  const dir = tvlSortDir; // -1 desc, 1 asc
+  const dir = tvlSortDir;
   DATA.sort((a,b)=> dir * ((b.tvl||0) - (a.tvl||0)));
-  const arrow = dir === -1 ? "▼" : "▲";
-  $("dirTVL").textContent = arrow;
+  $("dirTVL").textContent = dir === -1 ? "▼" : "▲";
 
   const rowsEl = $("rows");
   rowsEl.innerHTML = "";
@@ -430,7 +420,7 @@ function resortByTVL(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td data-label="#" class="row-index">${i+1}</td>
-      <td data-label="Token" class="token-cell">
+      <td class="token-cell">
         ${tokenCellHTML(p)}
       </td>
       <td data-label="Locked %">
@@ -440,9 +430,7 @@ function resortByTVL(){
         </div>
       </td>
       <td data-label="Unlock Date"><div class="cell-val">${nextU}</div></td>
-      <td data-label="TVL">
-        <div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div>
-      </td>
+      <td data-label="TVL"><div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div></td>
       <td data-label="Supply (Adjusted)" class="supply-cell">
         <div class="cell-val">
           <div class="supplybar">
@@ -450,7 +438,7 @@ function resortByTVL(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
-            ${circPct.toFixed(0)}% circ • ${burnPct.toFixed(0)}% burned
+            ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
           </div>
           <div class="small">
             Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
@@ -464,13 +452,7 @@ function resortByTVL(){
   updateSortHint();
 }
 
-/* Mobile sort hint text */
-function updateSortHint(){
-  const hint = tvlSortDir === -1 ? "TVL: high → low" : "TVL: low → high";
-  $("sortHint").textContent = hint;
-}
-
-/* ============== Load + Build ============== */
+/* ===== Build ===== */
 async function build(){
   $("status").textContent = "Loading…";
   await Promise.all([loadMarketCaps(), loadTokenLogos()]);
@@ -484,48 +466,44 @@ async function build(){
       const { sumLocked, earliestUnlock } = await getLocksSummary(addr);
       if (!sumLocked || sumLocked.isZero()) return null;
 
-      const meta  = await getTokenMetaAndSupply(addr);
-      const lockedHuman = bnToNum(sumLocked, meta.decimals);
+      const t = new ethers.Contract(addr, ERC20, ro);
+      const [name, symbol, decimals, total, ...burns] = await Promise.all([
+        t.name().catch(()=>""), t.symbol().catch(()=>""), t.decimals().catch(()=>18),
+        t.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+        ...BURN_ADDRS.map(a => t.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
+      ]);
+      let burned = ethers.BigNumber.from(0); for (const b of burns) burned = burned.add(b);
+
+      const lockedHuman = bnToNum(sumLocked, Number(decimals));
       if (lockedHuman <= 0) return null;
 
-      const totalHuman    = bnToNum(meta.total, meta.decimals);
-      const burnedHuman   = bnToNum(meta.burned, meta.decimals);
-      const adjustedHuman = Math.max(0, totalHuman - burnedHuman);
-      const lockedPct     = adjustedHuman > 0 ? (lockedHuman / adjustedHuman * 100) : 0;
+      const totalHuman  = bnToNum(total, Number(decimals));
+      const burnedHuman = bnToNum(burned, Number(decimals));
+      const adjusted    = Math.max(0, totalHuman - burnedHuman);
+      const lockedPct   = adjusted > 0 ? (lockedHuman / adjusted * 100) : 0;
 
       const m = marketCaps.get(addr.toLowerCase());
       const tvl = m?.mc || 0;
-      const name = meta.name || m?.name || "";
-      const symbol = meta.symbol || m?.symbol || "";
 
       return {
         address: addr.toLowerCase(),
-        name, symbol,
-        totalHuman, burnedHuman,
-        lockedHuman, lockedPct,
+        name: name || m?.name || "",
+        symbol: symbol || m?.symbol || "",
+        totalHuman, burnedHuman, lockedHuman, lockedPct,
         nextUnlock: earliestUnlock,
         tvl
       };
-    }catch(e){
-      return null;
-    }
+    }catch(e){ return null; }
   })))).filter(Boolean);
 
   DATA = results;
   render();
 }
 
-/* ============== Events ============== */
-document.getElementById("thTVL").addEventListener("click", ()=>{
-  tvlSortDir *= -1;
-  resortByTVL();
-});
-document.getElementById("btnSortTVL").addEventListener("click", ()=>{
-  tvlSortDir *= -1;
-  resortByTVL();
-});
+/* ===== Events ===== */
+document.getElementById("thTVL").addEventListener("click", ()=>{ tvlSortDir *= -1; resortByTVL(); });
+document.getElementById("btnSortTVL").addEventListener("click", ()=>{ tvlSortDir *= -1; resortByTVL(); });
 
-/* ============== Init ============== */
 document.addEventListener("DOMContentLoaded", build);
 </script>
 </body>
