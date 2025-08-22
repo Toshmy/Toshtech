@@ -439,9 +439,10 @@ $("scan").onclick = async () => {
           <a href="${PepuExplorer.address(owner)}" target="_blank">${ownerDisp}</a>
           ${isCreator ? '<span class="badge" title="Creator from explorer/guess">Creator</span>' : ''}
         </td>
-        <td>${id.toString()}</td>
-        <td><button class="btn gray" data-proof="${id.toString()}">Proof</button></td>
-      `;
+		<td>${id.toString()}</td>
+		  <td><button class="btn gray" data-proof="${id.toString()}" data-token="${token}">Proof</button></td>
+		`;		
+
       rows.appendChild(tr);
 
       state.activeRows.push({ unlock: date, amount: human, symbol: sym, name: names[i] || "", owner, lockId: id.toString() });
@@ -518,17 +519,37 @@ $("scan").onclick = async () => {
 document.addEventListener('click', async (e)=>{
   const btn = e.target.closest('[data-proof]');
   if (!btn) return;
-  btn.disabled = true; const lockId = btn.getAttribute('data-proof');
+
+  btn.disabled = true;
+  const lockId = btn.getAttribute('data-proof');
+  const token  = btn.getAttribute('data-token');
+
   try{
-    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
-    const topicLockId = ethers.utils.hexZeroPad(ethers.BigNumber.from(lockId).toHexString(), 32);
-    const filter = { address: LOCKER, topics: [topic0, null, null, topicLockId], fromBlock: 0, toBlock: "latest" };
+    const topic0     = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+    const tokenTopic = ethers.utils.hexZeroPad(ethers.utils.getAddress(token), 32);
+    const lockTopic  = ethers.utils.hexZeroPad(ethers.BigNumber.from(lockId).toHexString(), 32);
+
+    const filter = {
+      address: LOCKER,
+      topics: [topic0, tokenTopic, null, lockTopic], // filter by token & lockId
+      fromBlock: 0,
+      toBlock: "latest"
+    };
+
     const logs = await ro.getLogs(filter);
-    if (!logs.length) { alert("No event found for this lockId"); btn.disabled=false; return; }
-    const txh = logs[0].transactionHash;
-    window.open(PepuExplorer.tx(txh), "_blank");
-  }catch(err){ alert(err?.message || String(err)); }
-  finally{ btn.disabled=false; }
+    if (!logs.length) {
+      alert("No LiquidityLocked event found for this token + lockId");
+      return;
+    }
+
+    // if multiple (e.g. relocks), open the first (creation) tx
+    const chosen = logs.reduce((a,b)=> a.blockNumber < b.blockNumber ? a : b);
+    window.open(PepuExplorer.tx(chosen.transactionHash), "_blank");
+  }catch(err){
+    alert(err?.message || String(err));
+  }finally{
+    btn.disabled = false;
+  }
 });
 
 /* ===================== Wallet + Token view ===================== */
