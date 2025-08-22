@@ -245,6 +245,12 @@ async function pepuSearchRemote(q) {
 }
 
 /* ===================== AUTOCOMPLETE ===================== */
+function formatNumberShort(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.00$/, '') + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.00$/, '') + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(2).replace(/\.00$/, '') + "K";
+  return n.toLocaleString();
+}
 function attachTokenAutocomplete(inputId, listId){
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
@@ -442,7 +448,9 @@ $("scan").onclick = async () => {
     }
 
     $("count").textContent = `Active: ${ids.length}`;
-    $("total").textContent = `Total: ${ethers.utils.formatUnits(total, dec)} ${sym}`;
+	const totalHuman = Number(ethers.utils.formatUnits(total, dec));
+	$("total").textContent = `Total: ${formatNumberShort(totalHuman)} ${sym}`;	
+
 
     // Adjusted supply + ToshRank summary
     try {
