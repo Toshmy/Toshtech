@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshLock — Projects with Active Locks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18);
+      --green:#00ffae; --red:#ff6b6b;
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1150px;margin:24px auto;padding:0 16px}
+    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;padding:.25rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
+    th{text-align:left;background:var(--bg-2);position:sticky;top:0}
+    .table-scroll{overflow:auto;border-radius:12px}
+
+    .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
+
+    .supplybar{height:10px;background:#0f1730;border:1px solid var(--border);border-radius:6px;display:flex;overflow:hidden}
+    .supplybar .circ{background:var(--green);height:100%}
+    .supplybar .burn{background:var(--red);height:100%}
+
+    .muted{color:var(--muted);opacity:.92}
+    .small{font-size:12px;color:#bfeede}
+    .center{display:flex;align-items:center;justify-content:center;padding:18px;color:#bfeede}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    th.sortable{cursor:pointer}
+    th.sortable .dir{opacity:.75;font-size:12px;margin-left:4px}
+
+    /* Token cell */
+    td.token-cell{white-space:normal}
+    .token-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .token-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+    .token-logo{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:#0b1226;flex:0 0 36px}
+    .token-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .token-ca a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
+
+    .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:.22rem .6rem;background:#081021}
+    .chip .emoji{font-size:12px;opacity:.9}
+    .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+    td.supply-cell, td.valuations-cell{min-width:220px;white-space:normal}
+    .kv{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:10px;padding:8px;background:#0f1730}
+    .kv .k{color:#bfeede}
+    .kv .v{font-weight:700}
+
+    /* Mobile toolbar */
+    .mobile-toolbar{display:none; gap:8px; align-items:center; margin:8px 0 0;}
+    .btn{cursor:pointer; border:1px solid var(--border); background:#081021; color:#a8ffd9; border-radius:999px; padding:.4rem .8rem; font-size:12px;}
+    .btn:active{transform:translateY(1px)}
+
+    /* ===== Mobile: stacked cards ===== */
+    @media (max-width: 640px){
+      .table-scroll{ overflow:visible }
+      thead{ display:none }
+      table, tbody, tr, td{ display:block; width:100% }
+      tr{
+        margin:12px 0; border:1px solid var(--border); border-radius:12px;
+        background:var(--card); box-shadow:var(--shadow); padding:10px
+      }
+      .mobile-toolbar{display:flex}
+      tr .row-index{ display:none }
+
+      td.token-cell{ padding-bottom:8px }
+      td.token-cell::before{ content:none !important }
+
+      .token-head{flex-wrap:wrap;gap:10px}
+      .token-actions{flex:1 0 100%;display:flex;justify-content:flex-start}
+      .token-links{width:100%;justify-content:flex-start}
+      .chip{ font-size:11px; padding:.22rem .55rem; max-width:100% }
+
+      td[data-label]{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:8px 4px}
+      td[data-label]::before{
+        content:attr(data-label);
+        flex:0 0 42%;
+        max-width:220px;
+        font-size:11px; color:#bfeede; opacity:.8; text-transform:uppercase; letter-spacing:.03em;
+        padding-top:3px;
+      }
+      .cell-val{flex:1; min-width:0; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
+      .cell-val .progress{ width:100% }
+      td.supply-cell, td.valuations-cell{ min-width:auto }
+      .mono{ word-break:normal }
+      th.sortable .dir{ display:none }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h1 class="glow-text" style="margin:0">🏆 ToshLock — Projects with Active Locks</h1>
+      <span id="status" class="pill">Loading…</span>
+    </header>
+
+    <!-- Mobile toolbar -->
+    <div class="mobile-toolbar">
+      <button id="btnSortTVL" class="btn">Sort by TVL</button>
+      <span class="small" id="sortHint"></span>
+    </div>
+
+    <section class="table-scroll card" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Token</th>
+            <th>Locked %</th>
+            <th>Unlock Date</th>
+            <th id="thTVL" class="sortable">Valuation<span class="dir" id="dirTVL"></span></th>
+            <th>Supply (Adjusted)</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="center" style="display:none">No active locks found.</div>
+    </section>
+
+    <pre id="log" class="card muted" style="margin-top:12px;display:none"></pre>
+  </div>
+
+<script>
+// ===== keep your existing CONFIG / ABIs / helpers / loadMarketCaps / loadTokenLogos / discoverLockedTokens / getLocksSummary etc. =====
+// Only the parts below are new/updated: pLimit (if you don't already have it), fetchToken(), appendRow(), build()
+
+/* ---------- Concurrency limiter (if not already defined) ---------- */
+function pLimit(max){
+  let running=0, queue=[];
+  const next=()=>{ running--; if(queue.length) queue.shift()(); };
+  return fn=>new Promise((res,rej)=>{
+    const run=()=>{ running++;
+      Promise.resolve().then(fn).then(v=>{res(v);next();},e=>{rej(e);next();});
+    };
+    if(running<max) run(); else queue.push(run);
+  });
+}
+
+/* ---------- Small utils you already had ---------- */
+const $ = id => document.getElementById(id);
+function shortAddr(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
+function fmtNum(n){ return Number(n).toLocaleString(); }
+function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, decimals)); }catch{ return 0; } }
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[m]));
+}
+function timeFromNow(ts){
+  if (!ts) return "—";
+  const now = Math.floor(Date.now()/1000);
+  const diff = ts - now;
+  const abs = Math.abs(diff);
+  const m = Math.floor(abs/60), h=Math.floor(m/60), d=Math.floor(h/24), mo=Math.floor(d/30);
+  const unit = mo>=1 ? [mo,"month"] : d>=1 ? [d,"day"] : h>=1 ? [h,"hour"] : m>=1 ? [m,"min"] : [abs,"sec"];
+  const [val, label] = unit;
+  return diff >= 0 ? `in ${val} ${label}${val>1?'s':''}` : `${val} ${label}${val>1?'s':''} ago`;
+}
+function tsToUTC(ts){
+  try{ return new Date(ts*1000).toISOString().replace('T',' ').replace('Z',' UTC'); }
+  catch{ return "—"; }
+}
+
+/* ---------- Keep your existing globals ---------- */
+const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
+const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
+
+let marketCaps = new Map();       // filled by loadMarketCaps()
+let tokenMetaFromGQL = new Map(); // filled by loadTokenLogos()
+let DATA = [];                    // table data
+let tvlSortDir = -1;              // for TVL header sort
+
+/* ---------- Token cell HTML (unchanged) ---------- */
+function tokenCellHTML(p){
+  const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
+  const detailsLink  = `https://www.toshtech.xyz/toshdashboard.html?token=${p.address}`;
+  const meta = tokenMetaFromGQL.get(p.address) || {};
+  const logo = meta.iconUrl || "";
+  const web = meta.websiteUrl || "";
+  const x   = meta.xUrl || "";
+  const tg  = meta.telegramUrl || "";
+
+  return `
+    <div class="token-head">
+      <div class="token-left">
+        ${logo ? `<img class="token-logo" src="${logo}" alt="" onerror="this.style.display='none'">` : `<div class="token-logo" style="display:inline-block"></div>`}
+        <div style="min-width:0">
+          <div class="token-name">${escapeHtml(p.name || p.symbol || '')}</div>
+          <div class="small mono token-ca">
+            <a href="${explorerLink}" target="_blank" rel="noopener noreferrer" title="${p.address}">
+              ${shortAddr(p.address)}
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="token-actions">
+        <a class="chip" href="${detailsLink}" target="_blank" rel="noopener noreferrer"><span class="emoji">🔒</span> Active Locks</a>
+      </div>
+    </div>
+    <div class="token-links">
+      ${web ? `<a class="chip" href="${web}" target="_blank" rel="noopener noreferrer"><span class="emoji">🕸️</span> Website</a>` : ""}
+      ${x   ? `<a class="chip" href="${x}"   target="_blank" rel="noopener noreferrer"><span class="emoji">𝕏</span> X</a>` : ""}
+      ${tg  ? `<a class="chip" href="${tg}"  target="_blank" rel="noopener noreferrer"><span class="emoji">💬</span> Telegram</a>` : ""}
+    </div>
+  `;
+}
+
+/* ---------- Fetch & compute one token (factored out) ---------- */
+async function fetchToken(addr){
+  try{
+    // 1) Active locks summary (amount + unlocks)
+    const { sumLocked, earliestUnlock, avgUnlock } = await getLocksSummary(addr);
+    if (!sumLocked || sumLocked.isZero()) return null;
+
+    // 2) Supply + burn (we still do on-chain here; can be optimized via multicall/caching later)
+    const t = new ethers.Contract(addr, ERC20, ro);
+    const [name, symbol, decimals, total, ...burns] = await Promise.all([
+      t.name().catch(()=>""), t.symbol().catch(()=>""), t.decimals().catch(()=>18),
+      t.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+      ...BURN_ADDRS.map(a => t.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
+    ]);
+    let burned = ethers.BigNumber.from(0); for (const b of burns) burned = burned.add(b);
+
+    const lockedHuman = bnToNum(sumLocked, Number(decimals));
+    if (lockedHuman <= 0) return null;
+
+    const totalHuman  = bnToNum(total, Number(decimals));
+    const burnedHuman = bnToNum(burned, Number(decimals));
+    const adjusted    = Math.max(0, totalHuman - burnedHuman);
+    const lockedPct   = adjusted > 0 ? (lockedHuman / adjusted * 100) : 0;
+
+    // 3) Price/MC from cache (if present)
+    const m = marketCaps.get(addr.toLowerCase());
+    const tvl = m?.mc || 0; // (you can swap to computed TVL later if desired)
+
+    // Prefer GQL name/symbol if on-chain blank
+    const meta = tokenMetaFromGQL.get(addr.toLowerCase()) || {};
+    const finalName   = name || m?.name || "";
+    const finalSymbol = symbol || m?.symbol || "";
+
+    return {
+      address: addr.toLowerCase(),
+      name: finalName,
+      symbol: finalSymbol,
+      totalHuman, burnedHuman, lockedHuman, lockedPct,
+      nextUnlock: earliestUnlock,
+      avgUnlock,
+      tvl
+    };
+  }catch(e){
+    // silent skip on per-token errors
+    return null;
+  }
+}
+
+/* ---------- Append a single row immediately ---------- */
+function appendRow(p, index){
+  const rowsEl = $("rows");
+
+  const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
+  const avgU   = p.avgUnlock  ? timeFromNow(p.avgUnlock)  : "—";
+  const nextTitle = p.nextUnlock ? tsToUTC(p.nextUnlock) : "-";
+  const avgTitle  = p.avgUnlock  ? tsToUTC(p.avgUnlock)  : "-";
+
+  const lockedPctClamped = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
+
+  const totalHuman  = p.totalHuman;
+  const burnedHuman = p.burnedHuman;
+  const circHuman   = Math.max(0, totalHuman - burnedHuman);
+  const totalForBar = totalHuman > 0 ? totalHuman : (circHuman + burnedHuman || 1);
+  const circPct = Math.max(0, Math.min(100, (circHuman / totalForBar) * 100));
+  const burnPct = Math.max(0, Math.min(100, (burnedHuman / totalForBar) * 100));
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td data-label="#" class="row-index">${index}</td>
+
+    <td class="token-cell">
+      ${tokenCellHTML(p)}
+    </td>
+
+    <td data-label="Locked %">
+      <div class="cell-val">
+        <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
+        <div class="small">${lockedPctClamped.toFixed(2)}%</div>
+      </div>
+    </td>
+
+    <td data-label="Unlock Date">
+      <div class="cell-val" title="Next: ${nextTitle} | Avg: ${avgTitle}">
+        <div>${nextU}</div>
+        <div class="small muted">avg: ${avgU}</div>
+      </div>
+    </td>
+
+    <td data-label="TVL" data-tvl="${p.tvl}">
+      <div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div>
+    </td>
+
+    <td data-label="Supply (Adjusted)" class="supply-cell">
+      <div class="cell-val">
+        <div class="supplybar">
+          <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
+          <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
+        </div>
+        <div class="small">
+          ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
+        </div>
+        <div class="small">
+          Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} <br> Total: ${fmtNum(totalHuman)}
+        </div>
+      </div>
+    </td>
+  `;
+  rowsEl.appendChild(tr);
+}
+
+/* ---------- Final full render (kept for final sort/clean) ---------- */
+function render(){
+  const rowsEl = $("rows");
+  rowsEl.innerHTML = "";
+  if (!DATA.length){ $("empty").style.display=""; return; }
+  $("empty").style.display="none";
+
+  const byLocked = [...DATA].sort((a,b)=> b.lockedPct - a.lockedPct);
+
+  byLocked.forEach((p,i)=> appendRow(p, i+1));
+  $("status").textContent = `Projects: ${byLocked.length}`;
+  updateSortHint();
+}
+
+/* ---------- TVL sort (unchanged) ---------- */
+function updateSortHint(){
+  const hint = tvlSortDir === -1 ? "TVL: high → low" : "TVL: low → high";
+  $("sortHint").textContent = hint;
+}
+function resortByTVL(){
+  const dir = tvlSortDir;
+  DATA.sort((a,b)=> dir * ((b.tvl||0) - (a.tvl||0)));
+  $("dirTVL").textContent = dir === -1 ? "▼" : "▲";
+  render();
+}
+
+/* ---------- NEW build(): concurrent + progressive ---------- */
+async function build(){
+  $("status").textContent = "Loading…";
+  await Promise.all([loadMarketCaps(), loadTokenLogos()]);
+
+  const tokenList = await discoverLockedTokens();
+  if (!tokenList.length){
+    $("empty").style.display="";
+    $("status").textContent="No active locks";
+    return;
+  }
+
+  // Reset table for progressive render
+  const rowsEl = $("rows");
+  rowsEl.innerHTML = "";
+  DATA = [];
+
+  const limit = pLimit(8); // adjust concurrency here (8 is a good balance)
+  let done = 0;
+
+  await Promise.all(tokenList.map(addr => limit(async ()=>{
+    const row = await fetchToken(addr);
+    if (!row) { done++; $("status").textContent=`Projects: ${done}/${tokenList.length}`; return; }
+
+    DATA.push(row);
+    appendRow(row, DATA.length); // progressive row
+    done++;
+    $("status").textContent = `Projects: ${done}/${tokenList.length}`;
+  })));
+
+  // Final tidy: sort by Locked % (default view) and re-render
+  render();
+}
+
+/* ---------- Events ---------- */
+document.getElementById("thTVL").addEventListener("click", ()=>{ tvlSortDir *= -1; resortByTVL(); });
+document.getElementById("btnSortTVL").addEventListener("click", ()=>{ tvlSortDir *= -1; resortByTVL(); });
+
+document.addEventListener("DOMContentLoaded", build);
+</script>
+
+</body>
+</html>
