@@ -224,7 +224,7 @@ async function loadTokenLogos(){
       const iconUrl = parsed.iconUrl || "";
       const websiteUrl = parsed.websiteUrl || "";
       const xUrl = parsed.xUrl || parsed.twitterUrl || "";
-      const telegramUrl = parsed.telegramUrl || ""
+      const telegramUrl = parsed.telegramUrl || "";
       tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
     }
   }catch(e){ console.warn("GQL error:", e); }
@@ -324,11 +324,10 @@ function render(){
   if (!DATA.length){ $("empty").style.display=""; return; }
   $("empty").style.display="none";
 
-  // ✅ Sort by TVL (descending) instead of locked %
-  const byTVL = [...DATA].sort((a,b)=> (b.tvl || 0) - (a.tvl || 0));
+  const byLocked = [...DATA].sort((a,b)=> b.lockedPct - a.lockedPct);
   let totalTVL = 0;
 
-  byTVL.forEach((p,i)=>{
+  byLocked.forEach((p,i)=>{
     totalTVL += (p.tvl || 0);
     const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
     const avgU   = p.avgUnlock  ? timeFromNow(p.avgUnlock)  : "—";
@@ -340,8 +339,9 @@ function render(){
     const totalHuman  = p.totalHuman;
     const burnedHuman = p.burnedHuman;
     const liqHuman    = p.liqHuman;
-    const circHuman   = p.circHuman;
+    const circHuman   = p.circHuman; // Total − Locked − Liquidity − Burned
 
+    // Percent bars: denominator excludes burned for "tradable" view
     const denomForPct = Math.max(1e-18, totalHuman - burnedHuman);
     const circPct = Math.max(0, Math.min(100, (circHuman / denomForPct) * 100));
     const burnPct = Math.max(0, Math.min(100, (burnedHuman / Math.max(1e-18,totalHuman)) * 100));
@@ -373,7 +373,7 @@ function render(){
           <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
           <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
           <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
-          <div>💰 TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>
+          <div>💰 TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>		  
         </div>
       </td>
 
@@ -391,14 +391,14 @@ function render(){
           </div>
           <div>
             ✅ Circulating: ${fmtNum(circHuman.toFixed(0))}
-          </div>
+          </div>		  
         </div>
       </td>
     `;
     rowsEl.appendChild(tr);
   });
 
-  $("status").textContent = `Projects: ${byTVL.length} • Total TVL: $${fmtNum(totalTVL.toFixed(2))}`;
+  $("status").textContent = `Projects: ${byLocked.length} • Total TVL: $${fmtNum(totalTVL.toFixed(2))}`;
 }
 
 /* =========== Build =========== */
