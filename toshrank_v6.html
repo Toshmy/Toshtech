@@ -51,7 +51,7 @@
 
     td.supply-cell{min-width:180px;white-space:normal}
 
-    /* ===== Mobile: stacked cards ===== */
+    /* ===== Mobile stacked ===== */
     @media (max-width: 640px){
       .table-scroll{ overflow:visible }
       thead{ display:none }
@@ -60,8 +60,7 @@
         margin:12px 0; border:1px solid var(--border); border-radius:12px;
         background:var(--card); box-shadow:var(--shadow); padding:10px
       }
-      tr .row-index{ display:none } /* hide # */
-
+      tr .row-index{ display:none }
       td.token-cell{ padding-bottom:8px }
       td.token-cell::before{ content:none !important }
 
@@ -126,6 +125,19 @@ const CONFIG = {
   EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
   GQL_URL: "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad"
 };
+/* Cloudflare Worker relay (CORS) */
+const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
+async function fetchJsonCORS(url) {
+  try{
+    const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
+    if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
+    return r.json();
+  }catch(e){
+    console.warn("Relay fetch failed:", url, e);
+    throw e;
+  }
+}
+
 const GQL_QUERY = `query PresalesLogos { presales(first: 1000) { data token } }`;
 const POOLS_JSON_URL = "pools_cache.json";
 const BURN_ADDRS = [
@@ -178,7 +190,7 @@ const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 let poolsMap = new Map();       // price/reserve/name/symbol by token CA
 let tokenMetaFromGQL = new Map();
 
-/* Load prices/reserves from pools_cache.json */
+/* Load prices/reserves from pools_cache.json (same-origin) */
 async function loadMarketCaps(){
   poolsMap.clear();
   try{
@@ -200,17 +212,15 @@ async function loadMarketCaps(){
   }catch(e){ console.warn("pools_cache load error:", e); }
 }
 
-/* Logos / socials from GQL */
+/* Logos / socials via GQL (CORS → relay) */
 async function loadTokenLogos(){
   tokenMetaFromGQL.clear();
   try{
-    const r = await fetch(CONFIG.GQL_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "accept": "application/json" },
-      body: JSON.stringify({ query: GQL_QUERY })
-    });
-    if (!r.ok) return;
-    const js = await r.json();
+    const body = JSON.stringify({ query: GQL_QUERY });
+    const url = CONFIG.GQL_URL; // POST via relay
+    const js = await fetchJsonCORS(url + "?method=POST&headers=" + encodeURIComponent(JSON.stringify({
+      "content-type":"application/json","accept":"application/json"
+    })) + "&body=" + encodeURIComponent(body));
     const presales = js?.data?.presales || [];
     for (const p of presales){
       const addr = (p.token || "").toLowerCase();
@@ -223,7 +233,7 @@ async function loadTokenLogos(){
       const telegramUrl = parsed.telegramUrl || "";
       tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
     }
-  }catch(e){ console.warn("GQL error:", e); }
+  }catch(e){ console.warn("GQL via relay error:", e); }
 }
 
 /* Find tokens that have active locks (via events) */
@@ -261,29 +271,30 @@ async function getLocksSummary(token){
   return { sumLocked: sum, earliestUnlock: earliestUnlock || null, avgUnlock: avgUnlock || null };
 }
 
-/* Holders API: sum balances held by UniswapV3Pool contracts (there can be many pages) */
+/* Holders API via relay: sum balances held by UniswapV3Pool contracts (multi-page) */
 async function getLiquidityFromHolders(token, decimals){
-  // Example: https://explorer.../api/v2/tokens/<token>/holders
   const base = `${CONFIG.EXPLORER}/api/v2/tokens/${token}/holders`;
   let total = ethers.BigNumber.from(0);
   let next = null;
-  // safety page cap to avoid super long loads
   for (let page=0; page<8; page++){
-    const qs = next ? `?${new URLSearchParams(next)}` : "";
-    const r = await fetch(base + qs);
-    if (!r.ok) break;
-    const js = await r.json();
-    const items = js?.items || [];
-    for (const item of items){
-      const addr = item?.address || {};
-      const name = (addr?.name || "");
-      const isContract = !!addr?.is_contract;
-      if (isContract && /UniswapV3Pool/i.test(name)) {
-        try { total = total.add(ethers.BigNumber.from(item.value || "0")); } catch {}
+    try{
+      const url = next ? `${base}?${new URLSearchParams(next)}` : base;
+      const js = await fetchJsonCORS(url);
+      const items = js?.items || [];
+      for (const item of items){
+        const addr = item?.address || {};
+        const name = (addr?.name || "");
+        const isContract = !!addr?.is_contract;
+        if (isContract && /UniswapV3Pool/i.test(name)) {
+          try { total = total.add(ethers.BigNumber.from(item.value || "0")); } catch {}
+        }
       }
+      next = js?.next_page_params;
+      if (!next) break;
+    }catch(e){
+      console.warn("holders relay failed, treating liquidity as 0 for", token, e);
+      break;
     }
-    next = js?.next_page_params;
-    if (!next) break;
   }
   return bnToNum(total, decimals);
 }
@@ -345,7 +356,7 @@ function render(){
 
     const totalHuman  = p.totalHuman;
     const burnedHuman = p.burnedHuman;
-    const circHuman   = p.circHuman; // already computed with liquidity in build
+    const circHuman   = p.circHuman; // already adjusted w/ liquidity
     const totalForBar = totalHuman > 0 ? totalHuman : (circHuman + burnedHuman || 1);
     const circPct = Math.max(0, Math.min(100, (circHuman / totalForBar) * 100));
     const burnPct = Math.max(0, Math.min(100, (burnedHuman / totalForBar) * 100));
@@ -407,13 +418,12 @@ function render(){
 async function build(){
   $("status").textContent = "Loading…";
 
-  // Fetch static aids first
   await Promise.all([loadMarketCaps(), loadTokenLogos()]);
 
   const tokenList = await discoverLockedTokens();
   if (!tokenList.length){ $("empty").style.display=""; $("status").textContent="No active locks"; return; }
 
-  const limit = pLimit(3); // concurrency limit to avoid hammering explorer
+  const limit = pLimit(3); // keep explorer happy
 
   const results = (await Promise.all(tokenList.map(addr => limit(async ()=>{
     try{
@@ -437,19 +447,18 @@ async function build(){
       const burnedHuman  = bnToNum(burnedBN, dec);
       const lockedHuman  = bnToNum(sumLocked, dec);
 
-      // Price from pools_cache.json (fallback 0)
+      // Price from pools_cache.json
       const pool = poolsMap.get(ca);
       const price = pool?.price || 0;
 
-      // Liquidity (sum of UniswapV3Pool holder balances)
+      // Liquidity via holders relay (sum balances on UniswapV3Pool contracts)
       const liqHuman = await getLiquidityFromHolders(ca, dec);
 
-      // Circulating & caps per your formulas (subtract burned too so it’s not overstated)
+      // Metrics (subtract burned from circulating so it’s not overstated)
       const circHuman = Math.max(0, totalHuman - lockedHuman - liqHuman - burnedHuman);
       const tvl = lockedHuman * price;
       const fdv = totalHuman * price;
       const mc  = circHuman * price;
-
       const lockedPct = (totalHuman > 0) ? (lockedHuman / (totalHuman - burnedHuman) * 100) : 0;
 
       return {
