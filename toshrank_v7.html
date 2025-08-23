@@ -383,13 +383,12 @@ function render(){
             <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
-          <div class="small">Adj = Total − Locked − Liquidity − Burned</div>
           <div class="small">
             Total: ${fmtNum(totalHuman)}<br>
             Locked: ${fmtNum(p.lockedHuman)}<br>
-            Liquidity: ${fmtNum(liqHuman)}<br>
+            Liquidity: ${fmtNum(liqHuman.toFixed(0))}<br>
             Burned: ${fmtNum(burnedHuman)}<br>
-            Circulating (Adj): ${fmtNum(circHuman)}
+            Circ. (Adj): ${fmtNum(circHuman.toFixed(2))}
           </div>
         </div>
       </td>
