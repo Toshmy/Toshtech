@@ -51,7 +51,9 @@
     .chip .emoji{font-size:12px;opacity:.9}
     .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 
-    td.supply-cell{min-width:180px;white-space:normal}
+    td.metrics-cell{white-space:normal;min-width:220px}
+    .metrics-lines{display:flex;flex-direction:column;gap:4px}
+    .metrics-lines b{font-weight:600}
 
     /* Mobile toolbar */
     .mobile-toolbar{display:none; gap:8px; align-items:center; margin:8px 0 0;}
@@ -70,25 +72,19 @@
       .mobile-toolbar{display:flex}
       tr .row-index{ display:none } /* hide # */
 
-      /* Token header uses FULL width — no "TOKEN" label */
       td.token-cell{ padding-bottom:8px }
       td.token-cell[data-label]{ --dummy: 0; }
-      td.token-cell::before{ content:none !important }  /* ensure no label shows */
+      td.token-cell::before{ content:none !important }
 
-      /* Make action wrap under header, socials on separate full-width line */
       .token-head{flex-wrap:wrap;gap:10px}
       .token-actions{flex:1 0 100%;display:flex;justify-content:flex-start}
       .token-links{width:100%;justify-content:flex-start}
       .chip{ font-size:11px; padding:.22rem .55rem; max-width:100% }
 
-      /* Key-value rows */
-      td[data-label]{
-        display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:8px 4px
-      }
+      td[data-label]{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:8px 4px }
       td[data-label]::before{
         content:attr(data-label);
-        flex:0 0 42%;
-        max-width:220px;
+        flex:0 0 42%; max-width:220px;
         font-size:11px; color:#bfeede; opacity:.8; text-transform:uppercase; letter-spacing:.03em;
         padding-top:3px;
       }
@@ -97,8 +93,8 @@
         overflow-wrap:anywhere;
       }
       .cell-val .progress{ width:100% }
-      td.supply-cell{ min-width:auto }
-      .mono{ word-break:normal } /* keep CA as one line with ellipsis */
+      td.metrics-cell .metrics-lines{ width:100% }
+      .mono{ word-break:normal }
       th.sortable .dir{ display:none }
     }
   </style>
@@ -126,7 +122,7 @@
             <th>Locked %</th>
             <th>Unlock Date</th>
             <th id="thTVL" class="sortable">TVL<span class="dir" id="dirTVL"></span></th>
-            <th>Supply (Adjusted)</th>
+            <th>Price / Supply / Caps</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -169,11 +165,25 @@ const log = (...a)=>{ const el=$("log"); el.style.display='block'; el.textConten
 
 function shortAddr(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
 function fmtNum(n){ return Number(n).toLocaleString(); }
+function fmtUSD(n){
+  const v = Number(n)||0;
+  if (v === 0) return "0";
+  if (v < 0.01) return v.toLocaleString(undefined,{minimumFractionDigits:4, maximumFractionDigits:8});
+  if (v < 1)    return v.toLocaleString(undefined,{minimumFractionDigits:3, maximumFractionDigits:6});
+  return v.toLocaleString(undefined,{maximumFractionDigits:2});
+}
+function fmtPrice(p){
+  const v = Number(p)||0;
+  if (v === 0) return "0";
+  // show more decimals for tiny values
+  if (v < 0.000001) return v.toExponential(2);           // scientific for ultra small
+  if (v < 0.01)     return v.toLocaleString(undefined,{minimumFractionDigits:6, maximumFractionDigits:8});
+  if (v < 1)        return v.toLocaleString(undefined,{minimumFractionDigits:4, maximumFractionDigits:6});
+  return v.toLocaleString(undefined,{maximumFractionDigits:4});
+}
 function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, decimals)); }catch{ return 0; } }
 function escapeHtml(s){
-  return String(s||"").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-  }[m]));
+  return String(s||"").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 }
 function timeFromNow(ts){
   if (!ts) return "—";
@@ -195,31 +205,32 @@ const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
 const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 
 /* ===== External caches ===== */
-let marketCaps = new Map();
+let poolsMap = new Map();       // address -> { price, reserve, name, symbol }
 let tokenMetaFromGQL = new Map();
 
-async function loadMarketCaps(){
-  marketCaps.clear();
+async function loadPools(){
+  poolsMap.clear();
   try{
     if (location.protocol === "file:") {
       console.warn("pools_cache.json blocked on file:// — run a local server to load it.");
       return;
     }
     const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
-    if (!r.ok) return;
+    if (!r.ok) { console.warn("pools_cache fetch failed", r.status); return; }
     const js = await r.json();
     const rows = Array.isArray(js) ? js : (js.data || []);
     for (const row of rows){
       const addr = (row.address || "").toLowerCase();
       if(/^0x[a-fA-F0-9]{40}$/.test(addr)){
-        marketCaps.set(addr, {
-          mc: Number(row.market_cap || 0),
-          name: row.name || "",
+        poolsMap.set(addr, {
+          price: Number(row.price ?? row.pepu_price ?? 0),
+          reserve: Number(row.reserve_in_usd ?? 0),
+          name: row.symbol || row.name || "",
           symbol: row.symbol || ""
         });
       }
     }
-  }catch(e){}
+  }catch(e){ console.warn("pools_cache error:", e); }
 }
 
 async function loadTokenLogos(){
@@ -278,7 +289,7 @@ async function getLocksSummary(token){
     await locker.getActiveLocksByToken(token, 0, 1000).catch(()=>[[],[],[],[]]);
 
   let sum = ethers.BigNumber.from(0);
-  let sumWeighted = ethers.BigNumber.from(0); // Σ(amount * unlockTime)
+  let sumWeighted = ethers.BigNumber.from(0);
   let earliestUnlock = null;
 
   for (let i=0;i<ids.length;i++){
@@ -293,7 +304,7 @@ async function getLocksSummary(token){
 
   let avgUnlock = null;
   if (!sum.isZero()) {
-    const avgBN = sumWeighted.div(sum); // integer division
+    const avgBN = sumWeighted.div(sum);
     avgUnlock = avgBN.toNumber();
   }
 
@@ -399,12 +410,17 @@ function render(){
       </td>
 
       <td data-label="TVL" data-tvl="${p.tvl}">
-        <div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div>
+        <div class="cell-val">$${fmtUSD(p.tvl)}</div>
       </td>
-
-      <td data-label="Supply (Adjusted)" class="supply-cell">
+      <td data-label="Price / Supply / Caps" class="metrics-cell">
         <div class="cell-val">
-          <div class="supplybar">
+          <div class="metrics-lines">
+            <div><b>Price:</b> $${fmtPrice(p.price)}</div>
+            <div><b>Circulating:</b> ${fmtNum(circHuman)}</div>
+            <div><b>MC:</b> $${fmtUSD(p.mc)}</div>
+            <div><b>FDV:</b> $${fmtUSD(p.fdv)}</div>
+          </div>
+          <div class="supplybar" style="margin-top:6px">
             <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
@@ -412,7 +428,7 @@ function render(){
             ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
           </div>
           <div class="small">
-            Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} <br> Total: ${fmtNum(totalHuman)}
+            Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
           </div>
         </div>
       </td>
@@ -468,10 +484,16 @@ function resortByTVL(){
           <div class="small muted">avg: ${avgU}</div>
         </div>
       </td>
-      <td data-label="TVL"><div class="cell-val">$${fmtNum((p.tvl||0).toFixed(2))}</div></td>
-      <td data-label="Supply (Adjusted)" class="supply-cell">
+      <td data-label="TVL"><div class="cell-val">$${fmtUSD(p.tvl)}</div></td>
+      <td data-label="Price / Supply / Caps" class="metrics-cell">
         <div class="cell-val">
-          <div class="supplybar">
+          <div class="metrics-lines">
+            <div><b>Price:</b> $${fmtPrice(p.price)}</div>
+            <div><b>Circulating:</b> ${fmtNum(circHuman)}</div>
+            <div><b>MC:</b> $${fmtUSD(p.mc)}</div>
+            <div><b>FDV:</b> $${fmtUSD(p.fdv)}</div>
+          </div>
+          <div class="supplybar" style="margin-top:6px">
             <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
@@ -479,7 +501,7 @@ function resortByTVL(){
             ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
           </div>
           <div class="small">
-            Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)}<br> Total: ${fmtNum(totalHuman)}
+            Burned: ${fmtNum(burnedHuman)} • Total: ${fmtNum(totalHuman)}
           </div>
         </div>
       </td>
@@ -499,12 +521,13 @@ function updateSortHint(){
 /* ===== Build ===== */
 async function build(){
   $("status").textContent = "Loading…";
-  await Promise.all([loadMarketCaps(), loadTokenLogos()]);
+  await Promise.all([loadPools(), loadTokenLogos()]);
 
   const tokenList = await discoverLockedTokens();
   if (!tokenList.length){ $("empty").style.display=""; $("status").textContent="No active locks"; return; }
 
   const limit = pLimit(5);
+
   const results = (await Promise.all(tokenList.map(addr => limit(async ()=>{
     try{
       const { sumLocked, earliestUnlock, avgUnlock } = await getLocksSummary(addr);
@@ -523,20 +546,24 @@ async function build(){
 
       const totalHuman  = bnToNum(total, Number(decimals));
       const burnedHuman = bnToNum(burned, Number(decimals));
-      const adjusted    = Math.max(0, totalHuman - burnedHuman);
-      const lockedPct   = adjusted > 0 ? (lockedHuman / adjusted * 100) : 0;
+      const circHuman   = Math.max(0, totalHuman - burnedHuman);
+      const lockedPct   = circHuman > 0 ? (lockedHuman / circHuman * 100) : 0;
 
-      const m = marketCaps.get(addr.toLowerCase());
-      const tvl = m?.mc || 0;
+      const pool = poolsMap.get(addr.toLowerCase()) || {};
+      const price = Number(pool.price || 0);
+      const preserv   = Number(pool.reserve || 0);// liquidity from JSON reserve
+	  const tvl   = lockedHuman * price;
+      const mc    = price * circHuman;                         // MC using circ
+      const fdv   = price * totalHuman;                        // FDV using total
 
       return {
         address: addr.toLowerCase(),
-        name: name || m?.name || "",
-        symbol: symbol || m?.symbol || "",
+        name: name || pool.name || "",
+        symbol: symbol || pool.symbol || "",
         totalHuman, burnedHuman, lockedHuman, lockedPct,
         nextUnlock: earliestUnlock,
-        avgUnlock,                 // <-- include it in data
-        tvl
+        avgUnlock,
+        tvl, price, mc, fdv
       };
     }catch(e){ return null; }
   })))).filter(Boolean);
