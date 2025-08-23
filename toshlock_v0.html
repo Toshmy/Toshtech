@@ -30,9 +30,9 @@
     .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
     .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:var(--muted)}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
     th{text-align:left;background:var(--bg-2)}
-    .table-scroll{overflow-x:auto;overflow-y:hidden;border-radius:12px;-webkit-overflow-scrolling:touch}
+    .table-scroll{overflow:auto;border-radius:12px}
     pre{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:12px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
     td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
     #amountHint{margin-top:6px;min-height:16px}
@@ -54,20 +54,6 @@
     .ac-sym{color:#a8ffd9}
     .ac-addr{margin-left:auto; font-family:ui-monospace,monospace; color:#9fb; opacity:.85}
     .ac-empty{padding:10px 12px; color:#a8ffd9; font-size:12px}
-
-    /* ===== Mobile responsiveness for My Locks tables ===== */
-    @media (max-width: 640px){
-      .row.between{gap:10px}
-      th, td{font-size:12px}
-      /* Convert tables to stacked cards */
-      table.responsive thead{display:none}
-      table.responsive, table.responsive tbody, table.responsive tr, table.responsive td{display:block;width:100%}
-      table.responsive tr{padding:10px;border-bottom:1px solid rgba(255,255,255,.12)}
-      table.responsive td{display:flex;justify-content:space-between;align-items:center;gap:10px;white-space:normal}
-      table.responsive td::before{content:attr(data-label);color:var(--muted);font-weight:600}
-      .table-scroll{padding:0 4px}
-      .btn{padding:10px 12px}
-    }
   </style>
 
   <!-- ethers v5 -->
@@ -142,15 +128,11 @@
         <div style="flex:1 1 480px">
           <h3 style="margin-top:0">Active</h3>
           <div class="table-scroll card" style="padding:0">
-            <table class="responsive">
+            <table>
               <thead>
                 <tr>
-                  <th style="text-align:right">Amount</th>
-                  <th>Action</th>
-                  <th>Unlocks at</th>
-                  <th>Name</th>
-                  <th>Owner</th>
-                  <th>Lock ID</th>
+                  <th>Unlock</th><th style="text-align:right">Amount</th><th>Symbol</th>
+                  <th>Name</th><th>Owner</th><th>Lock ID</th>
                 </tr>
               </thead>
               <tbody id="activeRows"></tbody>
@@ -160,15 +142,11 @@
         <div style="flex:1 1 480px">
           <h3 style="margin-top:0">Unlockable</h3>
           <div class="table-scroll card" style="padding:0">
-            <table class="responsive">
+            <table>
               <thead>
                 <tr>
-                  <th style="text-align:right">Amount</th>
-                  <th>Action</th>
-                  <th>Unlocks at</th>
-                  <th>Name</th>
-                  <th>Owner</th>
-                  <th>Lock ID</th>
+                  <th>Unlock</th><th style="text-align:right">Amount</th><th>Symbol</th>
+                  <th>Name</th><th>Owner</th><th>Lock ID</th><th>Action</th>
                 </tr>
               </thead>
               <tbody id="unlockableRows"></tbody>
@@ -398,45 +376,19 @@ async function scanMyLocks(){
       const ownerDisp = user.slice(0,6)+"…"+user.slice(-4);
 
       const tr = document.createElement("tr");
-
-      // Amount (right-aligned)
-      const tdAmt = document.createElement("td");
-      tdAmt.style.textAlign = 'right';
-      tdAmt.dataset.label = 'Amount';
-      tdAmt.innerHTML = humanDisplay(human, sym);
-      tr.appendChild(tdAmt);
-
-      // Action (Unlock button for unlockable, dash otherwise)
-      const tdAct = document.createElement("td");
-      tdAct.dataset.label = 'Action';
-
-      // Unlocks at
-      const tdDate = document.createElement("td");
-      tdDate.dataset.label = 'Unlocks at';
-      tdDate.textContent = date;
-
-      // Name
-      const tdName = document.createElement("td");
-      tdName.dataset.label = 'Name';
-      tdName.textContent = lname||"";
-
-      // Owner
-      const tdOwner = document.createElement("td");
-      tdOwner.dataset.label = 'Owner';
-      tdOwner.className = 'mono';
-      tdOwner.title = user;
-      tdOwner.textContent = ownerDisp;
-
-      // Lock ID
-      const tdId = document.createElement("td");
-      tdId.dataset.label = 'Lock ID';
-      tdId.textContent = id.toString();
+      tr.innerHTML = `
+        <td>${date}</td>
+        <td style="text-align:right">${humanDisplay(human, sym)}</td>
+        <td>${sym}</td>
+        <td>${lname||""}</td>
+        <td class="mono" title="${user}">${ownerDisp}</td>
+        <td>${id.toString()}</td>
+      `;
 
       if (Number(unlockTime) > now) {
-        tdAct.textContent = '—';
-        tr.append(tdAct, tdDate, tdName, tdOwner, tdId);
         activeRows.appendChild(tr);
       } else if (active && Number(unlockTime) <= now) {
+        const td = document.createElement("td");
         const btn = document.createElement("button");
         btn.textContent="Unlock"; btn.className="btn";
         btn.onclick = async ()=>{
@@ -450,8 +402,7 @@ async function scanMyLocks(){
             scanMyLocks();
           }catch(e){ logScan("❌", e?.data?.message || e?.message || String(e)); btn.disabled=false; btn.textContent="Unlock"; }
         };
-        tdAct.appendChild(btn);
-        tr.append(tdAct, tdDate, tdName, tdOwner, tdId);
+        td.appendChild(btn); tr.appendChild(td);
         unlockableRows.appendChild(tr);
       }
     }
