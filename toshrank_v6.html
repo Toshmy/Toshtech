@@ -49,7 +49,7 @@
     .chip .emoji{font-size:12px;opacity:.9}
     .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 
-    td.supply-cell{min-width:180px;white-space:normal}
+    td.supply-cell{min-width:220px;white-space:normal}
 
     /* ===== Mobile stacked ===== */
     @media (max-width: 640px){
@@ -125,17 +125,12 @@ const CONFIG = {
   EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
   GQL_URL: "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad"
 };
-/* Cloudflare Worker relay (CORS) */
+// Only use the Worker for explorer API (CORS)
 const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
 async function fetchJsonCORS(url) {
-  try{
-    const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
-    if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
-    return r.json();
-  }catch(e){
-    console.warn("Relay fetch failed:", url, e);
-    throw e;
-  }
+  const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
+  if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
+  return r.json();
 }
 
 const GQL_QUERY = `query PresalesLogos { presales(first: 1000) { data token } }`;
@@ -190,7 +185,7 @@ const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 let poolsMap = new Map();       // price/reserve/name/symbol by token CA
 let tokenMetaFromGQL = new Map();
 
-/* Load prices/reserves from pools_cache.json (same-origin) */
+/* Load price/reserve from pools_cache.json (same-origin) */
 async function loadMarketCaps(){
   poolsMap.clear();
   try{
@@ -212,15 +207,17 @@ async function loadMarketCaps(){
   }catch(e){ console.warn("pools_cache load error:", e); }
 }
 
-/* Logos / socials via GQL (CORS → relay) */
+/* Logos / socials via GQL — direct (no worker) */
 async function loadTokenLogos(){
   tokenMetaFromGQL.clear();
   try{
-    const body = JSON.stringify({ query: GQL_QUERY });
-    const url = CONFIG.GQL_URL; // POST via relay
-    const js = await fetchJsonCORS(url + "?method=POST&headers=" + encodeURIComponent(JSON.stringify({
-      "content-type":"application/json","accept":"application/json"
-    })) + "&body=" + encodeURIComponent(body));
+    const r = await fetch(CONFIG.GQL_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({ query: GQL_QUERY })
+    });
+    if (!r.ok) { console.warn("GQL fetch failed:", r.status); return; }
+    const js = await r.json();
     const presales = js?.data?.presales || [];
     for (const p of presales){
       const addr = (p.token || "").toLowerCase();
@@ -233,7 +230,7 @@ async function loadTokenLogos(){
       const telegramUrl = parsed.telegramUrl || "";
       tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
     }
-  }catch(e){ console.warn("GQL via relay error:", e); }
+  }catch(e){ console.warn("GQL error:", e); }
 }
 
 /* Find tokens that have active locks (via events) */
@@ -356,10 +353,11 @@ function render(){
 
     const totalHuman  = p.totalHuman;
     const burnedHuman = p.burnedHuman;
-    const circHuman   = p.circHuman; // already adjusted w/ liquidity
-    const totalForBar = totalHuman > 0 ? totalHuman : (circHuman + burnedHuman || 1);
-    const circPct = Math.max(0, Math.min(100, (circHuman / totalForBar) * 100));
-    const burnPct = Math.max(0, Math.min(100, (burnedHuman / totalForBar) * 100));
+    const liqHuman    = p.liqHuman;
+    const circHuman   = p.circHuman; // Total − Locked − Liquidity − Burned
+    const denomForPct = Math.max(1e-18, totalHuman - burnedHuman); // exclude burned from denominator
+    const circPct = Math.max(0, Math.min(100, (circHuman / denomForPct) * 100));
+    const burnPct = Math.max(0, Math.min(100, (burnedHuman / Math.max(1e-18,totalHuman)) * 100));
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -387,7 +385,6 @@ function render(){
         <div class="cell-val">
           <div>TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>
           <div class="small">Price: $${(p.price||0).toFixed(8)}</div>
-          <div class="small">Circulating: ${fmtNum(circHuman)}</div>
           <div class="small">MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
           <div class="small">FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
         </div>
@@ -395,15 +392,19 @@ function render(){
 
       <td data-label="Supply (Adjusted)" class="supply-cell">
         <div class="cell-val">
-          <div class="supplybar">
+          <div class="supplybar" title="Circulating % (green) vs Burned % (red)">
             <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
-            ${circPct.toFixed(4)}% circ • ${burnPct.toFixed(4)}% burned
+            Adj = Total − Locked − Liquidity − Burned
           </div>
           <div class="small">
-            Circulating: ${fmtNum(circHuman)} • Burned: ${fmtNum(burnedHuman)} <br> Total: ${fmtNum(totalHuman)}
+            Total: ${fmtNum(totalHuman)}<br>
+            Locked: ${fmtNum(p.lockedHuman)}<br>
+            Liquidity: ${fmtNum(liqHuman)}<br>
+            Burned: ${fmtNum(burnedHuman)}<br>
+            Circulating (Adj): ${fmtNum(circHuman)}
           </div>
         </div>
       </td>
@@ -454,12 +455,12 @@ async function build(){
       // Liquidity via holders relay (sum balances on UniswapV3Pool contracts)
       const liqHuman = await getLiquidityFromHolders(ca, dec);
 
-      // Metrics (subtract burned from circulating so it’s not overstated)
+      // Metrics
       const circHuman = Math.max(0, totalHuman - lockedHuman - liqHuman - burnedHuman);
       const tvl = lockedHuman * price;
       const fdv = totalHuman * price;
       const mc  = circHuman * price;
-      const lockedPct = (totalHuman > 0) ? (lockedHuman / (totalHuman - burnedHuman) * 100) : 0;
+      const lockedPct = (totalHuman - burnedHuman > 0) ? (lockedHuman / (totalHuman - burnedHuman) * 100) : 0;
 
       return {
         address: ca,
@@ -468,7 +469,7 @@ async function build(){
         totalHuman, burnedHuman, lockedHuman, lockedPct,
         nextUnlock: earliestUnlock, avgUnlock,
         price, mc, fdv, tvl,
-        circHuman
+        circHuman, liqHuman
       };
     }catch(e){
       console.warn("token build error", addr, e);
