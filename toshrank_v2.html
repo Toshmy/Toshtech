@@ -111,7 +111,7 @@ const CONFIG = {
   RPC: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
   EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"
 };
-const POOLS_JSON_URL = "pools_cache.json";
+const POOLS_JSON_URL = "https://www.toshtech.xyz/pools_cache.json";
 const BURN_ADDRS = [
   "0xa9fD599cd8857e90059c83e4885Dc09986039085",
   "0x000000000000000000000000000000000000dEaD"
@@ -146,32 +146,47 @@ try{
 /* ===== Pools cache ===== */
 let marketCaps = new Map(); // address -> { price, mc, reserve, symbol, name }
 async function loadMarketCaps(){
+  marketCaps.clear();
   try{
-    const r = await fetch(POOLS_JSON_URL, {cache:"no-cache"});
-    if(!r.ok) { debug("pools_cache.json fetch failed", r.status); return []; }
-    const arr = await r.json();
-    const addresses = [];
-    for(const row of arr){
-      const addr=(row.address||"").toLowerCase();
-      if(/^0x[a-fA-F0-9]{40}$/.test(addr)){
-        marketCaps.set(addr,{
-          price:Number(row.price||0),
-          mc:Number(row.market_cap||0),
-          reserve:Number(row.reserve_in_usd||0),
-          symbol:row.symbol||"",
-          name:row.name||""
-        });
-        addresses.push(addr);
-      }
+    const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
+    if (!r.ok) { debug("pools_cache.json fetch failed:", r.status); return []; }
+
+    const root = await r.json();
+    // Accept either an array OR { data: [...] }
+    const arr = Array.isArray(root) ? root : (Array.isArray(root?.data) ? root.data : []);
+
+    if (!arr.length){
+      debug("pools_cache.json: no rows found. Keys:", Object.keys(root||{}).join(", "));
+      return [];
     }
-    debug("pools_cache.json loaded. tokens:", addresses.length);
-    return addresses;
-  }catch(e){
-    debug("pools_cache.json error:", e.message||e);
+
+    const addrs = [];
+    for (const row of arr){
+      const addr = (row.address || "").toLowerCase();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) continue;
+
+      // Normalize & store
+      const price   = Number(row.price ?? 0);
+      const mc      = Number(row.market_cap ?? 0);
+      const reserve = Number(row.reserve_in_usd ?? 0);
+
+      marketCaps.set(addr, {
+        price,
+        mc,
+        reserve,
+        symbol: row.symbol || "",
+        name:   row.name   || ""
+      });
+      addrs.push(addr);
+    }
+
+    debug(`pools_cache.json loaded: ${addrs.length} tokens`);
+    return addrs;
+  } catch (e) {
+    debug("pools_cache.json error:", e?.message || e);
     return [];
   }
 }
-
 /* ===== Discover tokens via logs ===== */
 async function discoverTokensByLogs(){
   try{
