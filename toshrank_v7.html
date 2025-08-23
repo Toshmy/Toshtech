@@ -385,9 +385,9 @@ function render(){
           </div>
           <div class="small">
             Total: ${fmtNum(totalHuman)}<br>
-            Locked: ${fmtNum(p.lockedHuman)}<br>
+            Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
             Liquidity: ${fmtNum(liqHuman.toFixed(0))}<br>
-            Burned: ${fmtNum(burnedHuman)}<br>
+            Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
             Circ. (Adj): ${fmtNum(circHuman.toFixed(0))}
           </div>
         </div>
