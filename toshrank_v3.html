@@ -412,7 +412,6 @@ function render(){
       <td data-label="TVL" data-tvl="${p.tvl}">
         <div class="cell-val">$${fmtUSD(p.tvl)}</div>
       </td>
-
       <td data-label="Price / Supply / Caps" class="metrics-cell">
         <div class="cell-val">
           <div class="metrics-lines">
@@ -552,7 +551,8 @@ async function build(){
 
       const pool = poolsMap.get(addr.toLowerCase()) || {};
       const price = Number(pool.price || 0);
-      const tvl   = Number(pool.reserve || 0);                 // TVL from JSON reserve
+      const preserv   = Number(pool.reserve || 0);// liquidity from JSON reserve
+	  const tvl   = lockedHuman * price;
       const mc    = price * circHuman;                         // MC using circ
       const fdv   = price * totalHuman;                        // FDV using total
 
