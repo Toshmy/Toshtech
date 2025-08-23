@@ -363,8 +363,8 @@ function render(){
 
       <td data-label="Unlock Date">
         <div class="cell-val" title="Next: ${nextTitle} | Avg: ${avgTitle}">
-          <div>⏳ next ${nextU}</div>
-          <div class="small muted">🗓️ avg ${avgU}</div>
+          <div>${nextU}</div>
+          <div class="small muted">avg: ${avgU}</div>
         </div>
       </td>
 
@@ -384,11 +384,11 @@ function render(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
-            📦 Total: ${fmtNum(totalHuman)}<br>
-            🔒 Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
-            💧 Liquidity: ${fmtNum(liqHuman.toFixed(0))}<br>
-            🔥 Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
-            ✅ Circ. (Adj): ${fmtNum(circHuman.toFixed(0))}
+            Total 📦: ${fmtNum(totalHuman)}<br>
+            Locked 🔒: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
+            Liquidity 💧: ${fmtNum(liqHuman.toFixed(0))}<br>
+            Burned 🔥: ${fmtNum(burnedHuman.toFixed(0))}<br>
+            Circ. (Adj)✅: ${fmtNum(circHuman.toFixed(0))}
           </div>
         </div>
       </td>
