@@ -28,10 +28,6 @@
     .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
     .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
 
-    .supplybar{height:10px;background:#0f1730;border:1px solid var(--border);border-radius:6px;display:flex;overflow:hidden}
-    .supplybar .circ{background:var(--green);height:100%}
-    .supplybar .burn{background:var(--red);height:100%}
-
     .muted{color:var(--muted);opacity:.92}
     .small{font-size:12px;color:#bfeede}
     .center{display:flex;align-items:center;justify-content:center;padding:18px;color:#bfeede}
@@ -42,15 +38,11 @@
     td.token-cell{white-space:normal}
     .token-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
     .token-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
-    .token-logo{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:#0b1226;flex:0 0 36px}
     .token-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
     .token-ca a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
 
     .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:.22rem .6rem;background:#081021}
-    .chip .emoji{font-size:12px;opacity:.9}
-    .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-
-    td.supply-cell{min-width:200px;white-space:normal}
+    td.supply-cell{min-width:220px;white-space:normal}
 
     .mobile-toolbar{display:none; gap:8px; align-items:center; margin:8px 0 0;}
     .btn{cursor:pointer; border:1px solid var(--border); background:#081021; color:#a8ffd9; border-radius:999px; padding:.4rem .8rem; font-size:12px;}
@@ -66,6 +58,11 @@
       td[data-label]::before{content:attr(data-label);flex:0 0 42%;font-size:11px;color:#bfeede;opacity:.8;text-transform:uppercase}
       .cell-val{flex:1;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
     }
+
+    /* Debug box */
+    #debugWrap{margin-top:12px}
+    #debug{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:10px;max-height:180px;overflow:auto;white-space:pre-wrap}
+    #debugToggle{cursor:pointer}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
@@ -90,13 +87,21 @@
             <th>Locked %</th>
             <th>Unlock Date</th>
             <th id="thTVL" class="sortable">TVL<span class="dir" id="dirTVL"></span></th>
-            <th>Supply / MC / FDV</th>
+            <th>Price / Supply / Caps</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
       <div id="empty" class="center" style="display:none">No active locks found.</div>
     </section>
+
+    <div id="debugWrap" class="card">
+      <div class="row" style="justify-content:space-between">
+        <strong>Debug</strong>
+        <span id="debugToggle" class="pill">hide</span>
+      </div>
+      <pre id="debug"></pre>
+    </div>
   </div>
 
 <script>
@@ -124,60 +129,102 @@ const LOCKER_ABI = [
 
 /* ===== Helpers ===== */
 const $ = id => document.getElementById(id);
+const debug = (...a)=>{ const el=$("debug"); el.textContent += a.join(" ")+"\n"; };
+const setStatus = s => { $("status").textContent = s; };
 function shortAddr(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
-function fmtNum(n){ return Number(n).toLocaleString(undefined,{maximumFractionDigits:4}); }
+function fmtNum(n){ const v=Number(n||0); return isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:4}):"0"; }
 function bnToNum(bn,dec){ try{return Number(ethers.utils.formatUnits(bn,dec))}catch{return 0;} }
-function timeFromNow(ts){const now=Math.floor(Date.now()/1000),diff=ts-now,abs=Math.abs(diff);const m=Math.floor(abs/60),h=Math.floor(m/60),d=Math.floor(h/24);const u=d?["day",d]:h?["hour",h]:m?["min",m]:["sec",abs];return diff>=0?`in ${u[1]} ${u[0]}${u[1]>1?"s":""}`:`${u[1]} ${u[0]}${u[1]>1?"s":""} ago`;}
+function timeFromNow(ts){const now=Math.floor(Date.now()/1000),diff=ts-now,abs=Math.abs(diff);const m=Math.floor(abs/60),h=Math.floor(m/60),d=Math.floor(h/24),mo=Math.floor(d/30);const u=mo?["month",mo]:d?["day",d]:h?["hour",h]:m?["min",m]:["sec",abs];return diff>=0?`in ${u[1]} ${u[0]}${u[1]>1?"s":""}`:`${u[1]} ${u[0]}${u[1]>1?"s":""} ago`;}
 
 /* ===== Providers ===== */
-const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
-const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
+let ro, locker;
+try{
+  ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
+  locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
+}catch(e){ debug("Provider init error:", e.message||e); }
 
-let marketCaps = new Map();
-let DATA = [];
-let tvlSortDir = -1;
-
-/* ===== Load pools_cache.json ===== */
+/* ===== Pools cache ===== */
+let marketCaps = new Map(); // address -> { price, mc, reserve, symbol, name }
 async function loadMarketCaps(){
-  const r=await fetch(POOLS_JSON_URL); if(!r.ok) return;
-  const js=await r.json();
-  js.forEach(row=>{
-    const addr=(row.address||"").toLowerCase();
-    if(/^0x[a-fA-F0-9]{40}$/.test(addr)){
-      marketCaps.set(addr,{
-        price: Number(row.price||0),
-        mc: Number(row.market_cap||0),
-        reserve: Number(row.reserve_in_usd||0),
-        symbol: row.symbol||"",
-        name: row.name||""
-      });
+  try{
+    const r = await fetch(POOLS_JSON_URL, {cache:"no-cache"});
+    if(!r.ok) { debug("pools_cache.json fetch failed", r.status); return []; }
+    const arr = await r.json();
+    const addresses = [];
+    for(const row of arr){
+      const addr=(row.address||"").toLowerCase();
+      if(/^0x[a-fA-F0-9]{40}$/.test(addr)){
+        marketCaps.set(addr,{
+          price:Number(row.price||0),
+          mc:Number(row.market_cap||0),
+          reserve:Number(row.reserve_in_usd||0),
+          symbol:row.symbol||"",
+          name:row.name||""
+        });
+        addresses.push(addr);
+      }
     }
-  });
+    debug("pools_cache.json loaded. tokens:", addresses.length);
+    return addresses;
+  }catch(e){
+    debug("pools_cache.json error:", e.message||e);
+    return [];
+  }
+}
+
+/* ===== Discover tokens via logs ===== */
+async function discoverTokensByLogs(){
+  try{
+    const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+    const latest = await ro.getBlockNumber();
+    const window = 400_000; // safer window
+    const fromBlock = Math.max(0, latest - window);
+    const logs = await ro.getLogs({ address: CONFIG.LOCKER, topics:[topic0], fromBlock, toBlock:"latest" });
+    const tokens = [...new Set(logs.map(l=>"0x"+l.topics[1].slice(26)).map(a=>a.toLowerCase()))];
+    debug("log scan tokens:", tokens.length, "fromBlock:", fromBlock, "latest:", latest);
+    return tokens;
+  }catch(e){
+    debug("log scan error:", e.message||e);
+    return [];
+  }
 }
 
 /* ===== Locks summary ===== */
 async function getLocksSummary(token){
-  const [ids,owners,amts,uts]=await locker.getActiveLocksByToken(token,0,1000).catch(()=>[[],[],[],[]]);
-  let sum=ethers.BigNumber.from(0),earliest=null;
-  ids.forEach((id,i)=>{sum=sum.add(amts[i]);const ut=Number(uts[i]);if(!earliest||ut<earliest)earliest=ut;});
-  return {sumLocked:sum,earliestUnlock:earliest};
+  try{
+    const [ids,owners,amts,uts] = await locker.getActiveLocksByToken(token,0,1000);
+    let sum=ethers.BigNumber.from(0), earliest=null;
+    for(let i=0;i<ids.length;i++){
+      sum=sum.add(amts[i]);
+      const ut = Number(uts[i]);
+      if(!earliest||ut<earliest) earliest=ut;
+    }
+    return { sumLocked:sum, earliestUnlock:earliest };
+  }catch(e){
+    debug("getLocksSummary error:", token, e.message||e);
+    return { sumLocked: ethers.BigNumber.from(0), earliestUnlock:null };
+  }
 }
 
 /* ===== Fetch one token ===== */
 async function fetchToken(addr){
   try{
     const {sumLocked,earliestUnlock}=await getLocksSummary(addr);
-    if(!sumLocked||sumLocked.isZero())return null;
+    if(!sumLocked || sumLocked.isZero()) return null;
+
     const t=new ethers.Contract(addr,ERC20,ro);
     const [name,sym,dec,total,...burns]=await Promise.all([
-      t.name().catch(()=>""),t.symbol().catch(()=>""),t.decimals().catch(()=>18),
+      t.name().catch(()=>""), t.symbol().catch(()=>""), t.decimals().catch(()=>18),
       t.totalSupply().catch(()=>ethers.BigNumber.from(0)),
       ...BURN_ADDRS.map(a=>t.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
     ]);
-    let burned=ethers.BigNumber.from(0);burns.forEach(b=>burned=burned.add(b));
-    const locked=bnToNum(sumLocked,dec),tot=bnToNum(total,dec),burn=bnToNum(burned,dec);
-    const circ=Math.max(0,tot-burn);
-    const lockedPct=circ>0?(locked/circ*100):0;
+    let burned=ethers.BigNumber.from(0); burns.forEach(b=>burned=burned.add(b));
+
+    const locked=bnToNum(sumLocked,dec);
+    const tot=bnToNum(total,dec);
+    const burn=bnToNum(burned,dec);
+    const circ=Math.max(0, tot - burn);
+    const lockedPct = circ>0 ? (locked/circ*100) : 0;
 
     const m=marketCaps.get(addr.toLowerCase())||{};
     const price=m.price||0;
@@ -186,20 +233,37 @@ async function fetchToken(addr){
     const tvl=locked*price;
 
     return {address:addr,name:name||m.name,symbol:sym||m.symbol,total:tot,circ,locked,lockedPct,burn,price,mc,fdv,tvl,nextUnlock:earliestUnlock};
-  }catch{return null;}
+  }catch(e){
+    debug("fetchToken error:", addr, e.message||e);
+    return null;
+  }
 }
 
-/* ===== Append row ===== */
-function appendRow(p,i){
+/* ===== Rendering ===== */
+let DATA = [];
+let tvlSortDir = -1; // -1 = desc
+function appendRow(p, index){
   const rows=$("rows");
   const tr=document.createElement("tr");
   tr.innerHTML=`
-    <td>${i}</td>
-    <td class="token-cell"><div class="token-head"><div class="token-left"><div class="token-name">${p.name||p.symbol}</div><div class="small mono"><a href="${CONFIG.EXPLORER}/address/${p.address}" target="_blank">${shortAddr(p.address)}</a></div></div></div></td>
-    <td><div class="progress"><i style="width:${p.lockedPct.toFixed(2)}%"></i></div><div class="small">${p.lockedPct.toFixed(2)}%</div></td>
-    <td>${p.nextUnlock?timeFromNow(p.nextUnlock):"—"}</td>
-    <td>$${fmtNum(p.tvl)}</td>
-    <td class="supply-cell">
+    <td class="row-index">${index}</td>
+    <td class="token-cell">
+      <div class="token-head">
+        <div class="token-left">
+          <div class="token-name">${(p.name||p.symbol||"").toString().replace(/[<>&]/g,"")}</div>
+          <div class="small mono token-ca">
+            <a href="${CONFIG.EXPLORER}/address/${p.address}" target="_blank" rel="noopener noreferrer">${shortAddr(p.address)}</a>
+          </div>
+        </div>
+      </div>
+    </td>
+    <td data-label="Locked %">
+      <div class="progress"><i style="width:${(p.lockedPct||0).toFixed(2)}%"></i></div>
+      <div class="small">${(p.lockedPct||0).toFixed(2)}%</div>
+    </td>
+    <td data-label="Unlock Date">${p.nextUnlock?timeFromNow(p.nextUnlock):"—"}</td>
+    <td data-label="TVL">$${fmtNum(p.tvl)}</td>
+    <td data-label="Price / Supply / Caps" class="supply-cell">
       <div class="small">Price: $${fmtNum(p.price)}</div>
       <div class="small">Circ: ${fmtNum(p.circ)}</div>
       <div class="small">MC: $${fmtNum(p.mc)}</div>
@@ -209,33 +273,103 @@ function appendRow(p,i){
   rows.appendChild(tr);
 }
 
+function rerenderAll(){
+  $("rows").innerHTML="";
+  DATA.forEach((p,i)=>appendRow(p,i+1));
+}
+
+function updateSortHint(){
+  $("dirTVL").textContent = tvlSortDir===-1 ? "▼" : "▲";
+  $("sortHint").textContent = tvlSortDir===-1 ? "TVL: high → low" : "TVL: low → high";
+}
+
+/* ===== Concurrency limiter ===== */
+function pLimit(max){
+  let running=0, queue=[];
+  const next=()=>{ running--; if(queue.length) queue.shift()(); };
+  return fn=>new Promise((res,rej)=>{
+    const run=()=>{ running++; Promise.resolve().then(fn).then(v=>{res(v);next();},e=>{rej(e);next();}); };
+    if(running<max) run(); else queue.push(run);
+  });
+}
+
 /* ===== Build ===== */
 async function build(){
-  $("status").textContent="Loading…";
-  await loadMarketCaps();
+  try{
+    setStatus("Loading pools…");
+    const cacheAddrs = await loadMarketCaps();
 
-  // Discover tokens by scanning logs
-  const topic0=ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
-  const latest=await ro.getBlockNumber();
-  const from=Math.max(0,latest-600000);
-  const logs=await ro.getLogs({address:locker.address,topics:[topic0],fromBlock:from,toBlock:"latest"});
-  const tokens=[...new Set(logs.map(l=>"0x"+l.topics[1].slice(26)).map(a=>a.toLowerCase()))];
+    setStatus("Scanning locks…");
+    const logAddrs = await discoverTokensByLogs();
 
-  DATA=[];
-  let i=0;
-  for(const addr of tokens){
-    const row=await fetchToken(addr);
-    if(row){DATA.push(row);appendRow(row,++i);}
-    $("status").textContent=`Loaded ${i}/${tokens.length}`;
+    // Merge & de-dup (prefer addresses from logs; if none, use cache)
+    const tokens = Array.from(new Set([...(logAddrs||[]), ...(cacheAddrs||[])]));
+    if(!tokens.length){
+      setStatus("No tokens found (check RPC/CORS)");
+      $("empty").style.display="";
+      return;
+    }
+
+    setStatus(`Found ${tokens.length} tokens — loading…`);
+    $("empty").style.display="none";
+
+    const limit = pLimit(8);
+    let shown = 0;
+
+    await Promise.all(tokens.map(addr => limit(async ()=>{
+      const row = await fetchToken(addr);
+      if(row){
+        DATA.push(row);
+        shown++;
+        appendRow(row, shown);
+        setStatus(`Loaded ${shown}/${tokens.length}`);
+      }
+    })));
+
+    if (!DATA.length){
+      setStatus("No active locks found");
+      $("empty").style.display="";
+      return;
+    }
+
+    // Default: sort by TVL desc and re-render
+    DATA.sort((a,b)=> (b.tvl||0) - (a.tvl||0));
+    rerenderAll();
+    updateSortHint();
+    setStatus(`Projects: ${DATA.length}`);
+  }catch(e){
+    debug("build fatal:", e.message||e);
+    setStatus("Error — see debug");
   }
-  $("status").textContent=`Projects: ${i}`;
 }
 
 /* ===== Events ===== */
-document.getElementById("thTVL").addEventListener("click",()=>{tvlSortDir*=-1;DATA.sort((a,b)=>tvlSortDir*((b.tvl||0)-(a.tvl||0)));$("rows").innerHTML="";DATA.forEach((p,i)=>appendRow(p,i+1));});
-document.getElementById("btnSortTVL").addEventListener("click",()=>{tvlSortDir*=-1;DATA.sort((a,b)=>tvlSortDir*((b.tvl||0)-(a.tvl||0)));$("rows").innerHTML="";DATA.forEach((p,i)=>appendRow(p,i+1));});
+document.getElementById("thTVL").addEventListener("click", ()=>{
+  tvlSortDir *= -1;
+  DATA.sort((a,b)=> tvlSortDir*((b.tvl||0)-(a.tvl||0)));
+  rerenderAll();
+  updateSortHint();
+});
+document.getElementById("btnSortTVL").addEventListener("click", ()=>{
+  tvlSortDir *= -1;
+  DATA.sort((a,b)=> tvlSortDir*((b.tvl||0)-(a.tvl||0)));
+  rerenderAll();
+  updateSortHint();
+});
+document.getElementById("debugToggle").addEventListener("click", ()=>{
+  const pre = $("debug");
+  const t = $("debugToggle");
+  if (pre.style.display==="none"){ pre.style.display="block"; t.textContent="hide"; }
+  else { pre.style.display="none"; t.textContent="show"; }
+});
 
-document.addEventListener("DOMContentLoaded",build);
+/* ===== Start ===== */
+document.addEventListener("DOMContentLoaded", ()=>{
+  if (location.protocol === "file:") {
+    debug("You are opening via file:// — fetch() of pools_cache.json is usually blocked by browsers. Serve with a local HTTP server.");
+  }
+  build();
+});
 </script>
 </body>
 </html>
