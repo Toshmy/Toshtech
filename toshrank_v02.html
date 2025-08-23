@@ -370,10 +370,10 @@ function render(){
 
       <td data-label="TVL / Metrics">
         <div class="cell-val">
-          <div>💰 TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>
-          <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
-          <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
-          <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
+          <div>TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>
+          <div class="small">Price: $${(p.price||0).toFixed(8)}</div>
+          <div class="small">MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
+          <div class="small">FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
         </div>
       </td>
 
@@ -384,11 +384,11 @@ function render(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
-            📦 Total: ${fmtNum(totalHuman)}<br>
-            🔒 Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
-            💧 Liquidity: ${fmtNum(liqHuman.toFixed(0))}<br>
-            🔥 Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
-            ✅ Circ. (Adj): ${fmtNum(circHuman.toFixed(0))}
+            Total: ${fmtNum(totalHuman)}<br>
+            Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
+            Liquidity: ${fmtNum(liqHuman.toFixed(0))}<br>
+            Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
+            Circ. (Adj): ${fmtNum(circHuman.toFixed(0))}
           </div>
         </div>
       </td>
