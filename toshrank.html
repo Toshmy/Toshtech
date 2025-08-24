@@ -50,6 +50,17 @@
 
     td.supply-cell{min-width:220px;white-space:normal}
 
+    /* Emphasize TVL */
+    .tvl-amount{
+      font-size:18px;
+      font-weight:800;
+      line-height:1.15;
+    }
+    .circ-amount{
+      font-size:12px;
+      font-weight:800;
+      line-height:1.15;
+    }
     @media (max-width: 640px){
       .table-scroll{ overflow:visible }
       thead{ display:none }
@@ -82,6 +93,7 @@
         overflow-wrap:anywhere;
       }
       .cell-val .progress{ width:100% }
+	  .cell-val .supplybar{ width:100%; align-self:stretch; }
       td.supply-cell{ min-width:auto }
       .mono{ word-break:normal }
     }
@@ -101,9 +113,10 @@
           <tr>
             <th>#</th>
             <th>Token</th>
+            <th class="tvl-col">TVL</th>
             <th>Locked %</th>
             <th>Unlock Date</th>
-            <th>TVL / Metrics</th>
+            <th>Metrics</th>
             <th>Supply (Adjusted)</th>
           </tr>
         </thead>
@@ -173,10 +186,10 @@ const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
 const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
 
 /* ===== External caches ===== */
-let poolInfoByToken = new Map(); // tokenCA -> { price, reserveUSD, pools: Set<poolCA>, name, symbol }
+let poolInfoByToken = new Map(); // tokenCA -> { price, reserveUSD, pools: Set<poolCA>, name, symbol, _maxReserveSeen }
 let tokenMetaFromGQL = new Map();
 
-/* Load price/reserve and LP pool addresses from pools_cache.json (same-origin) */
+/* Load & aggregate price/reserve across pools */
 async function loadPoolsJson(){
   poolInfoByToken.clear();
   try{
@@ -188,23 +201,31 @@ async function loadPoolsJson(){
       const token = (row.address || "").toLowerCase();
       const pool  = (row.pool_address || "").toLowerCase();
       if(!/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
+
       if(!poolInfoByToken.has(token)){
         poolInfoByToken.set(token, {
           price: Number(row.price || 0),
-          reserveUSD: Number(row.reserve_in_usd || 0),
+          reserveUSD: 0,
           pools: new Set(),
           name: row.name || "",
-          symbol: row.symbol || ""
+          symbol: row.symbol || "",
+          _maxReserveSeen: 0
         });
       }
-      if(/^0x[a-fA-F0-9]{40}$/.test(pool)){
-        poolInfoByToken.get(token).pools.add(pool);
+      const info = poolInfoByToken.get(token);
+      if(/^0x[a-fA-F0-9]{40}$/.test(pool)) info.pools.add(pool);
+
+      const rowReserve = Number(row.reserve_in_usd || 0);
+      info.reserveUSD += rowReserve;                       // sum USD liquidity across pools
+      if (rowReserve > info._maxReserveSeen) {             // pick price from most-liquid pool
+        info._maxReserveSeen = rowReserve;
+        info.price = Number(row.price || 0);
       }
     }
   }catch(e){ console.warn("pools_cache load error:", e); }
 }
 
-/* Logos / socials via GQL — direct (no Worker) */
+/* Logos / socials via GQL — direct */
 async function loadTokenLogos(){
   tokenMetaFromGQL.clear();
   try{
@@ -224,7 +245,7 @@ async function loadTokenLogos(){
       const iconUrl = parsed.iconUrl || "";
       const websiteUrl = parsed.websiteUrl || "";
       const xUrl = parsed.xUrl || parsed.twitterUrl || "";
-      const telegramUrl = parsed.telegramUrl || ""
+      const telegramUrl = parsed.telegramUrl || "";
       tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
     }
   }catch(e){ console.warn("GQL error:", e); }
@@ -263,22 +284,6 @@ async function getLocksSummary(token){
     avgUnlock = avgBN.toNumber();
   }
   return { sumLocked: sum, earliestUnlock: earliestUnlock || null, avgUnlock: avgUnlock || null };
-}
-
-/* Liquidity = sum of token.balanceOf(pool_address) across all pools in pools_cache.json */
-async function getLiquidityFromPools(token, decimals){
-  const info = poolInfoByToken.get(token);
-  if (!info || !info.pools || info.pools.size === 0) return 0;
-  const erc = new ethers.Contract(token, ERC20, ro);
-  const limit = pLimit(5);
-  const amounts = await Promise.all(
-    Array.from(info.pools).map(pool =>
-      limit(()=> erc.balanceOf(pool).catch(()=>ethers.BigNumber.from(0)))
-    )
-  );
-  let total = ethers.BigNumber.from(0);
-  for (const a of amounts) total = total.add(a);
-  return bnToNum(total, decimals);
 }
 
 /* =========== UI helpers =========== */
@@ -324,7 +329,7 @@ function render(){
   if (!DATA.length){ $("empty").style.display=""; return; }
   $("empty").style.display="none";
 
-  // ✅ Sort by TVL (descending) instead of locked %
+  // Sort by TVL (descending)
   const byTVL = [...DATA].sort((a,b)=> (b.tvl || 0) - (a.tvl || 0));
   let totalTVL = 0;
 
@@ -339,9 +344,9 @@ function render(){
 
     const totalHuman  = p.totalHuman;
     const burnedHuman = p.burnedHuman;
-    const liqHuman    = p.liqHuman;
     const circHuman   = p.circHuman;
 
+    // Percent bars: denominator excludes burned for "tradable" view
     const denomForPct = Math.max(1e-18, totalHuman - burnedHuman);
     const circPct = Math.max(0, Math.min(100, (circHuman / denomForPct) * 100));
     const burnPct = Math.max(0, Math.min(100, (burnedHuman / Math.max(1e-18,totalHuman)) * 100));
@@ -352,6 +357,11 @@ function render(){
 
       <td class="token-cell">
         ${tokenCellHTML(p)}
+      </td>
+
+      <!-- Dedicated TVL column (big & bold) -->
+      <td data-label="TVL" class="tvl-cell">
+        <div class="tvl-amount">💰 $${fmtNum((p.tvl||0).toFixed(0))}</div>
       </td>
 
       <td data-label="Locked %">
@@ -368,13 +378,13 @@ function render(){
         </div>
       </td>
 
-      <td data-label="TVL / Metrics">
+      <!-- Metrics (no TVL here) -->
+      <td data-label="Metrics">
         <div class="cell-val">
-          <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
-		  <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>
+          <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>
           <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
           <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
-          <div class="big">💰 TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>
+          <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
         </div>
       </td>
 
@@ -385,11 +395,11 @@ function render(){
             <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
           </div>
           <div class="small">
-            📦 Total: ${fmtNum(totalHuman)}<br>
+            📦 Total: ${fmtNum(totalHuman.toFixed(0))}<br>
             🔒 Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
             🔥 Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
           </div>
-          <div>
+          <div class="circ-amount">
             ✅ Circulating: ${fmtNum(circHuman.toFixed(0))}
           </div>
         </div>
@@ -434,20 +444,20 @@ async function build(){
       const burnedHuman  = bnToNum(burnedBN, dec);
       const lockedHuman  = bnToNum(sumLocked, dec);
 
-      // Price from pools_cache.json
+      // Price + liquidity (USD) from aggregated pools cache
       const poolInfo = poolInfoByToken.get(ca) || {};
-      const price = Number(poolInfo.price || 0);
-	  const liqUSD = Number(poolInfo.reserveUSD || 0);
+      const price  = Number(poolInfo.price || 0);
+      const liqUSD = Number(poolInfo.reserveUSD || 0);
 
-      // Liquidity by directly summing token.balanceOf(pool_address) across all pools
-      const liqHuman = await getLiquidityFromPools(ca, dec);
-
-      // Metrics
+      // ===== Metrics =====
+      // Standard circulating supply: total – locked – burned
       const circHuman = Math.max(0, totalHuman - lockedHuman - burnedHuman);
       const tvl = lockedHuman * price;
       const fdv = totalHuman * price;
       const mc  = circHuman * price;
-      const lockedPct = (totalHuman - burnedHuman > 0) ? (lockedHuman / (totalHuman - burnedHuman) * 100) : 0;
+      const lockedPct = (totalHuman - burnedHuman > 0)
+        ? (lockedHuman / (totalHuman - burnedHuman) * 100)
+        : 0;
 
       return {
         address: ca,
@@ -456,8 +466,8 @@ async function build(){
         totalHuman, burnedHuman, lockedHuman, lockedPct,
         nextUnlock: earliestUnlock, avgUnlock,
         price, mc, fdv, tvl,
-        circHuman, liqHuman,
-        liqUSD, 		
+        circHuman,
+        liqUSD
       };
     }catch(e){
       console.warn("token build error", addr, e);
