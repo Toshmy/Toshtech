@@ -371,6 +371,7 @@ function render(){
       <td data-label="TVL / Metrics">
         <div class="cell-val">
           <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
+		  <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>
           <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
           <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
           <div>💰 TVL: $${fmtNum((p.tvl||0).toFixed(2))}</div>
@@ -386,7 +387,6 @@ function render(){
           <div class="small">
             📦 Total: ${fmtNum(totalHuman)}<br>
             🔒 Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
-            💧 Liquidity: ${fmtNum(liqHuman.toFixed(0))}<br>
             🔥 Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
           </div>
           <div>
@@ -437,12 +437,13 @@ async function build(){
       // Price from pools_cache.json
       const poolInfo = poolInfoByToken.get(ca) || {};
       const price = Number(poolInfo.price || 0);
+	  const liqUSD = Number(poolInfo.reserveUSD || 0);
 
       // Liquidity by directly summing token.balanceOf(pool_address) across all pools
       const liqHuman = await getLiquidityFromPools(ca, dec);
 
       // Metrics
-      const circHuman = Math.max(0, totalHuman - lockedHuman - liqHuman - burnedHuman);
+      const circHuman = Math.max(0, totalHuman - lockedHuman - burnedHuman);
       const tvl = lockedHuman * price;
       const fdv = totalHuman * price;
       const mc  = circHuman * price;
@@ -455,7 +456,8 @@ async function build(){
         totalHuman, burnedHuman, lockedHuman, lockedPct,
         nextUnlock: earliestUnlock, avgUnlock,
         price, mc, fdv, tvl,
-        circHuman, liqHuman
+        circHuman, liqHuman,
+        liqUSD, 		
       };
     }catch(e){
       console.warn("token build error", addr, e);
