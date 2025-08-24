@@ -97,10 +97,162 @@
       td.supply-cell{ min-width:auto }
       .mono{ word-break:normal }
     }
+  :root{
+    --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+    --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+    --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
+  }
+
+  /* Basic utilities */
+  .hidden{display:none !important;}
+  .rotate-180{transform:rotate(180deg);}    
+
+  html,body{
+    margin:0;
+    background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);
+    color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+  }
+  a{color:#93c5fd;text-decoration:none}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px;padding-top:48px;}
+  .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .between{justify-content:space-between}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+  .muted{color:var(--muted);opacity:.9;font-size:12px}
+  *{box-sizing:border-box}
+  label{display:block;margin-bottom:6px;font-size:12px;color:var(--muted)}
+  input,button,select{
+    width:100%;border-radius:12px;border:1px solid var(--border);
+    background:#0f1730;color:#fff;padding:12px
+  }
+  input:focus,button:focus{outline:2px solid var(--accent);}
+  .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#00251b;border:0;font-weight:700;width:auto}
+  .btn.blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#eef5ff}
+  .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+  .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;
+    background:#081021;border:1px solid var(--border);color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}
+  th{text-align:left;background:var(--bg-2)}
+  .table-scroll{overflow-x:auto;overflow-y:hidden;border-radius:12px;-webkit-overflow-scrolling:touch}
+  pre{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:12px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
+  #amountHint{margin-top:6px;min-height:16px}
+  .flatpickr-calendar{background:#0f1730;border:1px solid var(--border);box-shadow:var(--shadow)}
+
+  /* ====== NAV ====== */
+  .site-nav{
+    position:fixed; left:0; right:0; top:4.5rem; z-index:60;
+    background:rgba(0,0,0,.8); backdrop-filter:blur(6px);
+  }
+  .nav-inner{max-width:64rem; margin:0 auto; padding:0 .75rem;}
+  .nav-row{display:flex; align-items:center; justify-content:space-between; padding:.75rem 0;}
+  .brand{color:#fff; font-weight:700; font-size:1.125rem;}
+
+  /* Desktop links */
+  .links-desktop{align-items:center; gap:1.5rem; font-weight:600;}
+  .links-desktop a{color:#fff; text-decoration:none;}
+  .links-desktop a:hover{color:var(--accent);}
+
+  /* Hamburger button (mobile only) */
+  .site-nav .menu-btn{
+    color:#fff !important;
+    -webkit-tap-highlight-color:transparent;
+    background:transparent;
+    border:0;
+    padding:.25rem;
+    cursor:pointer;
+    width:auto;
+    display:inline-flex;
+    align-items:center;
+    margin-left:auto;
+    flex:0 0 auto;
+  }
+  .site-nav .menu-btn svg{width:1.5rem;height:1.5rem;stroke:#fff;display:block;}
+  .site-nav .menu-btn:focus{outline:none;}
+  .site-nav .menu-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+    box-shadow:none;
+  }
+
+  /* Mobile menu */
+  .mobile-menu{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    padding:.5rem 0 .75rem;
+    font-weight:600;
+    text-align:center;
+    align-items:center;
+    width:100%;
+  }
+  .mobile-menu a{color:#fff;text-decoration:none;}
+  .mobile-menu a:hover{color:var(--accent);}
+
+  /* Dropdown (kept for future use) */
+  .nav-has-dropdown{position:relative;}
+  .nav-dropdown{
+    position:absolute; right:0; top:100%; margin-top:.5rem;
+    background:rgba(3,10,22,.92); border:1px solid rgba(0,255,174,.25);
+    backdrop-filter:blur(10px); border-radius:.75rem;
+    box-shadow:0 14px 40px rgba(0,0,0,.45),
+               0 0 0 1px rgba(0,255,174,.08) inset;
+    padding:.5rem; min-width:14rem;
+    opacity:0; visibility:hidden; transform:translateY(6px);
+    transition:opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
+    z-index:80;
+  }
+  .nav-has-dropdown:hover .nav-dropdown,
+  .nav-has-dropdown:focus-within .nav-dropdown{
+    opacity:1; visibility:visible; transform:translateY(0);
+  }
+  .nav-dropdown a{display:block; padding:.6rem .8rem; border-radius:.6rem; color:#eafff7;}
+  .nav-dropdown a:hover{background:rgba(255,255,255,.08);}
+
+  /* Responsive */
+  @media (max-width:768px){
+    .links-desktop{display:none !important;}
+    #menu-toggle{display:inline-flex !important;}
+    #mobile-menu{display:flex;} /* toggled by .hidden */
+  }
+  @media (min-width:769px){
+    .links-desktop{display:flex !important; gap:1.5rem;}
+    #menu-toggle{display:none !important;}
+    #mobile-menu{display:none !important;}
+  }	
   </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
+  <!-- NAVIGATION: Only ToshLock / ToshDashboard / ToshRank -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <div class="nav-row">
+        <div class="brand">Menu</div>
+        <div class="links-desktop only-desktop">
+          <a href="toshlock.html">ToshLock (Locker)</a>
+          <a href="toshdashboard.html">ToshDashboard</a>
+          <a href="toshrank.html">ToshRank</a>
+        </div>
+        <!-- Move the hamburger to be the LAST flex child so it sits at far right on mobile -->
+        <button id="menu-toggle" class="menu-btn only-mobile" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="mobile-menu" class="mobile-menu hidden" aria-hidden="true">
+        <a href="toshlock.html">ToshLock (Locker)</a>
+        <a href="toshdashboard.html">ToshDashboard</a>
+        <a href="toshrank.html">ToshRank</a>
+      </div>
+    </div>
+  </nav>
+
   <div class="wrap">
     <header class="row" style="justify-content:space-between;margin-bottom:10px">
       <h1 class="glow-text" style="margin:0">🏆 ToshLock — Projects with Active Locks</h1>
@@ -129,6 +281,39 @@
   </div>
 
 <script>
+    // Offset nav below banner (matches index behavior)
+    (function(){
+      const nav = document.querySelector('.site-nav');
+      const banner = document.querySelector('.banner');
+      function updateMenuTop(){
+        const h = banner ? banner.offsetHeight : 0; // 4.5rem fallback
+        nav.style.top = h + 'px';
+      }
+      window.addEventListener('resize', updateMenuTop);
+      updateMenuTop();
+    })();
+
+    // Hamburger toggle (menu stays right-aligned)
+    (function(){
+      const btn = document.getElementById('menu-toggle');
+      const panel = document.getElementById('mobile-menu');
+      if(!btn || !panel) return;
+      btn.addEventListener('click', ()=>{
+        const nowHidden = panel.classList.toggle('hidden');
+        const showing = !nowHidden;
+        btn.setAttribute('aria-expanded', String(showing));
+        panel.setAttribute('aria-hidden', String(!showing));
+      });
+    })();
+
+    // Highlight active link (desktop + mobile)
+    (function(){
+      const path = location.pathname.split('/').pop() || 'index.html';
+      document.querySelectorAll('nav a[href]').forEach(a=>{
+        if (a.getAttribute('href') === path) a.style.color = '#00ffae';
+      });
+    })();
+
 /* ===== CONFIG ===== */
 const CONFIG = {
   LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",

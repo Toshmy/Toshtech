@@ -4,80 +4,165 @@
   <meta charset="utf-8" />
   <title>ToshLock — Lock & Manage</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Flatpickr (calendar/time picker) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <style>
-    :root{
-      --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
-      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
-      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
-    }
-    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
-    a{color:#93c5fd;text-decoration:none}
-    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
-    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
-    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .between{justify-content:space-between}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
-    .muted{color:var(--muted);opacity:.9;font-size:12px}
-    *{box-sizing:border-box}
-    label{display:block;margin-bottom:6px;font-size:12px;color:var(--muted)}
-    input,button,select{width:100%;border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:12px}
-    input:focus,button:focus{outline:2px solid var(--accent);}
-    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700;width:auto}
-    .btn.blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#eef5ff}
-    .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
-    .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:var(--muted)}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}
-    th{text-align:left;background:var(--bg-2)}
-    .table-scroll{overflow-x:auto;overflow-y:hidden;border-radius:12px;-webkit-overflow-scrolling:touch}
-    pre{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:12px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
-    td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
-    #amountHint{margin-top:6px;min-height:16px}
-    .flatpickr-calendar{background:#0f1730;border:1px solid var(--border);box-shadow:var(--shadow)}
-    /* Autocomplete */
-    .ac-wrap{position:relative}
-    .ac-list{
-      position:absolute; left:0; right:0; top:calc(100% + 4px);
-      background:#0f1730; border:1px solid rgba(0,255,174,.2); border-radius:12px;
-      box-shadow:0 10px 24px rgba(0,0,0,.35); z-index:50; max-height:280px; overflow:auto; display:none;
-    }
-    .ac-item{
-      display:flex; gap:8px; align-items:center; padding:10px 12px; cursor:pointer;
-      border-bottom:1px solid rgba(255,255,255,.06); font-size:13px;
-    }
-    .ac-item:last-child{border-bottom:0}
-    .ac-item:hover{background:#0b1329}
-    .ac-name{font-weight:600}
-    .ac-sym{color:#a8ffd9}
-    .ac-addr{margin-left:auto; font-family:ui-monospace,monospace; color:#9fb; opacity:.85}
-    .ac-empty{padding:10px 12px; color:#a8ffd9; font-size:12px}
+<style>
+  :root{
+    --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+    --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+    --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
+  }
 
-    /* ===== Mobile responsiveness for My Locks tables ===== */
-    @media (max-width: 640px){
-      .row.between{gap:10px}
-      th, td{font-size:12px}
-      /* Convert tables to stacked cards */
-      table.responsive thead{display:none}
-      table.responsive, table.responsive tbody, table.responsive tr, table.responsive td{display:block;width:100%}
-      table.responsive tr{padding:10px;border-bottom:1px solid rgba(255,255,255,.12)}
-      table.responsive td{display:flex;justify-content:space-between;align-items:center;gap:10px;white-space:normal}
-      table.responsive td::before{content:attr(data-label);color:var(--muted);font-weight:600}
-      .table-scroll{padding:0 4px}
-      .btn{padding:10px 12px}
-    }
-  </style>
+  /* Basic utilities */
+  .hidden{display:none !important;}
+  .rotate-180{transform:rotate(180deg);}    
 
-  <!-- ethers v5 -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <!-- WalletConnect (self-hosted UMD you built) -->
-  <script src="assets/walletconnect.min.js"></script>
-  <!-- Flatpickr JS -->
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-</head>
+  html,body{
+    margin:0;
+    background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);
+    color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+  }
+  a{color:#93c5fd;text-decoration:none}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px;padding-top:48px;}
+  .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .between{justify-content:space-between}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+  .muted{color:var(--muted);opacity:.9;font-size:12px}
+  *{box-sizing:border-box}
+  label{display:block;margin-bottom:6px;font-size:12px;color:var(--muted)}
+  input,button,select{
+    width:100%;border-radius:12px;border:1px solid var(--border);
+    background:#0f1730;color:#fff;padding:12px
+  }
+  input:focus,button:focus{outline:2px solid var(--accent);}
+  .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#00251b;border:0;font-weight:700;width:auto}
+  .btn.blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#eef5ff}
+  .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+  .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;
+    background:#081021;border:1px solid var(--border);color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}
+  th{text-align:left;background:var(--bg-2)}
+  .table-scroll{overflow-x:auto;overflow-y:hidden;border-radius:12px;-webkit-overflow-scrolling:touch}
+  pre{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:12px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
+  #amountHint{margin-top:6px;min-height:16px}
+  .flatpickr-calendar{background:#0f1730;border:1px solid var(--border);box-shadow:var(--shadow)}
+
+  /* ====== NAV ====== */
+  .site-nav{
+    position:fixed; left:0; right:0; top:4.5rem; z-index:60;
+    background:rgba(0,0,0,.8); backdrop-filter:blur(6px);
+  }
+  .nav-inner{max-width:64rem; margin:0 auto; padding:0 .75rem;}
+  .nav-row{display:flex; align-items:center; justify-content:space-between; padding:.75rem 0;}
+  .brand{color:#fff; font-weight:700; font-size:1.125rem;}
+
+  /* Desktop links */
+  .links-desktop{align-items:center; gap:1.5rem; font-weight:600;}
+  .links-desktop a{color:#fff; text-decoration:none;}
+  .links-desktop a:hover{color:var(--accent);}
+
+  /* Hamburger button (mobile only) */
+  .site-nav .menu-btn{
+    color:#fff !important;
+    -webkit-tap-highlight-color:transparent;
+    background:transparent;
+    border:0;
+    padding:.25rem;
+    cursor:pointer;
+    width:auto;
+    display:inline-flex;
+    align-items:center;
+    margin-left:auto;
+    flex:0 0 auto;
+  }
+  .site-nav .menu-btn svg{width:1.5rem;height:1.5rem;stroke:#fff;display:block;}
+  .site-nav .menu-btn:focus{outline:none;}
+  .site-nav .menu-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+    box-shadow:none;
+  }
+
+  /* Mobile menu */
+  .mobile-menu{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    padding:.5rem 0 .75rem;
+    font-weight:600;
+    text-align:center;
+    align-items:center;
+    width:100%;
+  }
+  .mobile-menu a{color:#fff;text-decoration:none;}
+  .mobile-menu a:hover{color:var(--accent);}
+
+  /* Dropdown (kept for future use) */
+  .nav-has-dropdown{position:relative;}
+  .nav-dropdown{
+    position:absolute; right:0; top:100%; margin-top:.5rem;
+    background:rgba(3,10,22,.92); border:1px solid rgba(0,255,174,.25);
+    backdrop-filter:blur(10px); border-radius:.75rem;
+    box-shadow:0 14px 40px rgba(0,0,0,.45),
+               0 0 0 1px rgba(0,255,174,.08) inset;
+    padding:.5rem; min-width:14rem;
+    opacity:0; visibility:hidden; transform:translateY(6px);
+    transition:opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
+    z-index:80;
+  }
+  .nav-has-dropdown:hover .nav-dropdown,
+  .nav-has-dropdown:focus-within .nav-dropdown{
+    opacity:1; visibility:visible; transform:translateY(0);
+  }
+  .nav-dropdown a{display:block; padding:.6rem .8rem; border-radius:.6rem; color:#eafff7;}
+  .nav-dropdown a:hover{background:rgba(255,255,255,.08);}
+
+  /* Responsive */
+  @media (max-width:768px){
+    .links-desktop{display:none !important;}
+    #menu-toggle{display:inline-flex !important;}
+    #mobile-menu{display:flex;} /* toggled by .hidden */
+  }
+  @media (min-width:769px){
+    .links-desktop{display:flex !important; gap:1.5rem;}
+    #menu-toggle{display:none !important;}
+    #mobile-menu{display:none !important;}
+  }
+</style>
+
 <body>
+
+
+  <!-- NAVIGATION: Only ToshLock / ToshDashboard / ToshRank -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <div class="nav-row">
+        <div class="brand">Menu</div>
+        <div class="links-desktop only-desktop">
+          <a href="toshlock.html">ToshLock (Locker)</a>
+          <a href="toshdashboard.html">ToshDashboard</a>
+          <a href="toshrank.html">ToshRank</a>
+        </div>
+        <!-- Move the hamburger to be the LAST flex child so it sits at far right on mobile -->
+        <button id="menu-toggle" class="menu-btn only-mobile" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="mobile-menu" class="mobile-menu hidden" aria-hidden="true">
+        <a href="toshlock.html">ToshLock (Locker)</a>
+        <a href="toshdashboard.html">ToshDashboard</a>
+        <a href="toshrank.html">ToshRank</a>
+      </div>
+    </div>
+  </nav>
+
   <div class="wrap">
     <header class="row between">
       <h1 class="glow-text" style="margin:0">🔒 ToshLock — Lock & Manage</h1>
@@ -181,362 +266,360 @@
     </section>
   </div>
 
-<script>
-/* ========= Hardcoded env ========= */
-const LOCKER = "0xccefe66507762370c2487dd198d7d1fefc6def8f"; // ToshLockV4 prod
-const RPC    = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
-const CHAIN  = 97741;
-const WC_PID = "6e2df48125e4f633b093361ba0a87c81";
-const EXPLORER_BASE = "https://pepuscan.com";
+  <!-- NAV JS: banner offset + hamburger toggle + active link -->
+  <script>
+    // Offset nav below banner (matches index behavior)
+    (function(){
+      const nav = document.querySelector('.site-nav');
+      const banner = document.querySelector('.banner');
+      function updateMenuTop(){
+        const h = banner ? banner.offsetHeight : 0; // 4.5rem fallback
+        nav.style.top = h + 'px';
+      }
+      window.addEventListener('resize', updateMenuTop);
+      updateMenuTop();
+    })();
 
-// Cloudflare Worker relay (for explorer APIs / search)
-const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
+    // Hamburger toggle (menu stays right-aligned)
+    (function(){
+      const btn = document.getElementById('menu-toggle');
+      const panel = document.getElementById('mobile-menu');
+      if(!btn || !panel) return;
+      btn.addEventListener('click', ()=>{
+        const nowHidden = panel.classList.toggle('hidden');
+        const showing = !nowHidden;
+        btn.setAttribute('aria-expanded', String(showing));
+        panel.setAttribute('aria-hidden', String(!showing));
+      });
+    })();
 
-/* ========= ABIs ========= */
-const ERC20 = [
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
-  "function approve(address spender,uint256 amount) returns (bool)"
-];
-const LOCKER_ABI = [
-  "event LiquidityLocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount,uint256 unlockTime,string name)",
-  "event LiquidityUnlocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount)",
-  "function lockLiquidity(address token,uint256 amount,uint256 unlockTime)",
-  "function lockLiquidityWithName(address token,uint256 amount,uint256 unlockTime,string name)",
-  "function getLock(address token,uint256 lockId) view returns (address owner,uint256 amount,uint256 unlockTime,string name,bool active)",
-  "function getUserLockIds(address user,address token,uint256 offset,uint256 limit) view returns (uint256[] memory)",
-  "function unlockLiquidity(address token,uint256 lockId)"
-];
+    // Highlight active link (desktop + mobile)
+    (function(){
+      const path = location.pathname.split('/').pop() || 'index.html';
+      document.querySelectorAll('nav a[href]').forEach(a=>{
+        if (a.getAttribute('href') === path) a.style.color = '#00ffae';
+      });
+    })();
+  </script>
 
-/* ========= Helpers ========= */
-const $ = id => document.getElementById(id);
-const logTx = (...a)=>{ $("txlog").textContent += a.join(" ")+"\n"; };
-const logScan = (...a)=>{ $("scanlog").textContent += a.join(" ")+"\n"; };
-const setStatus = s => { $("status").textContent = s; };
-const PepuExplorer = {
-  tx: (h) => `${EXPLORER_BASE}/tx/${h}`,
-  address: (a) => `${EXPLORER_BASE}/address/${a}`
-};
-async function fetchJsonCORS(url) {
-  const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
-  if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
-  return r.json();
-}
+  <!-- ====== APP SCRIPTS (unchanged) ====== -->
+  <script>
+  /* ========= Hardcoded env ========= */
+  const LOCKER = "0xccefe66507762370c2487dd198d7d1fefc6def8f"; // ToshLockV4 prod
+  const RPC    = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
+  const CHAIN  = 97741;
+  const WC_PID = "6e2df48125e4f633b093361ba0a87c81";
+  const EXPLORER_BASE = "https://pepuscan.com";
 
-/* ---- Number formatting helpers (human & compact) ---- */
-function fmtWithCommasStr(s){
-  const str = String(s ?? "0");
-  const [int, frac=""] = str.split(".");
-  const withCommas = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const trimmedFrac = frac.replace(/0+$/,"");
-  return trimmedFrac ? `${withCommas}.${trimmedFrac}` : withCommas;
-}
-function fmtCompactSafe(s, dp=2){
-  const n = Number(s);
-  if (!isFinite(n)) return "";
-  return n.toLocaleString("en-US", { notation:"compact", maximumFractionDigits: dp });
-}
-function humanDisplay(amountStr, symbol=""){
-  const full = fmtWithCommasStr(amountStr);
-  const cmp  = fmtCompactSafe(amountStr, 2);
-  const sym  = symbol ? ` ${symbol}` : "";
-  return cmp ? `${full}${sym} <span class="muted">(≈ ${cmp}${sym})</span>` : `${full}${sym}`;
-}
+  // Cloudflare Worker relay (for explorer APIs / search)
+  const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
 
-let providerType = null; // 'mm' | 'wc'
-let wcProvider, ethersProvider, signer;
-const roProvider = new ethers.providers.JsonRpcProvider(RPC);
+  /* ========= ABIs ========= */
+  const ERC20 = [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function approve(address spender,uint256 amount) returns (bool)"
+  ];
+  const LOCKER_ABI = [
+    "event LiquidityLocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount,uint256 unlockTime,string name)",
+    "event LiquidityUnlocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount)",
+    "function lockLiquidity(address token,uint256 amount,uint256 unlockTime)",
+    "function lockLiquidityWithName(address token,uint256 amount,uint256 unlockTime,string name)",
+    "function getLock(address token,uint256 lockId) view returns (address owner,uint256 amount,uint256 unlockTime,string name,bool active)",
+    "function getUserLockIds(address user,address token,uint256 offset,uint256 limit) view returns (uint256[] memory)",
+    "function unlockLiquidity(address token,uint256 lockId)"
+  ];
 
-/* ========= Flatpickr init ========= */
-let whenPicker;
-document.addEventListener('DOMContentLoaded', () => {
-  whenPicker = flatpickr("#when", {
-    enableTime: true,
-    dateFormat: "Y-m-d H:i",
-    time_24hr: true,
-    minuteIncrement: 1,
-    altInput: true,
-    altFormat: "M j, Y — H:i",
-    defaultDate: new Date(Date.now() + 3600 * 1000), // +1h
-    minDate: "today"
-  });
-});
+  /* ========= Helpers ========= */
+  const $ = id => document.getElementById(id);
+  const logTx = (...a)=>{ $("txlog").textContent += a.join(" ")+"\n"; };
+  const logScan = (...a)=>{ $("scanlog").textContent += a.join(" ")+"\n"; };
+  const setStatus = s => { $("status").textContent = s; };
+  const PepuExplorer = {
+    tx: (h) => `${EXPLORER_BASE}/tx/${h}`,
+    address: (a) => `${EXPLORER_BASE}/address/${a}`
+  };
+  async function fetchJsonCORS(url) {
+    const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache: "no-cache" });
+    if (!r.ok) throw new Error(`Relay HTTP ${r.status}`);
+    return r.json();
+  }
 
-/* ========= Connect ========= */
-$("mm").onclick = async () => {
-  try{
-    if (!window.ethereum) throw new Error("MetaMask not found");
-    providerType='mm';
-    ethersProvider = new ethers.providers.Web3Provider(window.ethereum,'any');
-    await ethersProvider.send('eth_requestAccounts',[]);
-    signer = ethersProvider.getSigner();
-    const a = await signer.getAddress(); const n = await ethersProvider.getNetwork();
-    setStatus(`Connected (MM): ${a.slice(0,6)}…${a.slice(-4)} on chain ${n.chainId}`);
-    $("disc").disabled=false;
-  }catch(e){ setStatus(e.message||String(e)); }
-};
-$("wc").onclick = async () => {
-  try{
-    if (!window.WalletConnectEthereumProvider) throw new Error("walletconnect.min.js missing");
-    providerType='wc';
-    wcProvider = await window.WalletConnectEthereumProvider.init({
-      projectId: WC_PID, showQrModal:true,
-      chains:[CHAIN], optionalChains:[CHAIN],
-      rpcMap:{ [CHAIN]: RPC },
-      metadata:{ name:"ToshLock", description:"Pepu L2 Liquidity Locking", url:location.origin, icons:["https://walletconnect.com/walletconnect-logo.png"] }
+  function fmtWithCommasStr(s){
+    const str = String(s ?? "0");
+    const [int, frac=""] = str.split(".");
+    const withCommas = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const trimmedFrac = frac.replace(/0+$/,"");
+    return trimmedFrac ? `${withCommas}.${trimmedFrac}` : withCommas;
+  }
+  function fmtCompactSafe(s, dp=2){
+    const n = Number(s);
+    if (!isFinite(n)) return "";
+    return n.toLocaleString("en-US", { notation:"compact", maximumFractionDigits: dp });
+  }
+  function humanDisplay(amountStr, symbol=""){
+    const full = fmtWithCommasStr(amountStr);
+    const cmp  = fmtCompactSafe(amountStr, 2);
+    const sym  = symbol ? ` ${symbol}` : "";
+    return cmp ? `${full}${sym} <span class="muted">(≈ ${cmp}${sym})</span>` : `${full}${sym}`;
+  }
+
+  let providerType = null; // 'mm' | 'wc'
+  let wcProvider, ethersProvider, signer;
+  const roProvider = new ethers.providers.JsonRpcProvider(RPC);
+
+  let whenPicker;
+  document.addEventListener('DOMContentLoaded', () => {
+    whenPicker = flatpickr("#when", {
+      enableTime: true,
+      dateFormat: "Y-m-d H:i",
+      time_24hr: true,
+      minuteIncrement: 1,
+      altInput: true,
+      altFormat: "M j, Y — H:i",
+      defaultDate: new Date(Date.now() + 3600 * 1000), // +1h
+      minDate: "today"
     });
-    await wcProvider.enable();
-    ethersProvider = new ethers.providers.Web3Provider(wcProvider,'any');
-    signer = ethersProvider.getSigner();
-    const a = await signer.getAddress(); const n = await ethersProvider.getNetwork();
-    setStatus(`Connected (WC): ${a.slice(0,6)}…${a.slice(-4)} on chain ${n.chainId}`);
-    $("disc").disabled=false;
-    wcProvider.on('disconnect', ()=> setDisconnectedUI());
-  }catch(e){ setStatus(e.message||String(e)); }
-};
-$("disc").onclick = async () => {
-  try{ if (providerType==='wc' && wcProvider?.disconnect) await wcProvider.disconnect(); }catch{}
-  setDisconnectedUI();
-};
-function setDisconnectedUI(){ providerType=null; wcProvider=ethersProvider=signer=undefined; setStatus("Not connected"); $("disc").disabled=true; }
+  });
 
-/* ========= Token meta ========= */
-let tokenDecimals=null, tokenSymbol="", tokenName="";
-async function refreshTokenMeta(){
-  const addr = $("token").value.trim();
-  if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){ $("tokenMeta").textContent="—"; $("amountHint").textContent="—"; tokenDecimals=null; return; }
-  try{
-    const t = new ethers.Contract(addr, ERC20, roProvider);
-    const [name,symbol,dec] = await Promise.all([t.name(), t.symbol(), t.decimals()]);
-    tokenName=name; tokenSymbol=symbol; tokenDecimals=Number(dec);
-    $("tokenMeta").textContent = `${name} (${symbol}), decimals=${tokenDecimals}`;
-
-    // Refresh the hint using the current input value
-    const human = $("amount").value || "0";
-    $("amountHint").innerHTML = humanDisplay(human, tokenSymbol);
-
-  }catch{
+  $("mm").onclick = async () => {
     try{
-      const meta = await searchBestMatchByAddress(addr);
-      tokenName = meta?.name || ""; tokenSymbol = meta?.symbol || ""; tokenDecimals = null;
-      $("tokenMeta").textContent = `${tokenName || "?"} (${tokenSymbol || "?"})`;
+      if (!window.ethereum) throw new Error("MetaMask not found");
+      providerType='mm';
+      ethersProvider = new ethers.providers.Web3Provider(window.ethereum,'any');
+      await ethersProvider.send('eth_requestAccounts',[]);
+      signer = ethersProvider.getSigner();
+      const a = await signer.getAddress(); const n = await ethersProvider.getNetwork();
+      setStatus(`Connected (MM): ${a.slice(0,6)}…${a.slice(-4)} on chain ${n.chainId}`);
+      $("disc").disabled=false;
+    }catch(e){ setStatus(e.message||String(e)); }
+  };
+  $("wc").onclick = async () => {
+    try{
+      if (!window.WalletConnectEthereumProvider) throw new Error("walletconnect.min.js missing");
+      providerType='wc';
+      wcProvider = await window.WalletConnectEthereumProvider.init({
+        projectId: WC_PID, showQrModal:true,
+        chains:[CHAIN], optionalChains:[CHAIN],
+        rpcMap:{ [CHAIN]: RPC },
+        metadata:{ name:"ToshLock", description:"Pepu L2 Liquidity Locking", url:location.origin, icons:["https://walletconnect.com/walletconnect-logo.png"] }
+      });
+      await wcProvider.enable();
+      ethersProvider = new ethers.providers.Web3Provider(wcProvider,'any');
+      signer = ethersProvider.getSigner();
+      const a = await signer.getAddress(); const n = await ethersProvider.getNetwork();
+      setStatus(`Connected (WC): ${a.slice(0,6)}…${a.slice(-4)} on chain ${n.chainId}`);
+      $("disc").disabled=false;
+      wcProvider.on('disconnect', ()=> setDisconnectedUI());
+    }catch(e){ setStatus(e.message||String(e)); }
+  };
+  $("disc").onclick = async () => {
+    try{ if (providerType==='wc' && wcProvider?.disconnect) await wcProvider.disconnect(); }catch{}
+    setDisconnectedUI();
+  };
+  function setDisconnectedUI(){ providerType=null; wcProvider=ethersProvider=signer=undefined; setStatus("Not connected"); $("disc").disabled=true; }
+
+  let tokenDecimals=null, tokenSymbol="", tokenName="";
+  async function refreshTokenMeta(){
+    const addr = $("token").value.trim();
+    if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){ $("tokenMeta").textContent="—"; $("amountHint").textContent="—"; tokenDecimals=null; return; }
+    try{
+      const t = new ethers.Contract(addr, ERC20, roProvider);
+      const [name,symbol,dec] = await Promise.all([t.name(), t.symbol(), t.decimals()]);
+      tokenName=name; tokenSymbol=symbol; tokenDecimals=Number(dec);
+      $("tokenMeta").textContent = `${name} (${symbol}), decimals=${tokenDecimals}`;
       const human = $("amount").value || "0";
       $("amountHint").innerHTML = humanDisplay(human, tokenSymbol);
     }catch{
-      $("tokenMeta").textContent="⚠️ cannot read token"; tokenDecimals=null;
-      $("amountHint").textContent="—";
-    }
-  }
-}
-$("token").addEventListener("change", refreshTokenMeta);
-$("token").addEventListener("blur", refreshTokenMeta);
-$("amount").addEventListener("input", ()=>{
-  if(tokenDecimals==null){ $("amountHint").textContent="enter a valid token first"; return; }
-  const val = $("amount").value || "0";
-  $("amountHint").innerHTML = humanDisplay(val, tokenSymbol);
-});
-
-/* ========= Approve & Lock ========= */
-$("approveLock").onclick = async () => {
-  try{
-    if(!signer) throw new Error("Connect wallet first");
-    if(tokenDecimals==null) await refreshTokenMeta();
-
-    const tokenAddr = ethers.utils.getAddress($("token").value.trim());
-    const amtHuman  = $("amount").value || "0";
-    const amount    = ethers.utils.parseUnits(amtHuman, tokenDecimals||18);
-
-    const selectedDate = whenPicker && whenPicker.selectedDates[0];
-    if(!selectedDate) throw new Error("Pick a future lock date/time");
-    const unlockTs = Math.floor(selectedDate.getTime()/1000);
-    if(unlockTs <= Math.floor(Date.now()/1000)) throw new Error("Lock time must be in the future");
-
-    const name = $("lname").value || "";
-
-    const erc = new ethers.Contract(tokenAddr, ERC20, signer);
-    const tx1 = await erc.approve(LOCKER, amount);
-    logTx(`Approval: ${tx1.hash} — ${PepuExplorer.tx(tx1.hash)}`); await tx1.wait(); logTx("✅ Approval confirmed");
-
-    const locker = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
-    const tx2 = await locker.lockLiquidityWithName(tokenAddr, amount, unlockTs, name);
-    logTx(`Lock: ${tx2.hash} — ${PepuExplorer.tx(tx2.hash)}`); await tx2.wait(); logTx("🔒 Lock confirmed");
-
-    $("myToken").value = tokenAddr;
-    scanMyLocks();
-  }catch(e){ logTx("❌", e?.data?.message || e?.message || String(e)); }
-};
-
-/* ========= My Locks ========= */
-const activeRows = $("activeRows"), unlockableRows = $("unlockableRows");
-$("scan").onclick = scanMyLocks;
-
-async function scanMyLocks(){
-  try{
-    if(!signer) throw new Error("Connect wallet first");
-    $("scanlog").textContent=""; logScan("Loading…");
-    activeRows.innerHTML=""; unlockableRows.innerHTML="";
-
-    const tokenAddr = $("myToken").value.trim();
-    if(!/^0x[a-fA-F0-9]{40}$/.test(tokenAddr)) throw new Error("Enter a valid token address");
-
-    const user = await signer.getAddress();
-    const lockerRO = new ethers.Contract(LOCKER, LOCKER_ABI, roProvider);
-    const ids = await lockerRO.getUserLockIds(user, tokenAddr, 0, 500);
-
-    const ercRO = new ethers.Contract(tokenAddr, ERC20, roProvider);
-    const [sym, dec] = await Promise.all([ercRO.symbol().catch(()=>"?"), ercRO.decimals().catch(()=>18)]);
-    const detail = await Promise.all(ids.map(id => lockerRO.getLock(tokenAddr, id)));
-    const now = Math.floor(Date.now()/1000);
-
-    for (let i=0;i<ids.length;i++){
-      const id = ids[i];
-      const [owner, amount, unlockTime, lname, active] = detail[i];
-      if (!amount || amount.toString()==="0") continue;
-      const human = ethers.utils.formatUnits(amount, dec);
-      const date  = new Date(Number(unlockTime)*1000).toLocaleString();
-      const ownerDisp = user.slice(0,6)+"…"+user.slice(-4);
-
-      const tr = document.createElement("tr");
-
-      // Amount (right-aligned)
-      const tdAmt = document.createElement("td");
-      tdAmt.style.textAlign = 'right';
-      tdAmt.dataset.label = 'Amount';
-      tdAmt.innerHTML = humanDisplay(human, sym);
-      tr.appendChild(tdAmt);
-
-      // Action (Unlock button for unlockable, dash otherwise)
-      const tdAct = document.createElement("td");
-      tdAct.dataset.label = 'Action';
-
-      // Unlocks at
-      const tdDate = document.createElement("td");
-      tdDate.dataset.label = 'Unlocks at';
-      tdDate.textContent = date;
-
-      // Name
-      const tdName = document.createElement("td");
-      tdName.dataset.label = 'Name';
-      tdName.textContent = lname||"";
-
-      // Owner
-      const tdOwner = document.createElement("td");
-      tdOwner.dataset.label = 'Owner';
-      tdOwner.className = 'mono';
-      tdOwner.title = user;
-      tdOwner.textContent = ownerDisp;
-
-      // Lock ID
-      const tdId = document.createElement("td");
-      tdId.dataset.label = 'Lock ID';
-      tdId.textContent = id.toString();
-
-      if (Number(unlockTime) > now) {
-        tdAct.textContent = '—';
-        tr.append(tdAct, tdDate, tdName, tdOwner, tdId);
-        activeRows.appendChild(tr);
-      } else if (active && Number(unlockTime) <= now) {
-        const btn = document.createElement("button");
-        btn.textContent="Unlock"; btn.className="btn";
-        btn.onclick = async ()=>{
-          try{
-            const locker = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
-            btn.disabled=true; btn.textContent="Unlocking…";
-            const tx = await locker.unlockLiquidity(tokenAddr, id);
-            logScan(`Unlock: ${tx.hash} — ${PepuExplorer.tx(tx.hash)}`);
-            await tx.wait();
-            logScan("✅ Unlocked", id.toString());
-            scanMyLocks();
-          }catch(e){ logScan("❌", e?.data?.message || e?.message || String(e)); btn.disabled=false; btn.textContent="Unlock"; }
-        };
-        tdAct.appendChild(btn);
-        tr.append(tdAct, tdDate, tdName, tdOwner, tdId);
-        unlockableRows.appendChild(tr);
+      try{
+        const meta = await searchBestMatchByAddress(addr);
+        tokenName = meta?.name || ""; tokenSymbol = meta?.symbol || ""; tokenDecimals = null;
+        $("tokenMeta").textContent = `${tokenName || "?"} (${tokenSymbol || "?"})`;
+        const human = $("amount").value || "0";
+        $("amountHint").innerHTML = humanDisplay(human, tokenSymbol);
+      }catch{
+        $("tokenMeta").textContent="⚠️ cannot read token"; tokenDecimals=null;
+        $("amountHint").textContent="—";
       }
     }
-    logScan("Done.");
-  }catch(e){ logScan("❌", e?.data?.message || e?.message || String(e)); }
-}
-
-/* ========= Explorer SEARCH via your Worker (no tokens.json) ========= */
-async function pepuSearchRemote(q) {
-  if (!q || (q = q.trim()).length < 2) return [];
-  if (/^0x[a-fA-F0-9]{40}$/.test(q)) return [{ address: q, name: "", symbol: "" }];
-
-  const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
-  try {
-    const js = await fetchJsonCORS(url);
-    const items = js.items || [];
-    return items
-      .filter(it => it.type === 'token' || it.token_type === 'ERC-20' || it.address)
-      .map(it => ({
-        address: (it.address || it.address_hash || "").toLowerCase(),
-        name: it.name || "",
-        symbol: it.symbol || ""
-      }))
-      .filter((it, i, arr) => it.address && arr.findIndex(x => x.address === it.address) === i)
-      .slice(0, 20);
-  } catch (e) {
-    console.warn("search failed", e);
-    return [];
   }
-}
-
-// Helper: when user pastes an address, try to pull one matching search item for name/symbol
-async function searchBestMatchByAddress(addr){
-  try{
-    const res = await pepuSearchRemote(addr);
-    return res.find(x => x.address.toLowerCase()===addr.toLowerCase()) || res[0] || null;
-  }catch{ return null; }
-}
-
-function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
-
-function attachTokenAutocomplete(inputId, listId){
-  const inp = document.getElementById(inputId);
-  const list = document.getElementById(listId);
-  if(!inp || !list) return;
-  function hide(){ list.style.display="none"; }
-  function show(){ list.style.display="block"; }
-  hide();
-  const esc = s => String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
-  const render = (items)=>{
-    if(items.length===0){
-      list.innerHTML = `<div class="ac-empty">No matches</div>`; show(); return;
-    }
-    list.innerHTML = items.map(it=>{
-      const name = it.name ? `<span class="ac-name">${esc(it.name)}</span>` : '';
-      const sym  = it.symbol ? `<span class="ac-sym">(${esc(it.symbol)})</span>` : '';
-      const short = it.address.slice(0,8)+"…"+it.address.slice(-6);
-      return `<div class="ac-item" data-addr="${it.address}">
-        ${name} ${sym}
-        <span class="ac-addr">${short}</span>
-      </div>`;
-    }).join("");
-    show();
-  };
-  const onType = debounce(async ()=>{
-    const q = inp.value.trim();
-    if(!q){ hide(); return; }
-    if(/^0x[a-fA-F0-9]{40}$/.test(q)){ render([{address:q.toLowerCase(), name:"", symbol:""}]); return; }
-    const items = await pepuSearchRemote(q); render(items);
-  }, 220);
-  inp.addEventListener('input', onType);
-  inp.addEventListener('focus', ()=>{ if(list.innerHTML) show(); });
-  document.addEventListener('click', (e)=>{ if(!list.contains(e.target) && e.target!==inp) hide(); });
-  list.addEventListener('click', (e)=>{
-    const item = e.target.closest('.ac-item'); if(!item) return;
-    const addr = item.getAttribute('data-addr');
-    inp.value = addr; hide();
-    inp.dispatchEvent(new Event('change')); inp.dispatchEvent(new Event('blur'));
+  $("token").addEventListener("change", refreshTokenMeta);
+  $("token").addEventListener("blur", refreshTokenMeta);
+  $("amount").addEventListener("input", ()=>{
+    if(tokenDecimals==null){ $("amountHint").textContent="enter a valid token first"; return; }
+    const val = $("amount").value || "0";
+    $("amountHint").innerHTML = humanDisplay(val, tokenSymbol);
   });
-}
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  attachTokenAutocomplete('token','ac-token');
-  attachTokenAutocomplete('myToken','ac-myToken');
-});
-</script>
+  $("approveLock").onclick = async () => {
+    try{
+      if(!signer) throw new Error("Connect wallet first");
+      if(tokenDecimals==null) await refreshTokenMeta();
+
+      const tokenAddr = ethers.utils.getAddress($("token").value.trim());
+      const amtHuman  = $("amount").value || "0";
+      const amount    = ethers.utils.parseUnits(amtHuman, tokenDecimals||18);
+
+      const selectedDate = whenPicker && whenPicker.selectedDates[0];
+      if(!selectedDate) throw new Error("Pick a future lock date/time");
+      const unlockTs = Math.floor(selectedDate.getTime()/1000);
+      if(unlockTs <= Math.floor(Date.now()/1000)) throw new Error("Lock time must be in the future");
+
+      const name = $("lname").value || "";
+
+      const erc = new ethers.Contract(tokenAddr, ERC20, signer);
+      const tx1 = await erc.approve(LOCKER, amount);
+      logTx(`Approval: ${tx1.hash} — ${PepuExplorer.tx(tx1.hash)}`); await tx1.wait(); logTx("✅ Approval confirmed");
+
+      const locker = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
+      const tx2 = await locker.lockLiquidityWithName(tokenAddr, amount, unlockTs, name);
+      logTx(`Lock: ${tx2.hash} — ${PepuExplorer.tx(tx2.hash)}`); await tx2.wait(); logTx("🔒 Lock confirmed");
+
+      $("myToken").value = tokenAddr;
+      scanMyLocks();
+    }catch(e){ logTx("❌", e?.data?.message || e?.message || String(e)); }
+  };
+
+  const activeRows = $("activeRows"), unlockableRows = $("unlockableRows");
+  $("scan").onclick = scanMyLocks;
+
+  async function scanMyLocks(){
+    try{
+      if(!signer) throw new Error("Connect wallet first");
+      $("scanlog").textContent=""; logScan("Loading…");
+      activeRows.innerHTML=""; unlockableRows.innerHTML="";
+
+      const tokenAddr = $("myToken").value.trim();
+      if(!/^0x[a-fA-F0-9]{40}$/.test(tokenAddr)) throw new Error("Enter a valid token address");
+
+      const user = await signer.getAddress();
+      const lockerRO = new ethers.Contract(LOCKER, LOCKER_ABI, roProvider);
+      const ids = await lockerRO.getUserLockIds(user, tokenAddr, 0, 500);
+
+      const ercRO = new ethers.Contract(tokenAddr, ERC20, roProvider);
+      const [sym, dec] = await Promise.all([ercRO.symbol().catch(()=>"?"), ercRO.decimals().catch(()=>18)]);
+      const detail = await Promise.all(ids.map(id => lockerRO.getLock(tokenAddr, id)));
+      const now = Math.floor(Date.now()/1000);
+
+      for (let i=0;i<ids.length;i++){
+        const id = ids[i];
+        const [owner, amount, unlockTime, lname, active] = detail[i];
+        if (!amount || amount.toString()==="0") continue;
+        const human = ethers.utils.formatUnits(amount, dec);
+        const date  = new Date(Number(unlockTime)*1000).toLocaleString();
+        const ownerDisp = user.slice(0,6)+"…"+user.slice(-4);
+
+        const tr = document.createElement("tr");
+
+        const tdAmt = document.createElement("td");
+        tdAmt.style.textAlign = 'right';
+        tdAmt.dataset.label = 'Amount';
+        tdAmt.innerHTML = humanDisplay(human, sym);
+        tr.appendChild(tdAmt);
+
+        const tdAct = document.createElement("td");
+        tdAct.dataset.label = 'Action';
+
+        const tdDate = document.createElement("td");
+        tdDate.dataset.label = 'Unlocks at';
+        tdDate.textContent = date;
+
+        const tdName = document.createElement("td");
+        tdName.dataset.label = 'Name';
+        tdName.textContent = lname||"";
+
+        const tdOwner = document.createElement("td");
+        tdOwner.dataset.label = 'Owner';
+        tdOwner.className = 'mono';
+        tdOwner.title = user;
+        tdOwner.textContent = ownerDisp;
+
+        const tdId = document.createElement("td");
+        tdId.dataset.label = 'Lock ID';
+        tdId.textContent = id.toString();
+
+        if (Number(unlockTime) > now) {
+          tdAct.textContent = '—';
+          tr.append(tdAct, tdDate, tdName, tdOwner, tdId);
+          activeRows.appendChild(tr);
+        } else if (active && Number(unlockTime) <= now) {
+          const btn = document.createElement("button");
+          btn.textContent="Unlock"; btn.className="btn";
+          btn.onclick = async ()=>{
+            try{
+              const locker = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
+              btn.disabled=true; btn.textContent="Unlocking…";
+              const tx = await locker.unlockLiquidity(tokenAddr, id);
+              logScan(`Unlock: ${tx.hash} — ${PepuExplorer.tx(tx.hash)}`);
+              await tx.wait();
+              logScan("✅ Unlocked", id.toString());
+              scanMyLocks();
+            }catch(e){ logScan("❌", e?.data?.message || e?.message || String(e)); btn.disabled=false; btn.textContent="Unlock"; }
+          };
+          tdAct.appendChild(btn);
+          tr.append(tdAct, tdDate, tdName, tdOwner, tdId);
+          unlockableRows.appendChild(tr);
+        }
+      }
+      logScan("Done.");
+    }catch(e){ logScan("❌", e?.data?.message || e?.message || String(e)); }
+  }
+
+  async function pepuSearchRemote(q) {
+    if (!q || (q = q.trim()).length < 2) return [];
+    if (/^0x[a-fA-F0-9]{40}$/.test(q)) return [{ address: q, name: "", symbol: "" }];
+
+    const url = `${EXPLORER_BASE}/api/v2/search?q=${encodeURIComponent(q)}`;
+    try {
+      const js = await fetchJsonCORS(url);
+      const items = js.items || [];
+      return items
+        .filter(it => it.type === 'token' || it.token_type === 'ERC-20' || it.address)
+        .map(it => ({ address: (it.address || it.address_hash || "").toLowerCase(), name: it.name || "", symbol: it.symbol || "" }))
+        .filter((it, i, arr) => it.address && arr.findIndex(x => x.address === it.address) === i)
+        .slice(0, 20);
+    } catch (e) { console.warn("search failed", e); return []; }
+  }
+
+  async function searchBestMatchByAddress(addr){
+    try{ const res = await pepuSearchRemote(addr); return res.find(x => x.address.toLowerCase()===addr.toLowerCase()) || res[0] || null; }catch{ return null; }
+  }
+
+  function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
+
+  function attachTokenAutocomplete(inputId, listId){
+    const inp = document.getElementById(inputId);
+    const list = document.getElementById(listId);
+    if(!inp || !list) return;
+    function hide(){ list.style.display="none"; }
+    function show(){ list.style.display="block"; }
+    hide();
+    const esc = s => String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+    const render = (items)=>{
+      if(items.length===0){ list.innerHTML = `<div class="ac-empty">No matches</div>`; show(); return; }
+      list.innerHTML = items.map(it=>{
+        const name = it.name ? `<span class="ac-name">${esc(it.name)}</span>` : '';
+        const sym  = it.symbol ? `<span class="ac-sym">(${esc(it.symbol)})</span>` : '';
+        const short = it.address.slice(0,8)+"…"+it.address.slice(-6);
+        return `<div class="ac-item" data-addr="${it.address}">${name} ${sym}<span class="ac-addr">${short}</span></div>`;}).join("");
+      show(); };
+    const onType = debounce(async ()=>{
+      const q = inp.value.trim();
+      if(!q){ hide(); return; }
+      if(/^0x[a-fA-F0-9]{40}$/.test(q)){ render([{address:q.toLowerCase(), name:"", symbol:""}]); return; }
+      const items = await pepuSearchRemote(q); render(items);
+    }, 220);
+    inp.addEventListener('input', onType);
+    inp.addEventListener('focus', ()=>{ if(list.innerHTML) show(); });
+    document.addEventListener('click', (e)=>{ if(!list.contains(e.target) && e.target!==inp) hide(); });
+    list.addEventListener('click', (e)=>{ const item = e.target.closest('.ac-item'); if(!item) return; const addr = item.getAttribute('data-addr'); inp.value = addr; hide(); inp.dispatchEvent(new Event('change')); inp.dispatchEvent(new Event('blur')); });
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    attachTokenAutocomplete('token','ac-token');
+    attachTokenAutocomplete('myToken','ac-myToken');
+  });
+  </script>
 </body>
 </html>

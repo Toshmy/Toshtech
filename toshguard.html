@@ -21,17 +21,28 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>$TOSH Bots — Pepu L2 Tools</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="icon" href="assets/favicon.ico" type="image/x-icon">  
   <style>
-    body {
+    html, body {
       background: radial-gradient(circle at center, #1a2238 0%, #0c1222 80%);
       color: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow-x: hidden;
       scroll-behavior: smooth;
     }
+	nav {
+	  position: fixed;
+	  left: 0;
+	  width: 100%;
+	  z-index: 60;
+	  top: 4.5rem; /* default fallback */
+	  background: rgba(0,0,0,0.8);
+	  backdrop-filter: blur(6px);
+	}
     .glow-text {
       text-shadow: 0 0 12px #00ffae, 0 0 24px #00ffae;
     }
+
     .tech-glass {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(0, 255, 174, 0.2);
@@ -39,27 +50,152 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       border-radius: 1rem;
       box-shadow: 0 0 30px rgba(0, 255, 174, 0.2);
     }
-    .banner {
-      white-space: nowrap;
-      overflow: hidden;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 50;
-      background: #000;
-      color: #00ffae;
+  .banner {
+    white-space: nowrap;       /* Prevent line breaks */
+    overflow: hidden;          /* Hide overflow text */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 50;
+    background: #000;          /* Optional background */
+    color: #00ffae;            /* Optional text color */
+  }
+
+  .banner-text {
+    display: inline-block;
+    padding-left: 100%;       /* Start from outside the right edge */
+    animation: scroll-left 15s linear infinite;
+  }
+
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
     }
-    .banner-text {
-      display: inline-block;
-      padding-left: 100%;
-      animation: scroll-left 15s linear infinite;
+    100% {
+      transform: translateX(-100%);
     }
-    @keyframes scroll-left {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
+  }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 10px #00ffae, 0 0 20px #00ffae; }
+      50% { box-shadow: 0 0 20px #00ffae, 0 0 40px #00ffae; }
+      100% { box-shadow: 0 0 10px #00ffae, 0 0 20px #00ffae; }
     }
+
+    .glow-ring {
+      animation: pulseGlow 3s infinite;
+    }
+
+    @keyframes sip {
+      0%, 100% { transform: rotate(-7deg); }
+      10% { transform: rotate(0deg); }
+      20% { transform: rotate(-7deg); }
+    }
+
+	#cup-arm {
+	  position: absolute;
+	  left: 200px;
+	  top: 185px;
+	  width: 230px;
+
+	  animation: sip 10s infinite, slightShake 2s infinite;
+	  z-index: 20;
+	}
+	@media (max-width: 1024px){
+	  .nav-has-dropdown .nav-dropdown{
+		left: 50%;
+		right: auto;
+		transform: translate(-50%, 6px);
+		min-width: 16rem;
+		text-align:center;
+	  }
+	}
+	@media (max-width: 768px) {
+	  #cup-arm { 
+		top: 55%;
+		left: 40%;
+		width: 180px;
+	  }
+	}
+
+
+    .coin {
+      position: absolute;
+      height: 60px;
+      width: 60px;
+      animation: fall 6s linear forwards;
+      opacity: 0.85;
+      z-index: 10;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(40px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 1.2s ease forwards;
+    }
+/* Desktop dropdown for ToshLock */
+  .nav-has-dropdown { position: relative; }
+  .nav-dropdown{
+    position:absolute; right:0; top:100%; margin-top:.5rem;
+    /* darker, more opaque glass for readability */
+    background: rgba(3, 10, 22, 0.92);
+    border: 1px solid rgba(0,255,174,.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: .75rem;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,255,174,.08) inset;
+    padding:.5rem; min-width:14rem;
+    opacity:0; visibility:hidden; transform: translateY(6px);
+    transition: opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
+    z-index: 80; /* above nav & banner */
+  }
+  .nav-has-dropdown:hover .nav-dropdown,
+  .nav-has-dropdown:focus-within .nav-dropdown{
+    opacity:1; visibility:visible; transform: translateY(0);
+    transition-delay:0s;
+  }
+  .nav-dropdown a{
+    display:block; padding:.6rem .8rem; border-radius:.6rem;
+    color:#eafff7; /* strong contrast */
+  }
+  .nav-dropdown a:hover{ background: rgba(255,255,255,.08); }
+
+  /* 2) Mobile: center the ToshLock area and its links */
+  @media (max-width: 768px){
+    /* Center the accordion toggle row content */
+    #ml-toshlock-toggle{
+      justify-content: center !important;
+      text-align:center;
+    }
+    /* Center the panel and its items */
+    #ml-toshlock-panel{
+      text-align:center;
+      padding-left: 0 !important; /* remove left indent */
+    }
+    #ml-toshlock-panel a{
+      display:inline-block;
+      width: 90%;
+      max-width: 420px;
+      margin: 0 auto;
+      text-align:center;
+      padding:.6rem .9rem;
+      border:1px solid rgba(0,255,174,.18);
+      background: rgba(3,10,22,.75);
+      border-radius:.6rem;
+    }
+    #ml-toshlock-panel a + a{ margin-top:.4rem; }
+  }
   </style>
+
 </head>
 <body class="flex flex-col items-center justify-start min-h-screen p-4">
 <!-- Google Tag Manager (noscript) -->
@@ -85,24 +221,62 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <path d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
       </button>
-      <div class="hidden md:flex space-x-6 text-white font-semibold">
-        <a href="index.html" class="hover:text-green-400">Home</a>
-        <a href="roadmap.html" class="hover:text-green-400">Roadmap</a>
-        <a href="tokenomic.html" class="hover:text-green-400">Tokenomic</a>		
-        <a href="tools.html" class="hover:text-green-400">Tools</a>
-		<a href="toshguard.html" class="hover:text-green-400">ToshGuard</a>		
-        <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
-      </div>
+		<div class="hidden md:flex items-center gap-6 text-white font-semibold relative">
+		  <a href="index.html" class="hover:text-green-400">Home</a>
+		  <a href="roadmap.html" class="hover:text-green-400">Roadmap</a>
+		  <a href="tokenomic.html" class="hover:text-green-400">Tokenomic</a>
+		  <a href="tools.html" class="hover:text-green-400">Tools</a>
+		  <a href="toshguard.html" class="hover:text-green-400">ToshGuard</a>
+
+		  <!-- ToshLock dropdown -->
+		  <div class="nav-has-dropdown">
+			<button class="hover:text-green-400 flex items-center gap-1 focus:outline-none" aria-haspopup="true" aria-expanded="false">
+			  ToshLock
+			  <svg class="w-4 h-4 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+			  </svg>
+			</button>
+			<div class="nav-dropdown tech-glass">
+			  <a href="toshlock.html" class="hover:text-green-300">ToshLock (Locker)</a>
+			  <a href="toshdashboard.html" class="hover:text-green-300">ToshDashboard</a>
+			  <a href="toshrank.html" class="hover:text-green-300">ToshRank</a>
+			</div>
+		  </div>
+
+		  <a href="how-to-buy.html" class="hover:text-green-400">How to buy</a>
+		</div>
+
     </div>
     <!-- Mobile menu -->
-    <div id="mobile-menu" class="hidden flex-col md:hidden pb-4 space-y-3 text-center text-white font-semibold">
-      <a href="index.html" class="block hover:text-green-400">Home</a>
-      <a href="roadmap.html" class="block hover:text-green-400">Roadmap</a>
-      <a href="tokenomic.html" class="block hover:text-green-400">Tokenomic</a>	  
-      <a href="tools.html" class="block hover:text-green-400">Tools</a>
-      <a href="toshguard.html" class="block hover:text-green-400">ToshGuard</a>	  
-      <a href="how-to-buy.html" class="block hover:text-green-400">How to buy</a>
+<div id="mobile-menu" class="hidden flex-col md:hidden pb-4 space-y-3 text-center text-white font-semibold">
+
+  <a href="index.html" class="block hover:text-green-400">Home</a>
+  <a href="roadmap.html" class="block hover:text-green-400">Roadmap</a>
+  <a href="tokenomic.html" class="block hover:text-green-400">Tokenomic</a>
+  <a href="tools.html" class="block hover:text-green-400">Tools</a>
+  <a href="toshguard.html" class="block hover:text-green-400">ToshGuard</a>
+
+  <!-- ToshLock accordion -->
+  <div class="text-left px-4">
+
+	<button id="ml-toshlock-toggle"
+	  class="w-full flex items-center justify-between md:justify-between justify-center
+			 py-2 px-3 rounded bg-black bg-opacity-30 hover:bg-opacity-40">
+	  <span>ToshLock</span>
+	  <svg id="ml-toshlock-caret" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+	  </svg>
+	</button>
+	
+    <div id="ml-toshlock-panel" class="hidden pl-3 mt-2 space-y-2">
+      <a href="toshlock.html" class="block py-2 px-3 rounded hover:bg-white hover:bg-opacity-10">ToshLock (Locker)</a>
+      <a href="toshdashboard.html" class="block py-2 px-3 rounded hover:bg-white hover:bg-opacity-10">ToshDashboard</a>
+      <a href="toshrank.html" class="block py-2 px-3 rounded hover:bg-white hover:bg-opacity-10">ToshRank</a>
     </div>
+  </div>
+
+  <a href="how-to-buy.html" class="block hover:text-green-400">How to buy</a>
+</div>
   </div>
 </nav>
 
@@ -192,11 +366,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
   const hoverSound = document.getElementById('hover-sound');
 
-  hoverSound.volume = 0;
+  hoverSound.volume = 0.1;
   hoverSound.play().catch(() => {});
   hoverSound.pause();
   hoverSound.currentTime = 0;
-  hoverSound.volume = 1;
+
 
   const playIntro = () => {
     introSound.volume = 0.5;
@@ -215,6 +389,15 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+// Highlight active link (desktop + mobile)
+(() => {
+  const path = location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('nav a[href]').forEach(a => {
+    if (a.getAttribute('href') === path) {
+      a.classList.add('text-green-400');
+    }
+  });
+})();
   const toggleBtn = document.getElementById('menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
   toggleBtn.addEventListener('click', () => {
