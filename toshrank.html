@@ -381,10 +381,11 @@ function render(){
       <!-- Metrics (no TVL here) -->
       <td data-label="Metrics">
 		<div class="cell-val">
+		  <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
+		  <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>	
 		  <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
 		  <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
-		  <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>
-		  <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
+		  
 		</div>  
       </td>
 
