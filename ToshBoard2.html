@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ToshBoard — ToshScore (Mainnet)</title>
+  <title>ToshBoard — ToshScore (Mainnet, CORS-fixed)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -72,7 +72,7 @@
           <div id="ac" class="ac-list"></div>
         </div>
         <button id="reload" class="btn">Reload</button>
-        <span class="pill">Shows only tokens with active ToshLock</span>
+        <span class="pill">Mainnet • Only tokens with active ToshLock</span>
       </div>
 
       <div class="table-scroll card" style="padding:0;margin-top:8px">
@@ -96,19 +96,20 @@
   </div>
 
 <script>
-/* ====== MAINNET ONLY ====== */
+/* ====== MAINNET + CORS RELAY ====== */
 const NET = {
   CHAIN: 97740,
   RPC: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
   LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
   EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"
 };
-// CORS relay for HolderRadar votes
+// ⚠️ Set your Cloudflare Worker proxy (it should add Access-Control-Allow-Origin:* and stream JSON)
 const RELAY = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
+
 // Burn sources
 const BURN_ADDRESSES = [
-  "0xa9fD599cd8857e90059c83e4885Dc09986039085".toLowerCase(),
-  "0x000000000000000000000000000000000000dEaD".toLowerCase()
+  "0xa9fd599cd8857e90059c83e4885dc09986039085",
+  "0x000000000000000000000000000000000000dead"
 ];
 
 /* ====== ABIs ====== */
@@ -169,6 +170,11 @@ let VOTES = new Map(); // ca -> {votes, rank}
 let CURRENT_ROWS = [];
 let P90_RESERVE = 0;
 
+// simple memo caches for speed per session
+const cacheHoldersShare = new Map();
+const cacheLocks = new Map();
+const cacheSupply = new Map();
+
 /* ====== Fetchers ====== */
 async function fetchJSON(url){
   const r = await fetch(url,{cache:'no-cache'});
@@ -210,9 +216,10 @@ async function fetchVotes(){
 
 /* ====== Chain helpers ====== */
 async function getActiveLocks(token){
+  if (cacheLocks.has(token)) return cacheLocks.get(token);
   const res = await locker.getActiveLocksByToken(token,0,1000);
   const [ids, owners, amounts, unlockTimes, names] = res;
-  if (!ids.length) return null;
+  if (!ids.length) { cacheLocks.set(token,null); return null; }
 
   let sum = ethers.BigNumber.from(0);
   let nextUnlock = null, lastUnlock = 0;
@@ -223,14 +230,17 @@ async function getActiveLocks(token){
     if (nextUnlock===null || (ut>now && ut<nextUnlock)) nextUnlock = ut;
     if (ut>lastUnlock) lastUnlock = ut;
   }
-  return {
+  const out = {
     totalLocked: sum,
     nextUnlock: nextUnlock ? nextUnlock*1000 : null,
     lastUnlock: lastUnlock ? lastUnlock*1000 : null,
     count: ids.length
   };
+  cacheLocks.set(token,out);
+  return out;
 }
 async function getSupplyAndBurn(token){
+  if (cacheSupply.has(token)) return cacheSupply.get(token);
   const erc = new ethers.Contract(token, ERC20, ro);
   const [dec, total, symbol, name] = await Promise.all([
     erc.decimals().catch(()=>18),
@@ -243,50 +253,53 @@ async function getSupplyAndBurn(token){
     const b = await erc.balanceOf(a).catch(()=>ethers.BigNumber.from(0));
     burned = burned.add(b);
   }
-  return { decimals:Number(dec), total, burned, symbol, name };
+  const out = { decimals:Number(dec), total, burned, symbol, name };
+  cacheSupply.set(token,out);
+  return out;
 }
 
-/* ====== Holders (Top-10 share) ====== */
+/* ====== Holders (Top-10 share) via RELAY to avoid CORS ====== */
 async function fetchHoldersTopShare(ca, total, decimals){
-  // exclude burns + locker
+  const key = ca.toLowerCase();
+  if (cacheHoldersShare.has(key)) return cacheHoldersShare.get(key);
+
   const EXCLUDE = new Set([...BURN_ADDRESSES, NET.LOCKER.toLowerCase()]);
-  let url = `${NET.EXPLORER}/api/v2/tokens/${ca}/holders`;
+  const baseUrl = `${NET.EXPLORER}/api/v2/tokens/${ca}/holders`;
+  let nextUrl = RELAY + encodeURIComponent(baseUrl);
   let items = [];
   let guard=0;
-  while (url && guard<6){ // up to ~300 (6 pages*50)
-    const r = await fetch(url);
+
+  while (nextUrl && guard<6){ // ~300 holders max
+    const r = await fetch(nextUrl);
     if (!r.ok) break;
     const js = await r.json();
     items = items.concat(js.items||[]);
     const npp = js.next_page_params;
     if (npp){
-      const qp = new URLSearchParams({
-        address_hash: npp.address_hash,
-        items_count: npp.items_count,
-        value: npp.value
-      });
-      url = `${NET.EXPLORER}/api/v2/tokens/${ca}/holders?${qp.toString()}`;
-    }else url = null;
+      const url2 = `${baseUrl}?address_hash=${encodeURIComponent(npp.address_hash)}&items_count=${encodeURIComponent(npp.items_count)}&value=${encodeURIComponent(npp.value)}`;
+      nextUrl = RELAY + encodeURIComponent(url2);
+    }else nextUrl = null;
     guard++;
     if (items.length>=200) break;
   }
-  // build balances excluding addresses
+
+  // balances excluding burns + locker
   const balances = [];
   for (const it of items){
     const addr = (it.address?.hash||"").toLowerCase();
     if (!addr || EXCLUDE.has(addr)) continue;
-    const val = it.value ? Number(it.value) : 0; // big decimal string in base units
+    const val = it.value ? Number(it.value) : 0; // base units numeric
     balances.push(val);
   }
-  // convert base units to human and sort
-  const base = 10**decimals;
-  const humanBalances = balances.map(v=>v/base);
+  const humanBalances = balances.map(v=> v / (10**decimals));
   humanBalances.sort((a,b)=>b-a);
   const top10 = humanBalances.slice(0,10);
   const top10Sum = top10.reduce((s,x)=>s+x,0);
-  const nonExcludedTotal = Math.max(0, total); // total already excludes nothing; we compare vs total
-  const share = nonExcludedTotal>0 ? (top10Sum / nonExcludedTotal) : 0; // as fraction
-  return share; // 0..1
+  const nonExcludedTotal = Math.max(0, total); // conservative vs total supply
+  const share = nonExcludedTotal>0 ? (top10Sum / nonExcludedTotal) : 0; // 0..1
+
+  cacheHoldersShare.set(key, share);
+  return share;
 }
 
 /* ====== Scoring ====== */
@@ -304,6 +317,7 @@ function scoreAge(days){
   if (days>=7)  return 4;
   return 1;
 }
+let P90_RESERVE = 0;
 function scoreDepth(reserve){
   if (!P90_RESERVE || !reserve) return 0;
   return Math.max(0, Math.min(1, reserve / P90_RESERVE)) * 10;
@@ -465,7 +479,7 @@ async function computeOne(ca){
     const ageDays = pool.pool_created_at ? (Date.now()-Date.parse(pool.pool_created_at))/(1000*60*60*24) : 0;
     const reserve = pool.reserve_in_usd||0;
 
-    // Holders Top-10 share
+    // Holders Top-10 share (via RELAY)
     const topShare = await fetchHoldersTopShare(ca, total, dec);
 
     // Votes
@@ -542,7 +556,7 @@ async function computeTop10(){
       const topShare = await fetchHoldersTopShare(ca, total, dec);
       const votesObj = VOTES.get(ca.toLowerCase());
       const votes = votesObj?.votes||0;
-      let maxVotes = 0; VOTES.forEach(v=>{ if (v.votes>maxVotes) maxVotes=v.votes; });
+      let maxVotes = 0; VOTES.forEach(v=>{ if (v.votes>maxVotes) max=v.votes; });
 
       const s_locked = scoreLockedPct(lockedPct);
       const s_time   = scoreTimeSafety(locks.nextUnlock);
@@ -577,7 +591,6 @@ async function computeTop10(){
     }
   }
 
-  // only locked ones
   CURRENT_ROWS = rows.sort((a,b)=> (b.score||0)-(a.score||0));
   render();
   $("status").textContent = `Locked projects scored: ${CURRENT_ROWS.length}`;
