@@ -377,6 +377,35 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <p class="mb-2">Disclaimer: $TOSH is a community-driven project. Participation involves risk. Not financial advice. DYOR.</p>
 </div>
 <script>
+// Mobile "ToshLock" accordion
+const mlToggle = document.getElementById('ml-toshlock-toggle');
+const mlPanel  = document.getElementById('ml-toshlock-panel');
+const mlCaret  = document.getElementById('ml-toshlock-caret');
+
+if (mlToggle && mlPanel && mlCaret) {
+  mlToggle.addEventListener('click', () => {
+    mlPanel.classList.toggle('hidden');
+    mlCaret.classList.toggle('rotate-180');
+  });
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const introSound = document.getElementById('intro-sound');
+  const hoverSound = document.getElementById('hover-sound');
+
+  hoverSound.volume = 0.1;
+  hoverSound.play().catch(() => {});
+  hoverSound.pause();
+  hoverSound.currentTime = 0;
+
+
+  const playIntro = () => {
+    introSound.volume = 0.5;
+    introSound.play().catch(() => {});
+    document.removeEventListener('click', playIntro);
+  };
+
+  document.addEventListener('click', playIntro);
+
 window.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
   const hoverSound = document.getElementById('hover-sound');
