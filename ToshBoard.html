@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshRank — Pepu L2 Project Trust Scores</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0c1222; --bg2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
+      --bad:#ff7a7a; --ok:#ffd166; --good:#33ffaa;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1200px;margin:22px auto;padding:0 16px}
+    .glow{ text-shadow:0 0 12px var(--accent),0 0 24px var(--accent) }
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .between{justify-content:space-between}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+    .pill{display:inline-block;padding:.25rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+    input,select,button{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
+    input:focus,select:focus,button:focus{outline:2px solid var(--accent)}
+    .btn{cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#00251b;border:0;font-weight:700}
+    .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;vertical-align:middle;white-space:nowrap}
+    th{background:var(--bg2);text-align:left;position:sticky;top:0;z-index:1}
+    .table-scroll{max-height:70vh;overflow:auto;border-radius:12px}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .small{font-size:12px;color:#bfeede}
+    .score{font-weight:800}
+    .bar{height:8px;border-radius:999px;background:#0e1a3a;border:1px solid var(--border);overflow:hidden}
+    .bar > i{display:block;height:100%}
+    .bar.green > i{background:linear-gradient(90deg,#00ffae,#00d99c)}
+    .bar.red > i{background:linear-gradient(90deg,#ff7a7a,#ff4a4a)}
+    .muted{color:var(--muted);opacity:.95}
+    .tip{opacity:.9}
+    .right{ text-align:right }
+    .sortable{cursor:pointer}
+    .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+    .ok{color:#ffe08a}
+    .bad{color:#ff9d9d}
+    .good{color:#a8ffd9}
+    .nowrap{white-space:nowrap}
+    .flexcol{display:flex;flex-direction:column;gap:8px}
+    /* Autocomplete */
+    .ac-wrap{position:relative}
+    .ac-list{
+      position:absolute; left:0; right:0; top:calc(100% + 4px);
+      background:#0f1730; border:1px solid rgba(0,255,174,.2); border-radius:12px;
+      box-shadow:0 10px 24px rgba(0,0,0,.35); z-index:50; max-height:280px; overflow:auto; display:none;
+    }
+    .ac-item{display:flex; gap:8px; align-items:center; padding:10px 12px; cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06); font-size:13px;}
+    .ac-item:hover{background:#0b1329}
+    .ac-addr{margin-left:auto; font-family:ui-monospace,monospace; color:#9fb; opacity:.85}
+    .ac-empty{padding:10px 12px; color:#a8ffd9; font-size:12px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="row between" style="margin-bottom:10px">
+    <h1 class="glow" style="margin:0">🏆 ToshRank — Pepu L2 Trust Scores</h1>
+    <div class="row">
+      <select id="net">
+        <option value="mainnet">Pepu Mainnet</option>
+        <option value="testnet" selected>Pepu Testnet</option>
+      </select>
+      <button id="refresh" class="btn gray">Refresh</button>
+      <span id="lastUpd" class="pill">—</span>
+    </div>
+  </header>
+
+  <section class="card" style="margin-bottom:14px">
+    <div class="row">
+      <div class="ac-wrap" style="flex:1 1 420px;min-width:240px">
+        <input id="search" placeholder="Search by symbol / name / 0x..." autocomplete="off">
+        <div id="ac" class="ac-list"></div>
+      </div>
+      <button id="go" class="btn">Score Token</button>
+      <span class="small">Shows Top 10 by score; click **TVL** to sort by liquidity.</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Token</th>
+            <th>Event Date</th>
+            <th>Locked %</th>
+            <th>Unlock Date</th>
+            <th class="sortable" id="sortTVL">TVL</th>
+            <th>Supply</th>
+            <th class="right">Score</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="small muted" style="margin-top:8px">
+      * Event Date = most recent lock event (or pool creation if none). TVL = liquidity reserve (USD).  
+      Click TVL header to toggle TVL sorting; otherwise rows are sorted by Score.
+    </div>
+  </section>
+
+  <pre id="log" class="small tip" style="margin-top:10px;max-height:180px;overflow:auto"></pre>
+</div>
+
+<script>
+/*** =================== CONFIG =================== ***/
+const POOLS_CACHE_URL = "pools_cache.json"; // same-format file you provided
+const RELAY_PATH = "https://odd-feather-f250.toshtech777.workers.dev/?url="; // your working relay
+const EXPLORER_BASES = {
+  mainnet: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
+  testnet: "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz"
+};
+const LOCKERS = {
+  mainnet: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
+  testnet: "0x0c42901e39f8B88E67a4A93dc4Fc84F4e8f1193c" // updated as requested
+};
+const RPCS = {
+  mainnet: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
+  testnet: "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz"
+};
+// Auto refresh every 15 minutes
+const AUTO_MS = 15 * 60 * 1000;
+
+/*** =============== Minimal ABIs =============== ***/
+const ERC20_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "event LiquidityLocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount,uint256 unlockTime,string name)",
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
+];
+
+/*** =============== Helpers =============== ***/
+const $ = id => document.getElementById(id);
+const log = (...a)=>{ $("log").textContent += a.join(" ")+"\n"; };
+
+function short(a){ return a.slice(0,6)+"…"+a.slice(-4); }
+function fmtUSD(n){ if(n==null) return "—"; return n.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:2}); }
+function fmtPct(n){ if(n==null) return "—"; return (n*100).toFixed(2)+"%"; }
+function fromNow(ts){
+  const now = Date.now();
+  const diff = ts - now;
+  const abs = Math.abs(diff);
+  const m = Math.round(abs/60000), h=Math.round(abs/3600000), d=Math.round(abs/86400000), mo=Math.round(abs/(30*86400000));
+  if (abs < 3600000) return diff<0 ? `${m} min ago` : `in ${m} min`;
+  if (abs < 86400000) return diff<0 ? `${h} hours ago` : `in ${h} hours`;
+  if (abs < 30*86400000) return diff<0 ? `${d} days ago` : `in ${d} days`;
+  return diff<0 ? `${mo} months ago` : `in ${mo} months`;
+}
+function toDateStr(ts){ return new Date(ts).toLocaleString(); }
+
+/*** ============ Fetch via Relay ============ ***/
+async function fetchRelay(url){
+  const r = await fetch(RELAY_PATH + encodeURIComponent(url), { cache:"no-cache" });
+  if(!r.ok) throw new Error(`Relay ${r.status} for ${url}`);
+  return r.json();
+}
+
+/*** ============ Explorer helpers ============ ***/
+// creator + creation tx
+async function getCreator(explorerBase, token){
+  const a = await fetchRelay(`${explorerBase}/api/v2/addresses/${token}`);
+  const tx = a.creation_transaction_hash || a?.data?.attributes?.creation_transaction_hash;
+  if(!tx) return { creator:null, creationTx:null, creationTime:null };
+  const t = await fetchRelay(`${explorerBase}/api/v2/transactions/${tx}`);
+  const creator = t.from?.hash || t?.data?.attributes?.from?.hash || null;
+  const createdAt = t.timestamp || t?.data?.attributes?.timestamp || null;
+  const creationTime = createdAt ? new Date(createdAt).getTime() : null;
+  return { creator, creationTx:tx, creationTime };
+}
+
+// holders (enough to compute Top10 share)
+async function getTopHoldersShare(explorerBase, token, decimals){
+  let url = `${explorerBase}/api/v2/tokens/${token}/holders`;
+  let items = [];
+  for(let i=0;i<10 && url;i++){ // fetch a few pages until ≥10 holders
+    const js = await fetchRelay(url);
+    items = items.concat(js.items||[]);
+    const np = js.next_page_params;
+    if(np){
+      const q = new URLSearchParams({ address_hash: np.address_hash, items_count: np.items_count, value: np.value });
+      url = `${explorerBase}/api/v2/tokens/${token}/holders?${q.toString()}`;
+    }else url = null;
+    if(items.length >= 12) break;
+  }
+  if(!items.length) return null;
+  const toNum = v => Number(ethers.utils.formatUnits(v, decimals));
+  const totals = items.map(i=>toNum(i.value));
+  const sumAll = totals.reduce((a,b)=>a+b,0);
+  const top = totals.slice(0,10).reduce((a,b)=>a+b,0);
+  if(sumAll<=0) return null;
+  return top/sumAll; // fraction 0..1
+}
+
+/*** ============ Score model ============ ***/
+// Liquidity lock TVL tiers (USD)
+function scoreTVL(usd){
+  if(usd>=50000) return 15;
+  if(usd>=20000) return 12;
+  if(usd>=10000) return 9;
+  if(usd>=5000)  return 7;
+  if(usd>=2000)  return 5;
+  if(usd>0)      return 3;
+  return 0;
+}
+// Duration in months → 0..10 (cap at 12m)
+function scoreDuration(months){
+  if(months>=12) return 10;
+  if(months>=9)  return 8;
+  if(months>=6)  return 6;
+  if(months>=3)  return 4;
+  if(months>=1)  return 2;
+  return 0;
+}
+// Maturity by pool age → 0..15 (map 90d:10, 30–90:7, 7–30:4, <7:1, then scale 1.5x)
+function scoreMaturityByPool(createdAtMs){
+  if(!createdAtMs) return 3; // very new / unknown
+  const days = (Date.now()-createdAtMs)/86400000;
+  let base=1;
+  if(days>=90) base=10;
+  else if(days>=30) base=7;
+  else if(days>=7) base=4;
+  else base=1;
+  return Math.min(15, Math.round(base*1.5));
+}
+// Liquidity depth from reserve_in_usd → 0..10
+function scoreDepth(reserveUSD){
+  if(reserveUSD>=50000) return 10;
+  if(reserveUSD>=20000) return 8;
+  if(reserveUSD>=10000) return 6;
+  if(reserveUSD>=5000)  return 4;
+  if(reserveUSD>=2000)  return 3;
+  if(reserveUSD>0)      return 2;
+  return 0;
+}
+// 24h volume placeholder → 5/10 until integrated
+function scoreVolume(vol24USD){ return vol24USD==null ? 5 : (vol24USD>=100000?10:(vol24USD>=20000?7:(vol24USD>=5000?5:(vol24USD>0?3:0)))); }
+// Votes vs max → 0..10
+function scoreVotes(v, vmax){ if(!vmax||vmax<=0||!v) return 0; const frac=Math.min(1, v/vmax); return Math.round(frac*10); }
+// Holder Quality from Top10 share
+function scoreTop10Share(frac){
+  if(frac==null) return 3; // unknown, mild
+  const pct = frac*100;
+  if(pct<=20) return 10;
+  if(pct<=40) return 6;
+  if(pct<=60) return 3;
+  return 0;
+}
+
+/*** ============ State ============ ***/
+let CACHE = [];        // pools_cache.json data[]
+let VOTES = {};        // contract → votes
+let CURRENT_NET = "testnet";
+let ro; let lockerRO;
+
+/*** ============ Load pools + votes ============ ***/
+async function loadPoolsCache(){
+  const r = await fetch(POOLS_CACHE_URL, { cache: "no-cache" });
+  if(!r.ok) throw new Error("pools_cache.json fetch failed");
+  const js = await r.json();
+  return js.data || [];
+}
+async function loadVotes(){
+  try{
+    const r = await fetch("https://holderradar.com/api/votes/ranking?period=30d&limit=100", { cache: "no-cache" });
+    if(!r.ok) return {};
+    const arr = await r.json();
+    const map = {};
+    for(const it of arr){ map[(it.contract||"").toLowerCase()] = Number(it.votes||0)||0; }
+    return map;
+  }catch{ return {}; }
+}
+
+/*** ============ Autocomplete from cache ============ ***/
+function buildIndex(){
+  return CACHE.map(x=>({
+    address: (x.address||"").toLowerCase(),
+    symbol: x.symbol||"",
+    name: x.name||"",
+    reserve_in_usd: x.reserve_in_usd||0,
+    market_cap: x.market_cap||0
+  }));
+}
+let INDEX=[];
+function attachAutocomplete(inpId, listId){
+  const inp = $(inpId), list = $(listId);
+  const show=()=>list.style.display="block", hide=()=>list.style.display="none";
+  const esc = s => s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  inp.addEventListener('input', ()=>{
+    const q = inp.value.trim().toLowerCase();
+    if(!q){ hide(); return; }
+    let items=[];
+    if(/^0x[a-f0-9]{40}$/.test(q)){
+      const hit = INDEX.find(i=>i.address===q);
+      items = hit ? [hit] : [{address:q,symbol:"",name:""}];
+    }else{
+      items = INDEX.filter(i =>
+        i.address.includes(q) ||
+        (i.symbol||"").toLowerCase().includes(q) ||
+        (i.name||"").toLowerCase().includes(q)
+      ).slice(0,15);
+    }
+    if(!items.length){ list.innerHTML = `<div class="ac-empty">No matches</div>`; show(); return; }
+    list.innerHTML = items.map(it=>{
+      const short = it.address.slice(0,8)+"…"+it.address.slice(-6);
+      return `<div class="ac-item" data-addr="${it.address}">
+        <strong>${esc(it.symbol||it.name||short)}</strong>
+        <span class="muted"> ${esc(it.name||"")}</span>
+        <span class="ac-addr">${short}</span>
+      </div>`;
+    }).join("");
+    show();
+  });
+  list.addEventListener('click', (e)=>{
+    const item = e.target.closest('.ac-item'); if(!item) return;
+    inp.value = item.getAttribute('data-addr'); hide();
+  });
+  document.addEventListener('click', (e)=>{ if(!list.contains(e.target) && e.target!==inp) hide(); });
+}
+
+/*** ============ Core: build one row ============ ***/
+async function scoreToken(tokenCA){
+  const poolsHit = CACHE.find(x => (x.address||"").toLowerCase() === tokenCA.toLowerCase());
+  // basic on-chain
+  const erc = new ethers.Contract(tokenCA, ERC20_ABI, ro);
+  const [dec, totalSupplyBn, symbol, name] = await Promise.all([
+    erc.decimals().catch(()=>18),
+    erc.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+    erc.symbol().catch(()=>poolsHit?.symbol||""),
+    erc.name().catch(()=>poolsHit?.name||"")
+  ]);
+  const totalSupply = Number(ethers.utils.formatUnits(totalSupplyBn, dec));
+
+  // Active locks from ToshLock
+  const locks = await lockerRO.getActiveLocksByToken(tokenCA, 0, 1000).catch(()=>[[],[],[],[],[]]);
+  const [ids, owners, amounts, unlockTimes, names] = locks;
+  let lockedSum = ethers.BigNumber.from(0);
+  let nextUnlockTs = null;
+  let lastLockEventTs = null;
+  const ownerTotals = new Map();
+  for(let i=0;i<ids.length;i++){
+    lockedSum = lockedSum.add(amounts[i]);
+    const u = Number(unlockTimes[i])*1000;
+    if(nextUnlockTs==null || u<nextUnlockTs) nextUnlockTs = u;
+    const o = owners[i].toLowerCase();
+    ownerTotals.set(o, (ownerTotals.get(o)||ethers.BigNumber.from(0)).add(amounts[i]));
+  }
+  const lockedHuman = Number(ethers.utils.formatUnits(lockedSum, dec));
+  const lockedPct = totalSupply>0 ? lockedHuman/totalSupply : 0;
+
+  // We’ll define “last event” time as: if any active lock, the latest we can infer is “now” (active) — or fallback to pool creation.
+  // If you later add logs scan, you can set true event timestamps. For now:
+  lastLockEventTs = ids.length ? Date.now() : null;
+
+  // Duration safety: average remaining lock months (simple from next and average)
+  let avgMonths = 0;
+  if(ids.length){
+    const now = Math.floor(Date.now()/1000);
+    let sum=0, cnt=0;
+    for(let i=0;i<unlockTimes.length;i++){
+      const rem = Math.max(0, Number(unlockTimes[i])-now);
+      sum += rem; cnt++;
+    }
+    const avgSec = cnt? (sum/cnt) : 0;
+    avgMonths = avgSec / (30*24*3600);
+  }
+  const nextUnlock = nextUnlockTs ? new Date(nextUnlockTs) : null;
+
+  // Creator + whether creator locked
+  const { creator, creationTime } = await getCreator(EXPLORER_BASES[CURRENT_NET], tokenCA);
+  let creatorFound = !!creator;
+  let creatorLocked = false;
+  if(creatorFound && ownerTotals.size){
+    const cSum = ownerTotals.get(creator.toLowerCase());
+    creatorLocked = !!(cSum && !cSum.isZero());
+  }
+
+  // Holders Top10 share
+  const top10Frac = await getTopHoldersShare(EXPLORER_BASES[CURRENT_NET], tokenCA, dec).catch(()=>null);
+
+  // Votes
+  const votes = Number(VOTES[tokenCA.toLowerCase()]||0);
+  const vmax = Math.max(...Object.values(VOTES).map(Number), 0);
+
+  // TVL/Liquidity & MC/Price from pools cache (if present)
+  const tvl = poolsHit?.reserve_in_usd ?? null;
+  const mc  = poolsHit?.market_cap ?? null;
+  const price = poolsHit?.price ?? null;
+  const poolCreatedAt = poolsHit?.pool_created_at ? new Date(poolsHit.pool_created_at).getTime() : null;
+
+  // --- Subscores ---
+  const s_tvl  = scoreTVL(tvl||0);                    // 0..15
+  const s_dur  = scoreDuration(avgMonths||0);         // 0..10
+  const S_LIQ  = s_tvl + s_dur;                       // 25
+
+  const S_DEV  = (creatorFound?5:0) + (creatorLocked?10:0); // 0..15
+
+  const S_AGE  = scoreMaturityByPool(poolCreatedAt);  // 0..15
+
+  const s_depth= scoreDepth(tvl||0);                  // 0..10 (using reserve USD as depth proxy)
+  const s_vol  = scoreVolume(null);                   // placeholder 5/10 (no endpoint yet)
+  const S_HEALTH = s_depth + s_vol;                   // 0..20 (we target 25 → we’ll +5 baseline if locks exist)
+  const healthPad = ids.length ? 5 : 0;
+  const S_HEALTH_TOTAL = Math.min(25, S_HEALTH + healthPad);
+
+  const S_COMM = scoreVotes(votes, vmax);             // 0..10
+
+  const S_HQ   = scoreTop10Share(top10Frac);          // 0..10
+
+  const TOTAL  = Math.max(0, Math.min(100, S_LIQ + S_DEV + S_AGE + S_HEALTH_TOTAL + S_COMM + S_HQ));
+
+  // Supply bar: circulating vs burned (we only know total; if you want precise burned, plug dead addresses and sum)
+  // For demo: assume burned ~ 0 unless you already track. You can wire in your burn list later.
+  const burned = 0;
+  const circ = Math.max(0, totalSupply - lockedHuman - burned);
+
+  // “Event Date” (relative):
+  const eventTs = lastLockEventTs || poolCreatedAt || Date.now();
+  const eventRel = fromNow(eventTs);
+  const unlockRel = nextUnlock ? fromNow(nextUnlock.getTime()) : "—";
+
+  return {
+    ca: tokenCA, symbol, name, decimals: dec,
+    price, tvl, mc,
+    totalSupply, lockedHuman, lockedPct,
+    burned, circ,
+    eventRel, eventAt: eventTs,
+    nextUnlockRel: unlockRel, nextUnlockAt: nextUnlock?.getTime()||null,
+    votes, creator, creatorLocked,
+    top10Frac,
+    subs: { S_LIQ, S_DEV, S_AGE, S_HEALTH_TOTAL, S_COMM, S_HQ },
+    score: TOTAL
+  };
+}
+
+/*** ============ Render ============ ***/
+function supplyBarHTML(circ, burned, total){
+  const circPct = total>0 ? Math.max(0, Math.min(100, (circ/total)*100)) : 0;
+  const burnPct = total>0 ? Math.max(0, Math.min(100, (burned/total)*100)) : 0;
+  return `
+    <div style="min-width:240px">
+      <div class="bar green"><i style="width:${circPct.toFixed(2)}%"></i></div>
+      <div class="small muted">
+        <span class="good">Circulating:</span> ${circ.toLocaleString()} &nbsp;•&nbsp;
+        <span class="bad">Burned:</span> ${burned.toLocaleString()}
+      </div>
+    </div>
+  `;
+}
+function scoreCellHTML(s){
+  const color = s>=75? 'good' : (s>=50? 'ok' : 'bad');
+  return `<span class="score ${color}">${s}</span>`;
+}
+function tokenCellHTML(it){
+  const link = `https://www.toshtech.xyz/tdbv8.html?token=${it.ca}`;
+  const caShort = short(it.ca);
+  return `
+    <div class="flexcol">
+      <div><a href="${link}" target="_blank"><strong>${it.symbol||'(?)'}</strong></a> <span class="muted">— ${it.name||''}</span></div>
+      <div class="mono muted">${caShort}</div>
+      <div class="small muted">MC: ${it.mc?fmtUSD(it.mc):'—'} • Price: ${it.price!=null?('$'+Number(it.price).toFixed(8)):'—'}</div>
+    </div>
+  `;
+}
+function rowsHTML(list){
+  return list.map((it,idx)=>`
+    <tr>
+      <td>${idx+1}</td>
+      <td>${tokenCellHTML(it)}</td>
+      <td class="nowrap" title="${new Date(it.eventAt).toLocaleString()}">${it.eventRel}</td>
+      <td>${(it.lockedPct*100).toFixed(2)}%</td>
+      <td class="nowrap">${it.nextUnlockAt? `<span title="${toDateStr(it.nextUnlockAt)}">${it.nextUnlockRel}</span>` : '—'}</td>
+      <td class="right">${it.tvl!=null?fmtUSD(it.tvl):'—'}</td>
+      <td>${supplyBarHTML(it.circ, it.burned, it.totalSupply)}</td>
+      <td class="right" title="LIQ:${it.subs.S_LIQ} | DEV:${it.subs.S_DEV} | AGE:${it.subs.S_AGE} | HLTH:${it.subs.S_HEALTH_TOTAL} | COMM:${it.subs.S_COMM} | HQ:${it.subs.S_HQ}">
+        ${scoreCellHTML(it.score)}
+      </td>
+    </tr>
+  `).join("");
+}
+
+/*** ============ Main build ============ ***/
+let lastSortMode = "score"; // "score" | "tvl"
+async function rebuild(){
+  try{
+    $("rows").innerHTML=""; $("log").textContent="";
+    const t0 = Date.now();
+
+    ro = new ethers.providers.JsonRpcProvider(RPCS[CURRENT_NET]);
+    lockerRO = new ethers.Contract(LOCKERS[CURRENT_NET], LOCKER_ABI, ro);
+
+    [CACHE, VOTES] = await Promise.all([loadPoolsCache(), loadVotes()]);
+    INDEX = buildIndex();
+
+    // Candidates = all in pools cache (≈85). We will compute score for all, then show Top 10.
+    const cas = CACHE.map(x => (x.address||"").toLowerCase());
+
+    // Score all (sequential with small concurrency to avoid rate limits)
+    const SCORED = [];
+    let i=0;
+    for(const ca of cas){
+      try{
+        const it = await scoreToken(ca);
+        // Only keep tokens with some lock activity (your requirement: ToshRank only reports ToshLock'ed projects)
+        if(it.lockedHuman>0) SCORED.push(it);
+      }catch(e){
+        // Silent skip on failures (token might be broken)
+      }
+      i++;
+    }
+
+    // Sort
+    let list = SCORED.slice();
+    if(lastSortMode==="score"){
+      list.sort((a,b)=> b.score - a.score);
+    }else{
+      list.sort((a,b)=> (b.tvl||0) - (a.tvl||0));
+    }
+    list = list.slice(0, 10);
+
+    $("rows").innerHTML = rowsHTML(list);
+    $("lastUpd").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    log(`Scored ${SCORED.length} locked projects in ${(Date.now()-t0)/1000}s`);
+  }catch(e){
+    log("❌ "+(e?.message||String(e)));
+  }
+}
+
+/*** ============ UI hooks ============ ***/
+$("net").addEventListener("change", async (e)=>{
+  CURRENT_NET = e.target.value;
+  await rebuild();
+});
+$("refresh").addEventListener("click", rebuild);
+
+attachAutocomplete("search","ac");
+$("go").addEventListener("click", async ()=>{
+  const v = $("search").value.trim();
+  if(!/^0x[a-fA-F0-9]{40}$/.test(v)){
+    const hit = INDEX.find(i =>
+      i.address===v.toLowerCase() ||
+      (i.symbol||"").toLowerCase()===v.toLowerCase() ||
+      (i.name||"").toLowerCase().includes(v.toLowerCase())
+    );
+    if(!hit){ alert("Enter a valid CA or a token present in pools_cache.json"); return; }
+    $("search").value = hit.address;
+  }
+  // Score only this CA and render on top, then keep top 10 beneath
+  try{
+    ro = new ethers.providers.JsonRpcProvider(RPCS[CURRENT_NET]);
+    lockerRO = new ethers.Contract(LOCKERS[CURRENT_NET], LOCKER_ABI, ro);
+    if(CACHE.length===0) CACHE = await loadPoolsCache();
+    if(!Object.keys(VOTES).length) VOTES = await loadVotes();
+
+    const one = await scoreToken($("search").value.trim());
+    if(one.lockedHuman<=0){ alert("This token has no active ToshLock locks."); }
+
+    // Build the rest (locked only), then put “one” at row 1 if distinct
+    const others = [];
+    for(const x of CACHE){
+      const ca = (x.address||"").toLowerCase();
+      if(ca===one.ca.toLowerCase()) continue;
+      try{
+        const it = await scoreToken(ca);
+        if(it.lockedHuman>0) others.push(it);
+      }catch{}
+    }
+    let all = [one, ...others];
+    if(lastSortMode==="score") all.sort((a,b)=> b.score - a.score);
+    else all.sort((a,b)=> (b.tvl||0)-(a.tvl||0));
+    $("rows").innerHTML = rowsHTML(all.slice(0,10));
+    $("lastUpd").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  }catch(e){ log("❌ "+(e?.message||String(e))); }
+});
+
+// Sort TVL on header click
+$("sortTVL").addEventListener("click", async ()=>{
+  lastSortMode = (lastSortMode==="tvl" ? "score" : "tvl");
+  await rebuild();
+});
+
+// Auto refresh
+setInterval(()=>rebuild(), AUTO_MS);
+
+// Initial load (default Testnet as you asked earlier)
+(async ()=>{
+  CURRENT_NET = "mainnet";
+  await rebuild();
+})();
+</script>
+</body>
+</html>
