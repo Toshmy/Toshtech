@@ -317,7 +317,7 @@ function scoreAge(days){
   if (days>=7)  return 4;
   return 1;
 }
-let P90_RESERVE = 0;
+
 function scoreDepth(reserve){
   if (!P90_RESERVE || !reserve) return 0;
   return Math.max(0, Math.min(1, reserve / P90_RESERVE)) * 10;
