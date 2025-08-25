@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshBoard — Locked Projects (Pepu L2)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1221; --bg-2:#0b1426; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.14);
+      --red:#ff6b6b; --green:#2de3a1; --rowhi:rgba(255,255,255,.06);
+    }
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    .muted{color:var(--muted);opacity:.9}
+    input,select,button{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
+    input:focus,select:focus,button:focus{outline:2px solid var(--accent)}
+    .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));color:#00251b;border:0;font-weight:700}
+    .pill{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+    .table-scroll{overflow:auto;border-radius:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;vertical-align:middle}
+    th{background:var(--bg-2);text-align:left;position:sticky;top:0;z-index:2}
+    tr:hover{background:var(--rowhi)}
+    .right{text-align:right}
+    .center{text-align:center}
+    .addr{opacity:.9}
+    .token-cell{display:flex;gap:10px;align-items:center}
+    .supplybar{height:10px;border-radius:999px;background:#0f1730;border:1px solid var(--border);overflow:hidden}
+    .supplybar i{display:block;height:100%}
+    .supplybar .burn{background:linear-gradient(90deg,var(--red),#c94848)}
+    .supplybar .circ{background:linear-gradient(90deg,var(--green),#14b97e)}
+    .small{font-size:12px}
+    .warn{color:#ffb4b4}
+    .ok{color:#7dffa8}
+    .gray{color:#b6c4d1}
+    .ac-wrap{position:relative;flex:1 1 340px;min-width:240px}
+    .ac-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#0f1730;border:1px solid rgba(0,255,174,.2);border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.35);z-index:50;max-height:280px;overflow:auto;display:none}
+    .ac-item{display:flex;gap:8px;align-items:center;padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px}
+    .ac-item:last-child{border-bottom:0}
+    .ac-item:hover{background:#0b1329}
+    .ac-name{font-weight:600}
+    .ac-sym{color:#a8ffd9}
+    .ac-addr{margin-left:auto;font-family:ui-monospace,monospace;color:#9fb;opacity:.85}
+    .ac-empty{padding:10px 12px;color:#a8ffd9;font-size:12px}
+    .sortable{cursor:pointer}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+  </style>
+
+  <!-- ethers v5 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="justify-content:space-between">
+      <h1 class="glow-text" style="margin:0">📈 ToshBoard — Locked Projects</h1>
+      <div class="row">
+        <select id="net">
+          <option value="testnet" selected>Testnet</option>
+          <option value="mainnet">Mainnet</option>
+        </select>
+        <span id="status" class="pill">Loading…</span>
+      </div>
+    </header>
+
+    <section class="card" style="margin-top:12px">
+      <div class="row" style="gap:8px;margin-bottom:8px">
+        <div class="ac-wrap">
+          <input id="q" placeholder="Search symbol / name / 0x..." autocomplete="off">
+          <div id="ac" class="ac-list"></div>
+        </div>
+        <button id="reload" class="btn">Reload</button>
+        <span class="pill">Shows only tokens with active ToshLock</span>
+      </div>
+
+      <div class="table-scroll card" style="padding:0;margin-top:8px">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:280px"># / Token</th>
+              <th>Event Date</th>
+              <th class="right">Locked %</th>
+              <th>Next Unlock</th>
+              <th class="right sortable" id="sortTVL">TVL (Locked)</th>
+              <th style="min-width:260px">Supply</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <div id="log" class="small gray" style="margin-top:10px;white-space:pre-wrap"></div>
+    </section>
+  </div>
+
+<script>
+/* ========= Config ========= */
+// Worker relay to bypass CORS for HolderRadar
+const RELAY = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
+
+// Testnet (default)
+const TEST = {
+  CHAIN: 97741,
+  RPC: "https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz",
+  LOCKER: "0x0c42901e39f8B88E67a4A93dc4Fc84F4e8f1193c",
+  EXPLORER: "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz"
+};
+
+// Mainnet
+const MAIN = {
+  CHAIN: 97740,
+  RPC: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
+  LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
+  EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"
+};
+
+// Detail page link
+const DETAIL = (ca)=>`https://www.toshtech.xyz/tdbv8.html?token=${ca}`;
+
+// ABIs
+const ERC20 = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "event LiquidityLocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount,uint256 unlockTime,string name)",
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
+];
+
+// Burn sources (as requested)
+const BURN_ADDRESSES = [
+  "0xa9fD599cd8857e90059c83e4885Dc09986039085",
+  "0x000000000000000000000000000000000000dEaD"
+];
+
+/* ========= Utilities ========= */
+const $ = (id)=>document.getElementById(id);
+const log = (...a)=>{ $("log").textContent += a.join(" ")+"\n"; };
+function short(a){ return a.slice(0,6)+"…"+a.slice(-4); }
+function relTime(tsMs){
+  if (!tsMs) return "—";
+  const s = Math.max(1, Math.floor((Date.now() - tsMs)/1000));
+  const m = Math.floor(s/60), h=Math.floor(m/60), d=Math.floor(h/24), mo=Math.floor(d/30);
+  if (mo>0) return `${mo} month${mo>1?'s':''} ago`;
+  if (d>0)  return `${d} day${d>1?'s':''} ago`;
+  if (h>0)  return `${h} hour${h>1?'s':''} ago`;
+  if (m>0)  return `${m} min${m>1?'s':''} ago`;
+  return `${s} sec ago`;
+}
+function inFuture(tsMs){
+  if (!tsMs) return "—";
+  const s = Math.max(0, Math.floor((tsMs - Date.now())/1000));
+  const m = Math.floor(s/60), h=Math.floor(m/60), d=Math.floor(h/24), mo=Math.floor(d/30);
+  if (mo>0) return `in ${mo} month${mo>1?'s':''}`;
+  if (d>0)  return `in ${d} day${d>1?'s':''}`;
+  if (h>0)  return `in ${h} hour${h>1?'s':''}`;
+  if (m>0)  return `in ${m} min${m>1?'s':''}`;
+  return s>0?`in ${s} sec`:"—";
+}
+const fmtUSD = n => n==null?'—' : n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
+const fmtNum = (n, d=0)=> n==null?'—' : Number(n).toLocaleString(undefined,{maximumFractionDigits:d});
+
+/* ========= State ========= */
+let net = TEST; // default
+let ro, locker;
+let POOLS = []; // from pools_cache.json
+let POOLMAP = new Map(); // address -> pool
+let VOTES = new Map(); // address -> {votes, rank}
+let SORT = { col: 'tvl', dir: -1 }; // default sort by TVL desc
+let CURRENT_ROWS = []; // rendered items
+
+/* ========= Fetchers ========= */
+async function fetchJSON(url){
+  const r = await fetch(url, { cache:'no-cache' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function fetchVotes(){
+  try{
+    const url = "https://holderradar.com/api/votes/ranking?period=30d&limit=100";
+    const r = await fetch(RELAY + encodeURIComponent(url));
+    if (!r.ok) throw new Error(`Votes relay HTTP ${r.status}`);
+    const js = await r.json();
+    // expected: [{contract, token_name, votes, rank}, ...]
+    const map = new Map();
+    for (const it of js||[]){
+      const ca = (it.contract||"").toLowerCase();
+      if (ca) map.set(ca, { votes: Number(it.votes||0), rank: Number(it.rank||0), name: it.token_name||"" });
+    }
+    return map;
+  }catch(e){
+    log("Votes fetch failed (CORS via Worker?):", e.message||e);
+    return new Map();
+  }
+}
+
+/* ========= Core chain helpers ========= */
+async function getActiveLocks(token){
+  const res = await locker.getActiveLocksByToken(token, 0, 1000);
+  const [ids, owners, amounts, unlockTimes, names] = res;
+  if (!ids.length) return null;
+
+  // Aggregate
+  let sum = ethers.BigNumber.from(0);
+  let nextUnlock = null;
+  let lastUnlock = 0;
+  const now = Math.floor(Date.now()/1000);
+  for (let i=0;i<ids.length;i++){
+    sum = sum.add(amounts[i]);
+    const ut = Number(unlockTimes[i]);
+    if (nextUnlock===null || (ut>now && ut < nextUnlock)) nextUnlock = ut;
+    if (ut > lastUnlock) lastUnlock = ut;
+  }
+  return {
+    totalLocked: sum,
+    nextUnlock: nextUnlock ? nextUnlock*1000 : null,
+    lastUnlock: lastUnlock ? lastUnlock*1000 : null,
+    count: ids.length
+  };
+}
+
+async function getSupplyAndBurn(token){
+  const erc = new ethers.Contract(token, ERC20, ro);
+  const [dec, total, symbol, name] = await Promise.all([
+    erc.decimals().catch(()=>18),
+    erc.totalSupply(),
+    erc.symbol().catch(()=>"?"),
+    erc.name().catch(()=>"?"),
+  ]);
+  let burned = ethers.BigNumber.from(0);
+  for (const a of BURN_ADDRESSES){
+    const b = await erc.balanceOf(a).catch(()=>ethers.BigNumber.from(0));
+    burned = burned.add(b);
+  }
+  return { decimals:Number(dec), total, burned, symbol, name };
+}
+
+/* ========= Build & Render ========= */
+function tokenCellHTML(idx, sym, name, ca){
+  const link = DETAIL(ca);
+  return `
+    <div class="token-cell">
+      <span class="pill">${idx}</span>
+      <div>
+        <div><strong>${sym}</strong> — ${name}</div>
+        <div class="small mono addr">
+          <a href="${link}" target="_blank">${ca}</a>
+        </div>
+        <div class="small gray" id="mk-${ca}">MC: — • Price: —</div>
+      </div>
+    </div>`;
+}
+function supplyBarHTML(circPct, burnPct, circText, burnText){
+  const circW = Math.max(0, Math.min(100, circPct||0));
+  const burnW = Math.max(0, Math.min(100, burnPct||0));
+  let circStyle = `width:${circW}%;`;
+  let burnStyle = `width:${burnW}%;`;
+  return `
+    <div class="small gray">${circText}  •  ${burnText}</div>
+    <div class="supplybar">
+      <i class="circ" style="${circStyle}"></i>
+      <i class="burn" style="${burnStyle}"></i>
+    </div>`;
+}
+function rowHTML(o, idx){
+  const tvlTxt = o.tvlUSD!=null ? fmtUSD(o.tvlUSD) : '—';
+  const lockedPctTxt = o.lockedPct!=null ? `${o.lockedPct.toFixed(2)}%` : '—';
+  const supplyHTML = supplyBarHTML(
+    o.circPct, o.burnPct,
+    `Circulating: ${fmtNum(o.circ,0)}`,
+    `Burned: ${fmtNum(o.burn,0)}`
+  );
+  return `
+  <tr data-ca="${o.ca}">
+    <td>${tokenCellHTML(idx, o.symbol, o.name, o.ca)}</td>
+    <td>${o.eventDate ? relTime(o.eventDate) : "—"}</td>
+    <td class="right">${lockedPctTxt}</td>
+    <td>${o.nextUnlock ? inFuture(o.nextUnlock) : "—"}</td>
+    <td class="right">${tvlTxt}</td>
+    <td>${supplyHTML}</td>
+  </tr>`;
+}
+
+function applyPoolMetaToRow(ca, price, mc){
+  const el = $("mk-"+ca);
+  if (el) el.textContent = `MC: ${fmtUSD(mc)} • Price: ${fmtUSD(price)}`;
+}
+
+function render(rowsData){
+  const tbody = $("rows");
+  tbody.innerHTML = "";
+  let i=1;
+  for (const r of rowsData){
+    tbody.insertAdjacentHTML('beforeend', rowHTML(r, i));
+    // update MC/Price line
+    applyPoolMetaToRow(r.ca, r.priceUSD, r.marketCap);
+    i++;
+  }
+}
+
+/* ========= Sorting & Search ========= */
+function sortRows(){
+  const arr = CURRENT_ROWS.slice();
+  if (SORT.col === 'tvl'){
+    arr.sort((a,b)=> (b.tvlUSD||0)-(a.tvlUSD||0));
+  }
+  CURRENT_ROWS = arr;
+  render(CURRENT_ROWS);
+}
+$("sortTVL").addEventListener('click', ()=>{ SORT.col='tvl'; SORT.dir=-1; sortRows(); });
+
+/* Simple autocomplete from POOLS cache */
+function attachAutocomplete(){
+  const inp=$("q"), list=$("ac");
+  const hide=()=>list.style.display="none";
+  const show=()=>list.style.display="block";
+  function renderAC(items){
+    if (!items.length){ list.innerHTML='<div class="ac-empty">No matches</div>'; show(); return; }
+    const esc = s => (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+    list.innerHTML = items.slice(0,20).map(it=>{
+      const short = it.address.slice(0,8)+"…"+it.address.slice(-6);
+      return `<div class="ac-item" data-addr="${it.address}">
+        <span class="ac-name">${esc(it.name||"")}</span>
+        <span class="ac-sym">(${esc(it.symbol||"")})</span>
+        <span class="ac-addr">${short}</span>
+      </div>`;
+    }).join("");
+    show();
+  }
+  function onType(){
+    const q = inp.value.trim().toLowerCase();
+    if (!q){ hide(); return; }
+    if (/^0x[a-f0-9]{40}$/.test(q)){
+      renderAC([{address:q,name:"",symbol:""}]); return;
+    }
+    const hits = POOLS.filter(p =>
+      (p.address||"").toLowerCase().includes(q) ||
+      (p.symbol||"").toLowerCase().includes(q) ||
+      (p.name||"").toLowerCase().includes(q)
+    );
+    renderAC(hits);
+  }
+  inp.addEventListener('input', onType);
+  inp.addEventListener('focus', ()=>{ if (list.innerHTML) show(); });
+  document.addEventListener('click', (e)=>{ if (!list.contains(e.target) && e.target!==inp) hide(); });
+  list.addEventListener('click',(e)=>{
+    const item = e.target.closest('.ac-item'); if (!item) return;
+    const ca = item.getAttribute('data-addr');
+    inp.value = ca; hide();
+    filterToCA(ca);
+  });
+}
+function filterToCA(ca){
+  const lc = (ca||"").toLowerCase();
+  const one = CURRENT_ROWS.find(x=>x.ca.toLowerCase()===lc);
+  if (!one){ $("status").textContent = "Not found or not locked"; return; }
+  render([one]); // show only the selected one
+}
+
+/* ========= Main flow ========= */
+async function loadPools(){
+  const js = await fetchJSON("pools_cache.json");
+  POOLS = (js.data||[]).map(x => ({
+    address: (x.address||"").toLowerCase(),
+    symbol: x.symbol||"",
+    name: x.name||"",
+    price: Number(x.price||0), // USD token price
+    market_cap: Number(x.market_cap||0),
+    reserve_in_usd: Number(x.reserve_in_usd||0),
+    pool_created_at: x.pool_created_at,
+    buy_link: x.buy_link||""
+  }));
+  POOLMAP = new Map(POOLS.map(p => [p.address, p]));
+  $("status").textContent = `Pools loaded: ${POOLS.length}`;
+}
+
+async function scoreAllLocked(){
+  $("status").textContent = "Scanning locks…";
+  const out = [];
+
+  // iterate candidates from pools
+  for (const p of POOLS){
+    const ca = p.address;
+    try{
+      const locks = await getActiveLocks(ca);
+      if (!locks) continue; // skip no active locks
+
+      const sup = await getSupplyAndBurn(ca);
+
+      const dec = sup.decimals||18;
+      const total = Number(ethers.utils.formatUnits(sup.total, dec));
+      const burned = Number(ethers.utils.formatUnits(sup.burned, dec));
+
+      const lockedTokens = Number(ethers.utils.formatUnits(locks.totalLocked, dec));
+      const lockedPct = total>0 ? (lockedTokens/total*100) : null;
+
+      // circulating = total - burned - locked
+      const circ = Math.max(0, total - burned - lockedTokens);
+
+      // TVL (Locked) = locked tokens * token USD price (from pools cache)
+      const priceUSD = p.price || 0;
+      const tvlUSD = lockedTokens * priceUSD;
+
+      out.push({
+        ca: ca,
+        symbol: p.symbol || sup.symbol || "",
+        name: (p.name||"").split("/")[0].trim() || sup.name || "",
+        eventDate: locks.lastUnlock || (p.pool_created_at ? Date.parse(p.pool_created_at) : null),
+        nextUnlock: locks.nextUnlock,
+        lockedPct,
+        tvlUSD,
+        // supply bar inputs
+        circ, burn: burned, total,
+        circPct: total>0 ? (circ/total*100) : 0,
+        burnPct: total>0 ? (burned/total*100) : 0,
+        // pool meta for the small line under token title
+        priceUSD: priceUSD,
+        marketCap: p.market_cap
+      });
+
+      $("status").textContent = `Locked found: ${out.length}`;
+    }catch(e){
+      log("scan err", p.address, e.message||e);
+    }
+  }
+
+  // enrich with votes (optional / best-effort)
+  if (VOTES.size){
+    for (const it of out){
+      const v = VOTES.get(it.ca.toLowerCase());
+      if (v){ it.votes = v.votes; it.voteRank = v.rank; }
+    }
+  }
+
+  // Keep only locked projects
+  CURRENT_ROWS = out;
+
+  // Default sort by TVL desc
+  sortRows();
+  $("status").textContent = `Locked projects: ${CURRENT_ROWS.length}`;
+}
+
+async function reloadAll(){
+  try{
+    $("rows").innerHTML = "";
+    $("log").textContent = "";
+    $("status").textContent = "Loading…";
+
+    // setup provider & locker for selected net
+    const sel = $("net").value === "mainnet" ? MAIN : TEST;
+    net = sel;
+    ro = new ethers.providers.JsonRpcProvider(net.RPC);
+    locker = new ethers.Contract(net.LOCKER, LOCKER_ABI, ro);
+
+    await loadPools();
+    VOTES = await fetchVotes();
+    attachAutocomplete();
+
+    await scoreAllLocked();
+  }catch(e){
+    $("status").textContent = "Error";
+    log("Fatal:", e.message||String(e));
+  }
+}
+
+/* ========= UI bindings ========= */
+$("reload").addEventListener('click', reloadAll);
+$("net").addEventListener('change', reloadAll);
+
+/* ========= Init ========= */
+document.addEventListener('DOMContentLoaded', reloadAll);
+</script>
+</body>
+</html>
