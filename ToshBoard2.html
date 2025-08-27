@@ -501,33 +501,33 @@ function render(){
 
       <!-- Six visual metrics: Lock • Dev • Age • Health • Community • Distribution -->
       <div class="metrics">
-        ${metricHTML({name:'Lock',  ico:'🔒', ratio:ratioLock,   state:stateLock(r.lockedPct),  title:`Locked ${pct(r.lockedPct)} • Time ${r.p_time}/10`, crown:crownLock})}
-        ${metricHTML({name:'Dev',   ico:'🧑\u200d💻', ratio:r.p_dev?1:0, state:stateBool(!!r.p_dev), title:r.p_dev? 'Creator lock: yes' : 'Creator lock: no', crown:false})}
-        ${metricHTML({name:'Age',   ico:'⏳', ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`${r.ageDays} days`, crown:crownAge})}
-        ${metricHTML({name:'Health',ico:'💧', ratio:ratioHealth, state:stateHealth(ratioHealth), title:`Depth ${r.p_depth}/7 • Turnover ${r.p_vol}/8`, crown:crownHealth})}
-        ${metricHTML({name:'Community',ico:'🗳', ratio:ratioVotes, state:stateVotes(ratioVotes), title:`Votes ${(r.votes||0)}`, crown:crownVotes})}
-        ${metricHTML({name:'Distribution', ico:'👥', ratio:ratioHold, state:stateHold(r.top10Share), title: (r.top10Share==null? 'Top-10: pending…' : `Top-10: ${r.top10Share.toFixed(2)}%`), crown:crownDistr })}
+        ${metricHTML({name:'',  ico:'🔒', ratio:ratioLock,   state:stateLock(r.lockedPct),  title:`Locked ${pct(r.lockedPct)} • Time ${r.p_time}/10`, crown:crownLock})}
+        ${metricHTML({name:'',   ico:'👨‍💻', ratio:r.p_dev?1:0, state:stateBool(!!r.p_dev), title:r.p_dev? 'Creator lock: yes' : 'Creator lock: no', crown:false})}
+        ${metricHTML({name:'',   ico:'⏳', ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`${r.ageDays} days`, crown:crownAge})}
+        ${metricHTML({name:'',ico:'💧', ratio:ratioHealth, state:stateHealth(ratioHealth), title:`Depth ${r.p_depth}/7 • Turnover ${r.p_vol}/8`, crown:crownHealth})}
+        ${metricHTML({name:'',ico:'🗳', ratio:ratioVotes, state:stateVotes(ratioVotes), title:`Votes ${(r.votes||0)}`, crown:crownVotes})}
+        ${metricHTML({name:'', ico:'👥', ratio:ratioHold, state:stateHold(r.top10Share), title: (r.top10Share==null? 'Top-10: pending…' : `Top-10: ${r.top10Share.toFixed(2)}%`), crown:crownDistr })}
       </div>
 
       <details class="more">
         <summary>Details</summary>
-        <div class="brow"><div><strong>Liquidity Lock</strong></div><div>${(r.p_locked+r.p_time).toFixed(1)}/40</div></div>
+        <div class="brow"><div><strong>🔒 Liquidity Lock</strong></div><div>${(r.p_locked+r.p_time).toFixed(1)}/40</div></div>
         <div class="brow"><div>• Locked % (cap 50%)</div><div>${r.p_locked.toFixed(1)}/30</div></div>
         <div class="brow"><div>• Time safety (avg)</div><div>${r.p_time}/10 &nbsp; ⏳ ${r.avgDays?.toFixed? r.avgDays.toFixed(1): r.avgDays}d</div></div>
 
-        <div class="brow"><div><strong>Dev Transparency</strong></div><div>${r.p_dev}/10</div></div>
+        <div class="brow"><div><strong>'👨‍💻' Dev Transparency</strong></div><div>${r.p_dev}/10</div></div>
         <div class="brow"><div>• Creator locked?</div><div>${r.p_dev? 'yes':'no'}</div></div>
 
-        <div class="brow"><div><strong>Age & Consistency</strong></div><div>${r.p_age}/10</div></div>
+        <div class="brow"><div><strong>⏳ Age & Consistency</strong></div><div>${r.p_age}/10</div></div>
         <div class="brow"><div>• Age days</div><div>${r.ageDays}</div></div>
 
-        <div class="brow"><div><strong>On-chain health</strong></div><div>${(r.p_depth+r.p_vol).toFixed(1)}/15</div></div>
+        <div class="brow"><div><strong>💧 On-chain health</strong></div><div>${(r.p_depth+r.p_vol).toFixed(1)}/15</div></div>
         <div class="brow"><div>• Depth vs P90</div><div>${r.p_depth.toFixed(1)}/7</div></div>
         <div class="brow"><div>• 24h turnover</div><div>${r.p_vol}/8</div></div>
 
-        <div class="brow"><div><strong>Community</strong></div><div>${r.p_votes}/10 &nbsp; 🗳 ${niceNum(r.votes)}</div></div>
+        <div class="brow"><div><strong>🗳 Community</strong></div><div>${r.p_votes}/10 &nbsp; 🗳 ${niceNum(r.votes)}</div></div>
 
-        <div class="brow"><div><strong>Distribution</strong></div><div>${r.top10Share==null? 'pending…' : r.top10Share.toFixed(2)+'%' } / best is low</div></div>
+        <div class="brow"><div><strong>👥 Distribution</strong></div><div>${r.top10Share==null? 'pending…' : r.top10Share.toFixed(2)+'%' } / best is low</div></div>
         <div class="holders-list">
           ${(r.topHolders&&r.topHolders.length)? r.topHolders.map((h,i)=>`<div><span>#${i+1} <span class="mono">${short(h.address)}</span></span><span>${Number(h.pctCirc||0).toFixed(2)}%</span></div>`).join('') : '<div class="muted">Top holders pending…</div>'}
         </div>
