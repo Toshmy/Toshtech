@@ -96,6 +96,27 @@
   .overlay .panel{width:min(680px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.18);padding:16px}
   .progress{height:12px;border-radius:999px;background:#0b1430;border:1px solid var(--border);overflow:hidden}
   .progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+/* Make the score sit on the left on small screens + shrink it */
+@media (max-width: 560px){
+  .token-head{
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px;
+    justify-content: start;
+  }
+  .score-wrap{ order: -1; }          /* move score before the title block */
+  .score-badge{
+    min-width: 70px;
+    min-height: 50px;
+    padding: 4px 8px;
+  }
+  .score-num{ font-size: 18px; }
+  .score-caption{ display: none; }   /* save vertical space on phones */
+
+  /* Give more room to the meters inside Details on phones */
+  .rowline{ grid-template-columns: 140px 64px 1fr; }
+}  
 </style>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
@@ -552,12 +573,14 @@ function render(){
           </div>
         </div>
 
-        <div>
-          <div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
-            <span class="score-num">${fmtScore(r.score)}</span>
-          </div>
-          <div class="score-caption">ToshScore</div>
++        <div class="score-wrap">
+		   <div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
+			 <span class="score-num">${fmtScore(r.score)}</span>
+		   </div>
+		   <div class="score-caption">ToshScore</div>
+
         </div>
+
       </div>
 
       <div class="chips">
@@ -600,6 +623,7 @@ function render(){
             <div class="desc">Basic transparency: did the creator lock tokens? Are links (X/TG/Website) provided?</div>
             <div class="subrow"><span>• Creator locked?</span>
               <span class="mono">${r.p_dev? 'yes':'no'}</span></div>
+			  
 			<div class="subrow">
 			  <span>• Creator</span>
 			  <span class="mono">
