@@ -164,6 +164,8 @@ const COUNCIL_URL = "https://www.toshtech.xyz/council_votes.json"; // may 404
 const TG_CSV_URL = "https://www.toshtech.xyz/tg.csv";               // optional fallback
 const PEPUSCAN_TOKEN = "https://pepuscan.com/token/";
 const PEPUSCAN = "https://pepuscan.com/address/";
+const PEPUSCAN_TX = "https://pepuscan.com/tx/";
+
 const PEPUSWAP_BUY_BASE = "https://pepuswap.com/#/swap?inputCurrency=ETH&outputCurrency=";
 
 const BURNS = [
@@ -497,7 +499,8 @@ async function hydrateCreators(rows){
 
       // Only fetch from Explorer when we don't have a CSV timestamp (outside launchpad)
       // or we still miss creator/creationTs.
-      const needsExplorer = !r.launchpad || (!r.creator || !r.creationTs);
+      const needsExplorer = (!r.creationTx) || (!r.creator);
+
 
       if (!needsExplorer) { scheduleRender(); continue; }
 
@@ -854,15 +857,15 @@ function render(){
 				  : '—'}
 			  </span>
 			</div>
-
 			<div class="subrow">
 			  <span>• Creation tx</span>
 			  <span class="mono">
 				${r.creationTx
-				  ? `<a href="${PEPUSCAN}${r.creationTx}" target="_blank">${short(r.creationTx)}</a>`
+				  ? `<a href="${PEPUSCAN_TX}${r.creationTx}" target="_blank">${short(r.creationTx)}</a>`
 				  : '—'}
 			  </span>
 			</div>
+
             <div class="subrow"><span>• Links (X/TG/Web)</span><span class="mono">${['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0)}/3</span></div>
 
             <div class="rowline"><div>⏳ Age</div><div class="mono">${fmtN(r.p_age,1)}/10</div><div class="meter"><i style="width:${(clamp01(r.p_age/10)*100).toFixed(0)}%"></i></div></div>
