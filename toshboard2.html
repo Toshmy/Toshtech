@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>ToshBoard — Mainnet ToshScore</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  :root{
+    --bg:#0c1222; --fg:#e6fff6; --muted:#9fead1;
+    --card:rgba(255,255,255,.05); --border:rgba(0,255,174,.22);
+    --accent:#00ffae; --accent2:#00d99c;
+    --red:#ef4444; --amber:#f59e0b; --green:#22c55e; --blue:#49a8ff;
+  }
+  html,body{margin:0;background:radial-gradient(circle at 18% 8%, #17223c 0%, #0c1222 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+  .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
+  .glow{ text-shadow:0 0 10px var(--accent), 0 0 24px var(--accent) }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .between{justify-content:space-between}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:.32rem .68rem;border-radius:999px;background:#09122a;border:1px solid var(--border);color:#d0fff0;font-size:12px;box-shadow:0 0 0 2px rgba(0,255,174,.08) inset}
+  input,button,select{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
+  button{cursor:pointer}
+  .btn{background:linear-gradient(135deg, var(--accent), var(--accent2));color:#00251b;border:0;font-weight:800}
+  .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+  a{color:#93c5fd;text-decoration:none}
+
+  .grid{display:grid;gap:12px;grid-template-columns:1fr}
+
+  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.14);padding:14px}
+  .token-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .title-left{display:flex;align-items:center;gap:10px}
+  .logo{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:#0b162f;object-fit:cover}
+  .name{font-weight:900;font-size:18px}
+  .sub{font-size:12px;color:#bfeede}
+
+  .score-badge{min-width:92px;min-height:64px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--border);background:#0b162f;padding:6px 10px}
+  .score-badge.good{box-shadow:0 0 0 1px rgba(34,197,94,.25), 0 0 22px rgba(34,197,94,.18);color:#34d399}
+  .score-badge.ok{box-shadow:0 0 0 1px rgba(132,204,22,.25), 0 0 22px rgba(132,204,22,.18);color:#bef264}
+  .score-badge.warn{box-shadow:0 0 0 1px rgba(245,158,11,.25), 0 0 22px rgba(245,158,11,.18);color:#fbbf24}
+  .score-badge.bad{box-shadow:0 0 0 1px rgba(239,68,68,.25), 0 0 22px rgba(239,68,68,.18);color:#f87171}
+  .score-num{font-size:22px;font-weight:900;letter-spacing:.3px}
+  .score-caption{font-size:11px;color:#bfeede;margin-top:2px;text-align:center}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .chip{border:1px solid var(--border);border-radius:999px;padding:.18rem .55rem;background:#0f1730;font-size:12px;white-space:nowrap}
+  .chip.bad{border-color:rgba(239,68,68,.6);color:#fecaca}
+
+  .ca-row{display:flex;gap:8px;align-items:center;margin-top:4px}
+  .addr{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;background:#0e1836;border:1px solid var(--border);padding:6px 8px;border-radius:10px;flex:1}
+  .actbar{display:flex;gap:6px}
+  .act{border:1px solid var(--border);background:#0e1836;color:#cfe;padding:6px 10px;border-radius:10px;font-size:12px}
+  .act.buy{background:linear-gradient(135deg,#22c55e,#10b981);color:#042e24;font-weight:800}
+
+  .social{display:flex;gap:6px;margin-top:6px}
+  .socbtn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:linear-gradient(180deg,#0f1a3a,#0a1330)}
+  .socbtn:hover{box-shadow:0 0 0 2px rgba(0,255,174,.18) inset}
+  .socbtn span{filter:drop-shadow(0 0 6px rgba(0,255,174,.28))}
+
+  .supply{margin-top:8px}
+  .bar{height:10px;border-radius:999px;background:#0f1730;border:1px solid var(--border);display:flex;overflow:hidden}
+  .seg-burn{background:var(--red)}
+  .seg-locked{background:var(--blue)}
+  .seg-circ{background:var(--green)}
+  .subline{font-size:12px;color:#bfeede;margin-top:6px}
+
+  .metrics{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:10px;align-items:center;margin:10px 0 4px}
+  @media(max-width:900px){ .metrics{grid-template-columns:1fr 1fr} }
+  .m{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:12px;padding:7px 8px;background:#0f1730}
+  .m .ico{width:22px;text-align:center}
+  .m .val{width:58px;text-align:right;opacity:.95}
+  .m .meter{flex:1;height:8px;border-radius:999px;background:#0e1732;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+  .m .meter>i{display:block;height:100%;width:0}
+  .m.ok   .meter>i{background:var(--green)}
+  .m.warn .meter>i{background:var(--amber)}
+  .m.bad  .meter>i{background:var(--red)}
+
+  details.more{margin-top:6px}
+  details.more summary{cursor:pointer;color:#9fead1}
+
+  /* NEW: split details into left + right columns; right holds Distribution + Top holders */
+  .detail-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:8px}
+  @media(max-width:900px){ .detail-grid{grid-template-columns:1fr} }
+  .panel{background:#0b162f;border:1px solid var(--border);border-radius:12px;padding:12px}
+  .rowline{display:grid;grid-template-columns:180px 84px 1fr;gap:10px;align-items:center;margin:10px 0}
+  .rowline .meter{height:10px;border-radius:999px;background:#0e1732;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+  .rowline .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .subrow{display:flex;justify-content:space-between;font-size:12px;margin:4px 0;color:#bfeede}
+  .desc{font-size:11px;color:#9fd;opacity:.9;margin:-6px 0 8px 0}
+
+  .holders-list{font-size:12px;margin-top:6px}
+  .holders-list div{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center}
+  .holders-list a{color:#8ac7ff;word-break:break-all}
+  .muted{color:#a8ffd9;opacity:.8}
+
+  .footer-note{font-size:12px;color:#9fead1;margin-top:10px}
+
+  .overlay{position:fixed;inset:0;background:rgba(6,10,24,.82);backdrop-filter:blur(3px);display:none;place-items:center;z-index:50}
+  .overlay .panel{width:min(680px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.18);padding:16px}
+  .progress{height:12px;border-radius:999px;background:#0b1430;border:1px solid var(--border);overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+  /* Phone: score first, smaller */
+  @media (max-width: 560px){
+    .token-head{
+      display:grid;
+      grid-template-columns:auto 1fr;
+      align-items:center;
+      gap:10px;
+      justify-content:start;
+    }
+    .score-wrap{ order:-1; }
+    .score-badge{ min-width:70px; min-height:50px; padding:4px 8px; }
+    .score-num{ font-size:18px; }
+    .score-caption{ display:none; }
+    .rowline{ grid-template-columns:140px 64px 1fr; }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="row between">
+    <h1 class="glow" style="margin:0">📊 ToshBoard — Mainnet ToshScore</h1>
+    <div class="row">
+      <input id="search" placeholder="Search name / symbol / 0x…" style="min-width:240px">
+      <select id="sorter" title="Sort">
+        <option value="score">Sort: Score (desc)</option>
+        <option value="locked">Sort: Locked %</option>
+        <option value="mc">Sort: Market Cap</option>
+        <option value="liq">Sort: Liquidity</option>
+        <option value="age">Sort: Age</option>
+      </select>
+      <button id="reload" class="btn gray">Reload</button>
+      <span id="status" class="pill">Idle</span>
+    </div>
+  </header>
+
+  <div id="cards" class="grid" style="margin-top:10px"></div>
+  <div class="footer-note">Data: pools_cache.json • Launchpad subgraph • Explorer (holders & counters + creator fallback) • HolderRadar (votes) • Council JSON • tg.csv (social/logo fallback). P90 uses pools’ reserve_in_usd.</div>
+</div>
+
+<!-- Loading overlay -->
+<div id="overlay" class="overlay">
+  <div class="panel">
+    <div class="row between" style="margin-bottom:8px">
+      <div class="glow">Loading tokens…</div>
+      <span id="count" class="pill">0 / 0</span>
+    </div>
+    <div class="progress" aria-label="overall loading progress"><i id="progressFill"></i></div>
+    <div class="row between" style="margin-top:6px">
+      <span class="pill" id="stage">Starting…</span>
+      <span class="pill" id="elapsed">—</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== CONFIG ================== */
+const RPC = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
+const EXPLORER = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz";
+const LOCKER = "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F";
+const WORKER = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
+const POOLS_URL = "https://www.toshtech.xyz/pools_cache.json";
+const COUNCIL_URL = "https://www.toshtech.xyz/council_votes.json"; // may 404
+const TG_CSV_URL = "https://www.toshtech.xyz/tg.csv";               // optional fallback
+const PEPUSCAN_TOKEN = "https://pepuscan.com/token/";
+const PEPUSCAN = "https://pepuscan.com/address/";
+const PEPUSWAP_BUY_BASE = "https://pepuswap.com/#/swap?inputCurrency=ETH&outputCurrency=";
+
+const BURNS = [
+  "0xa9fD599cd8857e90059c83e4885Dc09986039085",
+  "0x000000000000000000000000000000000000dEaD"
+];
+
+const ERC20 = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
+];
+
+const ro = new ethers.providers.JsonRpcProvider(RPC);
+/* ================== State & leaders ================== */
+const TOPN_BOOT = 10;            // show only Top-10 MC on initial load
+let SHOW_PRIORITY_ONLY = true;    // when true: render only top-N unless searching
+
+/* ================== Weights ================== */
+const W_LOCKED = 15, W_TIME=10, W_DEV=15, W_AGE=10;
+const W_HEALTH_DEPTH=7, W_HEALTH_VOL=8, W_HEALTH=W_HEALTH_DEPTH+W_HEALTH_VOL;
+const W_VOTES=10, W_COUNCIL=15, W_HOLD=10;
+
+/* ================== Utils ================== */
+const $ = id => document.getElementById(id);
+const setStatus = t => { $("status").textContent = t; $("stage").textContent = t; };
+const niceUSD = v => (v==null||Number.isNaN(v)) ? "—" : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(+v);
+const niceNum = v => (v==null||Number.isNaN(v)) ? "—" : new Intl.NumberFormat('en-US').format(+v);
+const short = a => a.slice(0,6)+"…"+a.slice(-4);
+const fmtScore = v => (Number.isFinite(v)? (+v).toFixed(2) : "0.00");
+const clamp01 = x => Math.max(0,Math.min(1,Number(x||0)));
+function p90(arr){ const xs=arr.filter(v=>Number.isFinite(v)&&v>0).sort((a,b)=>a-b); if(!xs.length) return 0; const idx=Math.ceil(xs.length*0.9)-1; return xs[Math.max(0,Math.min(xs.length-1,idx))]; }
+function clock(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); const rs=s%60; return (m?m+"m ":"")+rs+"s"; }
+function scoreClass(s){ if(s>=75) return 'good'; if(s>=60) return 'ok'; if(s>=40) return 'warn'; return 'bad'; }
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+const fmtN = (v, d=1) => isNum(v) ? v.toFixed(d) : '0.0';
+const fmtNDash = (v, d=2) => isNum(v) ? v.toFixed(d) : '—';
+
+let renderPending=false;
+function scheduleRender(){ if(renderPending) return; renderPending=true; requestAnimationFrame(()=>{ renderPending=false; render(); }); }
+
+function niceCompact(v){
+  if(v==null || Number.isNaN(v)) return "—";
+  const n = Number(v);
+  if (n >= 1e9) return (n/1e9).toFixed(2).replace(/\.0+$/,'') + "B";
+  if (n >= 1e6) return (n/1e6).toFixed(2).replace(/\.0+$/,'') + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(2).replace(/\.0+$/,'') + "K";
+  return n.toString();
+}
+
+/* ================== Fetchers ================== */
+async function loadPools(){ const r=await fetch(POOLS_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('pools '+r.status); const js=await r.json(); return js?.data||[]; }
+async function loadVotes(){
+  try{ const u=WORKER+encodeURIComponent("https://holderradar.com/api/votes/ranking?period=30d&limit=100");
+    const r=await fetch(u,{cache:'no-cache'}); if(!r.ok) throw new Error('votes '+r.status); return await r.json();
+  }catch(e){ console.warn("votes failed",e); return []; }
+}
+async function loadCreators(){
+  const url="https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad";
+  const query=`query Q { presales(orderBy:blockTimestamp, orderDirection:desc, first:1000){ token minter blockTimestamp data } }`;
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query})});
+    if(!r.ok) throw new Error('gql '+r.status);
+    const js=await r.json(); const map=new Map();
+    (js?.data?.presales||[]).forEach(p=>{
+      const key=(p.token||"").toLowerCase(); const ts=Number(p.blockTimestamp||0); let meta={}; try{ meta=JSON.parse(p.data||"{}"); }catch(_){}
+      const prev=map.get(key);
+      const website = meta.websiteUrl || meta.website || meta.site || meta.siteUrl || meta.url || null;
+      if(!prev || ts>prev.blockTimestamp) map.set(key,{
+        minter:(p.minter||"").toLowerCase(),
+        blockTimestamp:ts,
+        iconUrl: meta.iconUrl || null,
+        xUrl: meta.xUrl || null,
+        telegramUrl: meta.telegramUrl || null,
+        websiteUrl: website
+      });
+    });
+    return map;
+  }catch(e){ console.warn("gql creators failed",e); return new Map(); }
+}
+async function loadCouncil(){
+  try{
+    const r=await fetch(COUNCIL_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('council '+r.status);
+    const js=await r.json(); const map=new Map();
+    Object.entries(js||{}).forEach(([k,v])=>{
+      const ca=(k||"").toLowerCase(); const avg=Number(v?.avg||0); const count=Number(v?.count||0);
+      if(ca) map.set(ca,{avg:Number.isFinite(avg)?Math.max(0,Math.min(100,avg)):0, count:Math.max(0,count)});
+    });
+    return map;
+  }catch(e){ console.warn("council failed",e); return new Map(); }
+}
+async function loadTgCsv(){
+  try{
+    const r=await fetch(TG_CSV_URL,{cache:'no-cache'});
+    if(!r.ok) throw new Error('tg '+r.status);
+    const txt=await r.text();
+    const lines=txt.split(/\r?\n/).filter(Boolean);
+    const header=lines.shift();
+    const idx={};
+    header.split(',').forEach((h,i)=> idx[h.trim().toLowerCase()]=i);
+    const map=new Map();
+    for(const ln of lines){
+      const cells=ln.split(',');
+      const token=(cells[idx.token]||'').trim().toLowerCase();
+      if(!token) continue;
+      map.set(token,{
+        telegramUrl:(cells[idx.tg]||'').trim()||null,
+        websiteUrl:(cells[idx.website]||'').trim()||null,
+        xUrl:(cells[idx.xurl]||'').trim()||null,
+        iconUrl:(cells[idx.iconurl]||'').trim()||null,
+        minter:(cells[idx.minter]||'').trim().toLowerCase()||null
+      });
+    }
+    return map;
+  }catch(e){ console.warn('tg.csv not available',e); return new Map(); }
+}
+
+async function fetchJsonRelay(url){ const r=await fetch(WORKER+encodeURIComponent(url),{cache:'no-cache'}); if(!r.ok) throw new Error('relay '+r.status); return r.json(); }
+async function fetchCounters(ca){
+  try{ const js=await fetchJsonRelay(`${EXPLORER}/api/v2/tokens/${ca}/counters`); return {holders:Number(js?.token_holders_count||0), transfers:Number(js?.transfers_count||0)}; }
+  catch(_){ return {holders:0, transfers:0}; }
+}
+
+/* explorer fallback for creator + creation time */
+/* explorer fallback for creator + creation time */
+async function fetchCreatorAndCreation(ca){
+  try{
+    // 1) address -> creation tx hash
+    const addr = await fetchJsonRelay(`${EXPLORER}/api/v2/addresses/${ca}`);
+    const creationTx =
+      addr?.creation_transaction_hash ||
+      addr?.data?.attributes?.creation_transaction_hash ||
+      null;
+
+    if (!creationTx) return { creator:null, creationTs:null, creationTx:null };
+
+    // 2) tx -> from (creator) + timestamp
+    const tx = await fetchJsonRelay(`${EXPLORER}/api/v2/transactions/${creationTx}`);
+    const creator =
+      (tx?.from?.hash) ||
+      (tx?.data?.attributes?.from?.hash) ||
+      tx?.from ||
+      null;
+
+    let ts = tx?.timestamp || tx?.data?.attributes?.timestamp || tx?.time || tx?.block?.timestamp || null;
+    let epoch = null;
+    if (typeof ts === 'number' && Number.isFinite(ts)) {
+      epoch = ts;
+    } else if (typeof ts === 'string') {
+      const d = Date.parse(ts);
+      if (!Number.isNaN(d)) epoch = Math.floor(d / 1000);
+    }
+
+    return { creator, creationTs: epoch, creationTx };
+  } catch(e){
+    return { creator:null, creationTs:null, creationTx:null };
+  }
+}
+
+
+/* ================== Age logic ================== */
+function deriveAgeDaysFrom(tsSeconds){
+  if(!Number.isFinite(tsSeconds) || tsSeconds<=0) return 0;
+  return Math.max(0, Math.floor((Date.now()/1000 - tsSeconds)/86400));
+}
+function deriveAge(poolTs, crTs, cacheTs, sourceHint){
+  if(Number.isFinite(crTs) && crTs>0) return {days: deriveAgeDaysFrom(crTs), source:'Explorer'};
+  if(Number.isFinite(poolTs) && poolTs>0) return {days: deriveAgeDaysFrom(poolTs), source:(sourceHint||'Cache')};
+  return {days:0, source:'Unknown'};
+}
+
+/* ================== Scoring ================== */
+function sLockedPct(p){ const cap=Math.min(p,50); return +(W_LOCKED*(cap/50)).toFixed(2); }
+function sLockTime(days){ if(days>=180)return 10; if(days>=90)return 8; if(days>=30)return 6; if(days>=7)return 3; return 0; }
+function sDev(creatorLocked, linksCount){ const base = creatorLocked?W_DEV:0; const bonus = Math.min(3, linksCount); return +(Math.min(W_DEV, base + bonus)).toFixed(2); }
+function sAge(days){ if(days>=90)return 10; if(days>=30)return 7; if(days>=7)return 4; return 1; }
+function sDepth(reserve,p90v){ if(!p90v) return 0; const x=clamp01(reserve/p90v); return +(W_HEALTH_DEPTH*x).toFixed(2); }
+function sVol(vol,res){ if(!res || vol<=0) return 0; const x=Math.min(1, Math.sqrt(vol/res)); return +(W_HEALTH_VOL*x).toFixed(2); }
+function sVotes(v,max){ if(!max) return 0; return +(W_VOTES*(Math.min(v,max)/max)).toFixed(2); }
+function sCouncil(avg){
+  if(!Number.isFinite(avg)) return 0;
+  // allow auditors to give -100 to +100 → mapped to -10 to +10
+  return +(W_COUNCIL * (Math.max(-100, Math.min(100, avg)) / 100)).toFixed(2);
+}
+function sHold(top10, holders){
+  let conc=0; if(top10==null||!Number.isFinite(top10)) conc=0; else if(top10<=20) conc=12; else if(top10<=40) conc=7; else if(top10<=60) conc=3; else conc=0;
+  const h=Number(holders||0); const bonus = h>0 ? +(3*Math.min(1, Math.sqrt(h/500))).toFixed(2) : 0;
+  return +(conc+bonus).toFixed(2);
+}
+
+/* ================== State & leaders ================== */
+let POOLS=[], CREATOR=new Map(), TGCSV=new Map(), COUNCIL=new Map(), P90=0, ROWS_ALL=[];
+function recomputeScore(r){
+  r.score = +( (r.p_locked||0)+(r.p_time||0)+(r.p_dev||0)+(r.p_age||0)+(r.p_depth||0)+(r.p_vol||0)+(r.p_votes||0)+(r.p_council||0)+(r.p_hold||0) ).toFixed(2);
+}
+
+/* ================== Progress ================== */
+let START_TS=0,DONE=0,TOTAL=0;
+function showOverlay(show){ $("overlay").style.display = show? 'grid':'none'; }
+function updateProgress(){
+  const p = TOTAL? Math.min(100,Math.max(0,(DONE/TOTAL)*100)) : 0;
+  $("count").textContent=`${DONE} / ${TOTAL}`;
+  $("progressFill").style.width=p.toFixed(1)+"%";
+  $("elapsed").textContent=clock(Date.now()-START_TS);
+}
+
+/* ================== Build ================== */
+$("search").oninput=()=> scheduleRender();
+$("sorter").onchange=()=> scheduleRender();
+$("reload").onclick=()=> boot();
+
+/* --- heavy on-chain: locks & supply --- */
+async function getLocksAndSupply(token){
+  const erc=new ethers.Contract(token, ERC20, ro);
+  const [dec,total,...burns]=await Promise.all([
+    erc.decimals().catch(()=>18),
+    erc.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+    ...BURNS.map(a=>erc.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
+  ]);
+  let burned=ethers.BigNumber.from(0); for(const b of burns) burned=burned.add(b);
+  const locker=new ethers.Contract(LOCKER, LOCKER_ABI, ro);
+  const [ids,owners,amounts,unlocks]=await locker.getActiveLocksByToken(token,0,1000).catch(()=>[[],[],[],[]]);
+  const now=Math.floor(Date.now()/1000);
+  let totalLocked=ethers.BigNumber.from(0), sumRem=0, cnt=0;
+  const ownerTotals=new Map();
+  for(let i=0;i<amounts.length;i++){
+    const amt=amounts[i]; totalLocked=totalLocked.add(amt);
+    const own=(owners[i]||'').toLowerCase(); if(!own) continue;
+    ownerTotals.set(own,(ownerTotals.get(own)||ethers.BigNumber.from(0)).add(amt));
+    const rem=Number(unlocks[i])-now; if(rem>0){ sumRem+=rem; cnt++; }
+  }
+  const avgDays = cnt ? (sumRem/cnt)/86400 : 0;
+  return {dec,total,burned,totalLocked,avgDays,ownerTotals};
+}
+
+async function fetchTopHolders(token,N=10,maxPages=8){
+  const base=`${EXPLORER}/api/v2/tokens/${token}/holders`;
+  let js=await fetchJsonRelay(base).catch(()=>null); if(!js?.items) return {raw:[],top:[]};
+  const burnSet=new Set(BURNS.map(a=>a.toLowerCase()));
+  let eoa=(js.items||[]).map(it=>({address:(it.address?.hash)||"",is_contract:!!(it.address?.is_contract),value:BigInt(it.value||"0")})).filter(it=>it.address && !it.is_contract && !burnSet.has(it.address.toLowerCase()) && it.value>0n);
+  let next=js.next_page_params; let page=1;
+  while(eoa.length<N && next && page<maxPages){
+    const qp=new URLSearchParams(); for(const k in next) qp.set(k,String(next[k]));
+    js=await fetchJsonRelay(base+"?"+qp.toString()).catch(()=>null);
+    const more=(js?.items||[]).map(it=>({address:(it.address?.hash)||"",is_contract:!!(it.address?.is_contract),value:BigInt(it.value||"0")})).filter(it=>it.address && !it.is_contract && !burnSet.has(it.address.toLowerCase()) && it.value>0n);
+    eoa=eoa.concat(more); next=js?.next_page_params; page++;
+  }
+  eoa.sort((a,b)=> (a.value<b.value?1:-1));
+  return {raw:eoa, top:eoa.slice(0,N)};
+}
+
+async function computeHoldersForRow(row){
+  const holders=await fetchTopHolders(row.ca,10,8);
+  const totalBI=BigInt(row.totalBI||'0'), burnedBI=BigInt(row.burnedBI||'0'), lockedBI=BigInt(row.lockedBI||'0');
+  const denomAdj = totalBI>burnedBI ? (totalBI - burnedBI) : 0n;
+  const denomCirc= denomAdj>lockedBI ? (denomAdj - lockedBI) : 0n;
+  const top=holders.top; const top10Sum = top.reduce((a,b)=>a+b.value,0n);
+  const top10Share = denomCirc>0n ? Number(top10Sum*10000n/denomCirc)/100 : null;
+  const topList = top.map(h=>({ address:h.address, pctCirc: denomCirc>0n ? Number(h.value*10000n/denomCirc)/100 : 0 }));
+  return { top10Share, topList };
+}
+
+/* ===== Hydrators (run after quick first paint) ===== */
+async function hydrateSupplyAndLocks(rows){
+  const CONC=4; let i=0;
+  async function run(){
+    while(i<rows.length){
+      const r=rows[i++];
+      try{
+        const got=await getLocksAndSupply(r.ca);
+        const totalN=Number(ethers.utils.formatUnits(got.total,got.dec));
+        const burnedN=Number(ethers.utils.formatUnits(got.burned,got.dec));
+        const lockedN=Number(ethers.utils.formatUnits(got.totalLocked,got.dec));
+        const adjusted=Math.max(0,totalN-burnedN);
+        const lockedPct = adjusted>0 ? (lockedN/adjusted*100) : 0;
+
+        r.totalN=totalN; r.burnedN=burnedN; r.lockedN=lockedN;
+        r.totalBI=got.total.toString(); r.burnedBI=got.burned.toString(); r.lockedBI=got.totalLocked.toString();
+        r.avgDays=got.avgDays; r.lockedPct=lockedPct;
+
+        // creator lock flag: check minter balance in lock ownerTotals
+        let creatorAddr = r.creator || null;
+        if(!creatorAddr && TGCSV.has(r.ca)) creatorAddr = TGCSV.get(r.ca).minter || null;
+        let creatorLocked=false;
+        if(creatorAddr){
+          const tot = got.ownerTotals.get(creatorAddr) || ethers.BigNumber.from(0);
+          creatorLocked = tot.gt(ethers.constants.Zero);
+        }
+        r.creatorLocked=creatorLocked;
+
+        r.p_locked=sLockedPct(lockedPct);
+        r.p_time=sLockTime(r.avgDays||0);
+        r.p_dev=sDev(creatorLocked, ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0));
+        recomputeScore(r);
+        scheduleRender();
+      }catch(e){}
+    }
+  }
+  await Promise.all(Array.from({length:CONC},()=>run()));
+}
+async function hydrateCreators(rows){
+  const CONC=4; let i=0;
+  async function run(){
+    while(i<rows.length){
+      const r=rows[i++];
+      try{
+        const expl = await fetchCreatorAndCreation(r.ca);
+		if (expl.creator && !r.creator) r.creator = (expl.creator || '').toLowerCase();
+		if (expl.creationTx) r.creationTx = expl.creationTx;   // <-- add this line
+		if (expl.creationTs){
+		  let poolTs = r.poolTs || null;
+		  const ageInfo = deriveAge(poolTs, expl.creationTs, poolTs, 'Explorer');
+		  r.ageDays = ageInfo.days; r.ageSource = ageInfo.source;
+		  r.p_age = sAge(r.ageDays);
+		}		
+        recomputeScore(r);
+      }catch(e){}
+      finally{ scheduleRender(); }
+    }
+  }
+  await Promise.all(Array.from({length:CONC},()=>run()));
+}
+async function hydrateCounters(rows){
+  const CONC=6; let i=0;
+  async function run(){
+    while(i<rows.length){
+      const r=rows[i++];
+      try{
+        const c=await fetchCounters(r.ca); r.holders=c.holders; r.transfers=c.transfers;
+      }catch(e){ r.holders=0; r.transfers=0; }
+      finally{ scheduleRender(); }
+    }
+  }
+  await Promise.all(Array.from({length:CONC},()=>run()));
+}
+async function hydrateTopHolders(rows){
+  const targets = rows.filter(r=> (r.totalBI!=null)); // need supply first
+  const CONC=3; let i=0;
+  async function run(){
+    while(i<targets.length){
+      const r=targets[i++];
+      try{
+        const {top10Share,topList}=await computeHoldersForRow(r);
+        r.top10Share=top10Share; r.topHolders=topList; r.p_hold=sHold(top10Share, r.holders||0);
+        recomputeScore(r);
+      }catch(e){}
+      finally{ scheduleRender(); }
+    }
+  }
+  await Promise.all(Array.from({length:CONC},()=>run()));
+}
+
+/* ================== Boot (2-phase: quick first paint, then hydrate) ================== */
+async function boot(){
+  try{
+    showOverlay(true); START_TS=Date.now(); DONE=0; TOTAL=0; updateProgress();
+    setStatus("Loading pools…"); POOLS=await loadPools(); TOTAL=POOLS.length; updateProgress();
+    P90=p90(POOLS.map(p=>Number(p.reserve_in_usd||0)));
+	// Pick Top-N by market cap for priority hydration / first paint
+	const poolsByMc = POOLS.slice().sort((a,b)=>Number(b.market_cap||0)-Number(a.market_cap||0));
+	const PRIORITY_SET = new Set(
+	  poolsByMc.slice(0, TOPN_BOOT).map(p => (p.address||'').toLowerCase())
+	);
+    setStatus("Loading votes…"); const votesArr=await loadVotes(); const vmap=new Map(); let vmax=0;
+    votesArr.forEach(v=>{ const ca=(v.contract||"").toLowerCase(); const n=Number(v.votes||0); vmap.set(ca,n); if(n>vmax)vmax=n; });
+
+    setStatus("Loading creators…"); CREATOR=await loadCreators();
+    setStatus("Loading tg.csv…");   TGCSV=await loadTgCsv();
+    setStatus("Loading council…");  COUNCIL=await loadCouncil();
+
+    setStatus("Indexing…");
+    ROWS_ALL.length=0;
+
+	const EAGER = TOPN_BOOT; // was 15
+    let firstPaint=false;
+
+    for(const pool of POOLS){
+      const ca=(pool.address||"").toLowerCase(); if(!ca){ continue; }
+      // Basic fields from pool
+      let poolTs=null; const tsKeys=['created_at','createdAt','first_trade_at','first_trade_time','launched_at','launchTime','timestamp'];
+      for(const k of tsKeys){ if(pool && pool[k]!=null){ poolTs = Number(pool[k]); break; } }
+      if(Number.isFinite(poolTs) && poolTs>1e12) poolTs=Math.floor(poolTs/1000);
+      const ageInfo=deriveAge(poolTs,null,poolTs,'Cache');
+
+      // Compose initial row (no chain calls yet)
+      const cr = CREATOR.get(ca) || {};
+      const csv = TGCSV.get(ca) || {};
+      const websiteUrl = cr.websiteUrl || csv.websiteUrl || null;
+      const telegramUrl = cr.telegramUrl || csv.telegramUrl || null;
+      const xUrl       = cr.xUrl       || csv.xUrl       || null;
+      const iconUrl    = cr.iconUrl    || csv.iconUrl    || null;
+
+      const council = COUNCIL.get(ca)||{avg:null,count:0};
+      const councilAvg = Number.isFinite(council.avg)?Number(council.avg):null;
+      const councilCount = Number(council.count||0);
+
+      const v=vmap.get(ca)||0; const reserve=Number(pool.reserve_in_usd||0); const vol24=Number(pool.volume_24h_usd||0);
+		const row = {
+		  ca, pool, poolTs,
+		  // placeholders (will be filled by hydrators)
+		  totalN:0, burnedN:0, lockedN:0, lockedPct:0, avgDays:0,
+		  totalBI:'0', burnedBI:'0', lockedBI:'0',
+		  creator:(cr.minter||csv.minter||'').toLowerCase()||null,
+		  creationTx: null,
+		  priority: PRIORITY_SET.has(ca), // <--- add comma here
+		  creatorLocked:false,
+		  ageDays:ageInfo.days, ageSource:ageInfo.source,
+		  iconUrl, xUrl, telegramUrl, websiteUrl,
+		  top10Share:null, topHolders:[], holders:0, transfers:0,
+		  votes:v, votesMax:vmax, councilAvg, councilCount,
+		  reserve, vol24, hasLock:false,
+		  p_locked:0, p_time:0,
+		  p_dev:sDev(false, ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+((({xUrl,telegramUrl,websiteUrl})[k])?1:0),0)),
+		  p_age:sAge(ageInfo.days), p_depth:sDepth(reserve,P90), p_vol:sVol(vol24,reserve),
+		  p_votes:sVotes(v,vmax), p_council:sCouncil(councilAvg), p_hold:0, score:0
+		};
+
+      recomputeScore(row);
+      ROWS_ALL.push(row);
+
+      DONE++; updateProgress();
+      if(!firstPaint && DONE>=EAGER){ firstPaint=true; showOverlay(false); scheduleRender(); }
+    }
+
+    showOverlay(false); scheduleRender();
+	// Hydrate priority subset first, then the rest in the background
+	const PRIO_ROWS = ROWS_ALL.filter(r => r.priority);
+	const REST_ROWS = ROWS_ALL.filter(r => !r.priority);
+
+	// --- Priority stage (awaited; drives first UX) ---
+	setStatus("Hydrating Top-10 supply/locks…"); await hydrateSupplyAndLocks(PRIO_ROWS);
+	setStatus("Hydrating Top-10 counters…");     await hydrateCounters(PRIO_ROWS);
+	setStatus("Hydrating Top-10 creators…");     await hydrateCreators(PRIO_ROWS);
+	setStatus("Hydrating Top-10 holders…");      await hydrateTopHolders(PRIO_ROWS);
+
+	// Switch to score sorting (Top-10 only) and show them immediately
+	setStatus("Top-10 ready");
+	SHOW_PRIORITY_ONLY = true;   // still only show Top-10 by default
+	scheduleRender();
+
+	// --- Background: everything else (don’t await the chain) ---
+	(async () => {
+	  try{
+		await hydrateSupplyAndLocks(REST_ROWS);
+		await hydrateCounters(REST_ROWS);
+		await hydrateCreators(REST_ROWS);
+		await hydrateTopHolders(REST_ROWS);
+		// Done: keep Top-10 view by default, but now search has full detail
+		setStatus("All tokens hydrated");
+		scheduleRender();
+	  }catch(_){ /* swallow background errors */ }
+	})();
+
+
+    setStatus("Loading all tokens");
+  }catch(e){ console.error(e); setStatus("Error: "+(e.message||String(e))); showOverlay(false); }
+}
+
+/* ======= UI helpers ======= */
+function metricHTML({ico='•', val=0, max=null, ratio=0, state='', title=''}) {
+  const w = clamp01(ratio)*100;
+  const numericVal = isNum(val) ? Number(val).toFixed(1) : (max!=null ? '0.0' : '—');
+  const txt = numericVal + (max!=null ? '/'+max : '');
+  return `
+    <div class="m ${state}" title="${title}">
+      <span class="ico">${ico}</span>
+      <span class="val mono">${txt}</span>
+      <div class="meter" aria-hidden="true"><i style="width:${w.toFixed(0)}%"></i></div>
+    </div>`;
+}
+function stateLock(pct){ if(!Number.isFinite(pct)||pct<=0) return 'bad'; if(pct<5) return 'bad'; if(pct<15) return 'warn'; return 'ok'; }
+function stateBool(ok){ return ok? 'ok':'bad'; }
+function stateAge(days){ if(days<7) return 'bad'; if(days<30) return 'warn'; return 'ok'; }
+function stateHealth(r){ if(r<0.3) return 'bad'; if(r<0.6) return 'warn'; return 'ok'; }
+function stateVotes(r){ if(r<0.1) return 'bad'; if(r<0.5) return 'warn'; return 'ok'; }
+function stateHold(top10){ if(top10==null) return 'warn'; if(top10>60) return 'bad'; if(top10>40) return 'warn'; return 'ok'; }
+
+/* ======= Render ======= */
+function render(){
+  const q = $("search").value.trim().toLowerCase();
+
+  // Start with all rows; filter by search if present
+  let list = ROWS_ALL.slice();
+
+  // If not searching, only show the priority set (Top-10) on the main page
+  if (!q && SHOW_PRIORITY_ONLY) {
+    list = list.filter(r => r.priority);
+  }
+
+  // Search should find everything
+  if (q){
+    list = list.filter(r=>{
+      const sym=(r.pool.symbol||"").toLowerCase();
+      const name=(r.pool.name||"").toLowerCase();
+      return r.ca.includes(q)||sym.includes(q)||name.includes(q);
+    });
+  }
+
+  // Sorting: when not searching and showing priority, sort by *score*
+  // (after hydration it will naturally reorder as scores update)
+  const how = $("sorter").value;
+  if (how === 'score') list.sort((a,b)=> b.score - a.score);
+  if (how === 'locked') list.sort((a,b)=> b.lockedPct - a.lockedPct);
+  if (how === 'mc') list.sort((a,b)=> Number(b.pool.market_cap||0)-Number(a.pool.market_cap||0));
+  if (how === 'liq') list.sort((a,b)=> b.reserve - a.reserve);
+  if (how === 'age') list.sort((a,b)=> b.ageDays - a.ageDays);
+
+  const cards=$("cards"); cards.innerHTML="";
+
+  list.forEach(r=>{
+    const sym=r.pool.symbol||""; const name=r.pool.name||""; const price=r.pool.price; const mc=r.pool.market_cap;
+    const total=r.totalN||0; const burnW = total>0?(r.burnedN/total*100):0; const lockW=total>0?(r.lockedN/total*100):0; const circW=Math.max(0,100-burnW-lockW);
+    const scoreCls=scoreClass(r.score);
+
+    const ratioLock   = clamp01(((r.p_locked||0) + (r.p_time||0))/40);
+    const ratioHealth = clamp01(((r.p_depth||0) + (r.p_vol||0))/15);
+    const ratioVotes  = clamp01((r.p_votes||0)/10);
+    const ratioHold   = clamp01(((r.p_hold||0))/W_HOLD);
+
+    const rightPanel = `
+      <div class="panel">
+        <div class="rowline"><div>👥 Distribution</div><div class="mono">${fmtN(r.p_hold,1)}/15</div><div class="meter"><i style="width:${(clamp01(r.p_hold/15)*100).toFixed(0)}%"></i></div></div>
+        <div class="desc">How spread the supply is across EOA holders (lower Top-10 share is better) + breadth by total holders.</div>
+        <div class="subrow"><span>• Top-10 share (lower is better)</span><span class="mono">${r.top10Share==null? '—' : fmtNDash(r.top10Share,2)+'%'}</span></div>
+        <div class="subrow"><span>• Holders</span><span class="mono">${niceNum(r.holders||0)}</span></div>
+        <div class="subrow"><span>• Transfers (lifetime)</span><span class="mono">${niceNum(r.transfers||0)}</span></div>
+
+        <div class="subrow" style="margin-top:8px"><span>Top holders (EOA, % of circulating)</span><span class="mono">${r.top10Share==null?'—':fmtNDash(r.top10Share,2)+'%'}</span></div>
+        <div class="holders-list">
+          ${(r.topHolders && r.topHolders.length)
+            ? r.topHolders.map((h)=>`<div><a href="${PEPUSCAN}${h.address}" target="_blank">${h.address}</a><span>${fmtNDash(h.pctCirc,2)}%</span></div>`).join('')
+            : '<div class="muted">Top holders pending…</div>'}
+        </div>
+      </div>`;
+
+    const el=document.createElement('div'); el.className="card";
+    el.innerHTML = `
+      <div class="token-head">
+        <div>
+          <div class="title-left">
+            ${r.iconUrl ? `<img class="logo" src="${r.iconUrl}" alt="logo">` : `<div class="logo" style="display:grid;place-items:center">🪙</div>`}
+            <div>
+              <div class="name">${sym || name || short(r.ca)}</div>
+              <div class="sub">${name || sym} • Price: $${Number(price||0).toFixed(8)}</div>
+            </div>
+          </div>
+
+          <div class="ca-row">
+            <a class="addr" href="${PEPUSCAN_TOKEN}${r.ca}" target="_blank" title="Open on PepuScan">${short(r.ca)}</a>
+            <div class="actbar">
+              <button class="act copy-btn" data-ca="${r.ca}" title="Copy contract">Copy</button>
+              <a class="act buy" href="${PEPUSWAP_BUY_BASE}${r.ca}" target="_blank" title="Buy on PepuSwap">Buy</a>
+            </div>
+          </div>
+
+          <div class="social">
+            ${(r.websiteUrl) ? `<a class="socbtn" href="${r.websiteUrl}" target="_blank" title="Website"><span>🔗</span></a>`:''}
+            ${(r.telegramUrl) ? `<a class="socbtn" href="${r.telegramUrl.startsWith('http')?r.telegramUrl:'https://t.me/'+r.telegramUrl.replace('@','')}" target="_blank" title="Telegram"><span>✈️</span></a>`:''}
+            ${(r.xUrl) ? `<a class="socbtn" href="${r.xUrl}" target="_blank" title="X (Twitter)"><span>𝕏</span></a>`:''}
+          </div>
+        </div>
+
+        <div class="score-wrap">
+          <div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
+            <span class="score-num">${fmtScore(r.score)}</span>
+          </div>
+          <div class="score-caption">ToshScore</div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip">MC ${niceUSD(r.pool.market_cap)}</span>
+        <span class="chip">Liq ${niceUSD(r.reserve)}</span>
+        <span class="chip">Vol 24h ${niceUSD(r.vol24)}</span>
+        <span class="chip">Age ${r.ageDays}d <span class="muted">(${r.ageSource})</span></span>
+        <span class="chip">Holders ${niceNum(r.holders||0)}</span>
+        ${!(r.lockedN>0)? `<span class="chip bad">No lock</span>` : ''}
+      </div>
+
+      <div class="supply" title="Burn / Locked / Circulating (share of total supply)">
+        <div class="bar">
+          <i class="seg-burn"   style="width:${burnW.toFixed(2)}%"></i>
+          <i class="seg-locked" style="width:${lockW.toFixed(2)}%"></i>
+          <i class="seg-circ"   style="width:${circW.toFixed(2)}%"></i>
+        </div>
+
+		<div class="subline">
+		  Total ${niceCompact(r.totalN)} • 🔥 ${niceCompact(r.burnedN)} • 🔒 ${niceCompact(r.lockedN)} • ✅ ${niceCompact(Math.max(0,r.totalN-r.burnedN-r.lockedN))}
+		</div>
+      <div class="metrics">
+        ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:25, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/10`})}
+        ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:15, ratio:clamp01(r.p_dev/10), state:stateBool(!!r.p_dev), title:(r.creatorLocked? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
+        ${metricHTML({ico:'⏳', val:r.p_age, max:10, ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`Age ${r.ageDays} days (${r.ageSource})`})}
+        ${metricHTML({ico:'💧', val:(r.p_depth+r.p_vol), max:15, ratio:ratioHealth, state:stateHealth(ratioHealth), title:`Depth ${fmtN(r.p_depth,1)}/7 · Turnover ${fmtN(r.p_vol,1)}/8`})}
+        ${metricHTML({ico:'🗳', val:r.p_votes, max:10, ratio:clamp01(r.p_votes/10), state:stateVotes(ratioVotes), title:`Votes ${niceNum(r.votes||0)} (30d)`})}
+        ${metricHTML({ico:'👥', val:r.p_hold, max:15, ratio:ratioHold, state:stateHold(r.top10Share), title:(r.top10Share==null ? 'Top-10 pending…' : `Top-10 share ${fmtNDash(r.top10Share,2)}%`) + ` · Holders ${niceNum(r.holders||0)}`})}
+      </div>
+
+      <details class="more">
+        <summary>Details</summary>
+        <div class="detail-grid">
+          <!-- Left column: everything but Distribution -->
+          <div class="panel">
+            <div class="rowline"><div>🔒 Lock</div><div class="mono">${fmtN((r.p_locked||0)+(r.p_time||0),1)}/25</div><div class="meter"><i style="width:${(ratioLock*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">How much liquidity is locked and for how long.</div>
+            <div class="subrow"><span>• Locked % (cap 50%)</span><span class="mono">${fmtN(r.p_locked,1)}/15</span></div>
+            <div class="subrow"><span>• Avg lock (days)</span><span class="mono">${fmtN(r.p_time,1)}/10 · ${isNum(r.avgDays)? r.avgDays.toFixed(1) : '0.0'}d</span></div>
+
+            <div class="rowline"><div>👨‍💻 Dev</div><div class="mono">${fmtN(r.p_dev,1)}/15</div><div class="meter"><i style="width:${(clamp01(r.p_dev/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Basic transparency: did the creator lock tokens? Are links (X/TG/Website) provided?</div>
+            <div class="subrow"><span>• Creator locked?</span><span class="mono">${r.creatorLocked? 'yes':'no'}</span></div>
+			<div class="subrow">
+			  <span>• Creator</span>
+			  <span class="mono">
+				${r.creator
+				  ? `<a href="${PEPUSCAN}${r.creator}" target="_blank">${short(r.creator)}</a>`
+				  : '—'}
+			  </span>
+			</div>
+
+			<div class="subrow">
+			  <span>• Creation tx</span>
+			  <span class="mono">
+				${r.creationTx
+				  ? `<a href="${PEPUSCAN}${r.creationTx}" target="_blank">${short(r.creationTx)}</a>`
+				  : '—'}
+			  </span>
+			</div>
+            <div class="subrow"><span>• Links (X/TG/Web)</span><span class="mono">${['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0)}/3</span></div>
+
+            <div class="rowline"><div>⏳ Age</div><div class="mono">${fmtN(r.p_age,1)}/10</div><div class="meter"><i style="width:${(clamp01(r.p_age/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Project lifetime. Source: <span class="mono">${r.ageSource}</span>.</div>
+            <div class="subrow"><span>• Days</span><span class="mono">${r.ageDays}</span></div>
+
+            <div class="rowline"><div>💧 Health</div><div class="mono">${fmtN((r.p_depth||0)+(r.p_vol||0),1)}/15</div><div class="meter"><i style="width:${(ratioHealth*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Liquidity depth vs network P90 and how much trading happens vs reserve (turnover).</div>
+            <div class="subrow"><span>• Depth vs P90</span><span class="mono">${fmtN(r.p_depth,1)}/7</span></div>
+            <div class="subrow"><span>• 24h turnover</span><span class="mono">${fmtN(r.p_vol,1)}/8</span></div>
+
+            <div class="rowline"><div>🗳 Community</div><div class="mono">${fmtN(r.p_votes,1)}/10</div><div class="meter"><i style="width:${(clamp01(r.p_votes/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">HolderRadar votes over 30 days (normalized).</div>
+
+            <div class="rowline"><div>🏛 Council</div><div class="mono">${fmtN(r.p_council||0,1)}/15</div><div class="meter"><i style="width:${(clamp01((r.p_council||0)/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Score from vetted community auditors.</div>
+            <div class="subrow"><span>• Avg</span><span class="mono">${fmtNDash(r.councilAvg,1)}/100 · ${r.councilCount||0} votes</span></div>
+          </div>
+
+          <!-- Right column: Distribution + Top holders -->
+          ${rightPanel}
+        </div>
+      </details>
+    `;
+    cards.appendChild(el);
+  });
+}
+
+/* copy handler */
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('.copy-btn');
+  if(!b) return;
+  const ca = b.getAttribute('data-ca'); navigator.clipboard.writeText(ca).then(()=>{
+    const old=b.textContent; b.textContent='Copied!'; setTimeout(()=>b.textContent=old, 900);
+  }).catch(()=>{});
+});
+
+/* ================== Run ================== */
+let STARTED=false;
+function start(){ if(STARTED) return; STARTED=true; showOverlay(false); boot(); }
+start();
+</script>
+</body>
+</html>
