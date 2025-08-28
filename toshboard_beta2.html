@@ -183,6 +183,9 @@ const LOCKER_ABI = [
 ];
 
 const ro = new ethers.providers.JsonRpcProvider(RPC);
+/* ================== State & leaders ================== */
+const TOPN_BOOT = 10;            // show only Top-10 MC on initial load
+let SHOW_PRIORITY_ONLY = true;    // when true: render only top-N unless searching
 
 /* ================== Weights ================== */
 const W_LOCKED = 30, W_TIME=10, W_DEV=10, W_AGE=10;
@@ -511,7 +514,11 @@ async function boot(){
     showOverlay(true); START_TS=Date.now(); DONE=0; TOTAL=0; updateProgress();
     setStatus("Loading pools…"); POOLS=await loadPools(); TOTAL=POOLS.length; updateProgress();
     P90=p90(POOLS.map(p=>Number(p.reserve_in_usd||0)));
-
+	// Pick Top-N by market cap for priority hydration / first paint
+	const poolsByMc = POOLS.slice().sort((a,b)=>Number(b.market_cap||0)-Number(a.market_cap||0));
+	const PRIORITY_SET = new Set(
+	  poolsByMc.slice(0, TOPN_BOOT).map(p => (p.address||'').toLowerCase())
+	);
     setStatus("Loading votes…"); const votesArr=await loadVotes(); const vmap=new Map(); let vmax=0;
     votesArr.forEach(v=>{ const ca=(v.contract||"").toLowerCase(); const n=Number(v.votes||0); vmap.set(ca,n); if(n>vmax)vmax=n; });
 
@@ -521,7 +528,8 @@ async function boot(){
 
     setStatus("Indexing…");
     ROWS_ALL.length=0;
-    const EAGER=15; // first paint after this many rows
+
+	const EAGER = TOPN_BOOT; // was 15
     let firstPaint=false;
 
     for(const pool of POOLS){
@@ -545,24 +553,26 @@ async function boot(){
       const councilCount = Number(council.count||0);
 
       const v=vmap.get(ca)||0; const reserve=Number(pool.reserve_in_usd||0); const vol24=Number(pool.volume_24h_usd||0);
+		const row = {
+		  ca, pool, poolTs,
+		  // placeholders (will be filled by hydrators)
+		  totalN:0, burnedN:0, lockedN:0, lockedPct:0, avgDays:0,
+		  totalBI:'0', burnedBI:'0', lockedBI:'0',
+		  creator:(cr.minter||csv.minter||'').toLowerCase()||null,
+		  creationTx: null,
+		  priority: PRIORITY_SET.has(ca), // <--- add comma here
+		  creatorLocked:false,
+		  ageDays:ageInfo.days, ageSource:ageInfo.source,
+		  iconUrl, xUrl, telegramUrl, websiteUrl,
+		  top10Share:null, topHolders:[], holders:0, transfers:0,
+		  votes:v, votesMax:vmax, councilAvg, councilCount,
+		  reserve, vol24, hasLock:false,
+		  p_locked:0, p_time:0,
+		  p_dev:sDev(false, ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+((({xUrl,telegramUrl,websiteUrl})[k])?1:0),0)),
+		  p_age:sAge(ageInfo.days), p_depth:sDepth(reserve,P90), p_vol:sVol(vol24,reserve),
+		  p_votes:sVotes(v,vmax), p_council:sCouncil(councilAvg), p_hold:0, score:0
+		};
 
-      const row={
-        ca,pool,poolTs,
-        // placeholders (will be filled by hydrators)
-        totalN:0,burnedN:0,lockedN:0,lockedPct:0,avgDays:0,
-        totalBI:'0',burnedBI:'0',lockedBI:'0',
-        creator:(cr.minter||csv.minter||'').toLowerCase()||null,
-		creationTx: null,
-        creatorLocked:false,
-        ageDays:ageInfo.days, ageSource:ageInfo.source,
-        iconUrl, xUrl, telegramUrl, websiteUrl,
-        top10Share:null, topHolders:[], holders:0, transfers:0,
-        votes:v, votesMax:vmax, councilAvg, councilCount,
-        reserve, vol24, hasLock:false,
-        p_locked:0, p_time:0, p_dev:sDev(false, ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+((({xUrl,telegramUrl,websiteUrl})[k])?1:0),0)),
-        p_age:sAge(ageInfo.days), p_depth:sDepth(reserve,P90), p_vol:sVol(vol24,reserve),
-        p_votes:sVotes(v,vmax), p_council:sCouncil(councilAvg), p_hold:0, score:0
-      };
       recomputeScore(row);
       ROWS_ALL.push(row);
 
@@ -571,12 +581,34 @@ async function boot(){
     }
 
     showOverlay(false); scheduleRender();
+	// Hydrate priority subset first, then the rest in the background
+	const PRIO_ROWS = ROWS_ALL.filter(r => r.priority);
+	const REST_ROWS = ROWS_ALL.filter(r => !r.priority);
 
-    // Hydrate in background with limited concurrency
-    setStatus("Hydrating supply/locks…"); await hydrateSupplyAndLocks(ROWS_ALL);
-    setStatus("Hydrating counters…");     await hydrateCounters(ROWS_ALL);
-    setStatus("Hydrating creators…");     await hydrateCreators(ROWS_ALL);
-    setStatus("Hydrating top holders…");  await hydrateTopHolders(ROWS_ALL);
+	// --- Priority stage (awaited; drives first UX) ---
+	setStatus("Hydrating Top-10 supply/locks…"); await hydrateSupplyAndLocks(PRIO_ROWS);
+	setStatus("Hydrating Top-10 counters…");     await hydrateCounters(PRIO_ROWS);
+	setStatus("Hydrating Top-10 creators…");     await hydrateCreators(PRIO_ROWS);
+	setStatus("Hydrating Top-10 holders…");      await hydrateTopHolders(PRIO_ROWS);
+
+	// Switch to score sorting (Top-10 only) and show them immediately
+	setStatus("Top-10 ready");
+	SHOW_PRIORITY_ONLY = true;   // still only show Top-10 by default
+	scheduleRender();
+
+	// --- Background: everything else (don’t await the chain) ---
+	(async () => {
+	  try{
+		await hydrateSupplyAndLocks(REST_ROWS);
+		await hydrateCounters(REST_ROWS);
+		await hydrateCreators(REST_ROWS);
+		await hydrateTopHolders(REST_ROWS);
+		// Done: keep Top-10 view by default, but now search has full detail
+		setStatus("All tokens hydrated");
+		scheduleRender();
+	  }catch(_){ /* swallow background errors */ }
+	})();
+
 
     setStatus("Ready");
   }catch(e){ console.error(e); setStatus("Error: "+(e.message||String(e))); showOverlay(false); }
@@ -603,16 +635,33 @@ function stateHold(top10){ if(top10==null) return 'warn'; if(top10>60) return 'b
 
 /* ======= Render ======= */
 function render(){
-  const q=$("search").value.trim().toLowerCase();
-  let list=ROWS_ALL.slice();
-  if(q){ list=list.filter(r=>{ const sym=(r.pool.symbol||"").toLowerCase(), name=(r.pool.name||"").toLowerCase(); return r.ca.includes(q)||sym.includes(q)||name.includes(q); }); }
+  const q = $("search").value.trim().toLowerCase();
 
-  const how=$("sorter").value;
-  if(how==='score') list.sort((a,b)=> b.score - a.score);
-  if(how==='locked') list.sort((a,b)=> b.lockedPct - a.lockedPct);
-  if(how==='mc') list.sort((a,b)=> Number(b.pool.market_cap||0)-Number(a.pool.market_cap||0));
-  if(how==='liq') list.sort((a,b)=> b.reserve - a.reserve);
-  if(how==='age') list.sort((a,b)=> b.ageDays - a.ageDays);
+  // Start with all rows; filter by search if present
+  let list = ROWS_ALL.slice();
+
+  // If not searching, only show the priority set (Top-10) on the main page
+  if (!q && SHOW_PRIORITY_ONLY) {
+    list = list.filter(r => r.priority);
+  }
+
+  // Search should find everything
+  if (q){
+    list = list.filter(r=>{
+      const sym=(r.pool.symbol||"").toLowerCase();
+      const name=(r.pool.name||"").toLowerCase();
+      return r.ca.includes(q)||sym.includes(q)||name.includes(q);
+    });
+  }
+
+  // Sorting: when not searching and showing priority, sort by *score*
+  // (after hydration it will naturally reorder as scores update)
+  const how = $("sorter").value;
+  if (how === 'score') list.sort((a,b)=> b.score - a.score);
+  if (how === 'locked') list.sort((a,b)=> b.lockedPct - a.lockedPct);
+  if (how === 'mc') list.sort((a,b)=> Number(b.pool.market_cap||0)-Number(a.pool.market_cap||0));
+  if (how === 'liq') list.sort((a,b)=> b.reserve - a.reserve);
+  if (how === 'age') list.sort((a,b)=> b.ageDays - a.ageDays);
 
   const cards=$("cards"); cards.innerHTML="";
 
