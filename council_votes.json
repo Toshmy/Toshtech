@@ -15,7 +15,7 @@
     { "id": "tg:@emma",  "display": "Emma" }
   ],
   "tokens": {
-    "0xLAUNCHPAD...": {
+    "0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
       "launch_type": "launchpad",
       "votes": [
         {
@@ -33,7 +33,7 @@
         }
       ]
     },
-    "0xMANUAL...": {
+    "0xd42fabf08d04d1eb5c69f770c6e049832b69d788": {
       "launch_type": "manual",
       "votes": [
         {
