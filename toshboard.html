@@ -165,9 +165,10 @@ const TG_CSV_URL = "https://www.toshtech.xyz/tg.csv";               // optional 
 const PEPUSCAN_TOKEN = "https://pepuscan.com/token/";
 const PEPUSCAN = "https://pepuscan.com/address/";
 const PEPUSCAN_TX = "https://pepuscan.com/tx/";
-
 const PEPUSWAP_BUY_BASE = "https://pepuswap.com/#/swap?inputCurrency=ETH&outputCurrency=";
-
+const BLOCKLIST = new Set([
+  "0x20fb684bfc1abaad3acec5712f2aa30bd494df74".toLowerCase()
+]);
 const BURNS = [
   "0xa9fD599cd8857e90059c83e4885Dc09986039085",
   "0x000000000000000000000000000000000000dEaD"
@@ -514,7 +515,7 @@ async function hydrateCreators(rows){
           r.creationTs = expl.creationTs;
           const ageInfo = deriveAge(r.poolTs, expl.creationTs, r.poolTs, 'Explorer');
           r.ageDays = ageInfo.days;
-          r.ageSource = r.launchpad ? 'Launchpad CSV' : 'Explorer';
+          r.ageSource = r.launchpad ? 'Launchpad' : 'Explorer';
           r.p_age = sAge(r.ageDays);
         }
 
@@ -561,16 +562,24 @@ async function boot(){
     showOverlay(true); START_TS=Date.now(); DONE=0; TOTAL=0; updateProgress();
     setStatus("Loading pools…"); POOLS=await loadPools(); TOTAL=POOLS.length; updateProgress();
     P90=p90(POOLS.map(p=>Number(p.reserve_in_usd||0)));
-	// Pick Top-N by market cap for priority hydration / first paint
-	const poolsByMc = POOLS.slice().sort((a,b)=>Number(b.market_cap||0)-Number(a.market_cap||0));
-	const PRIORITY_SET = new Set(
-	  poolsByMc.slice(0, TOPN_BOOT).map(p => (p.address||'').toLowerCase())
-	);
+// Pick Top-N by market cap for priority hydration / first paint
+const poolsByMc = POOLS
+  .filter(p => {
+    const addr = (p.address || "").toLowerCase();
+    return addr && !BLOCKLIST.has(addr);        // <-- exclude blocked here
+  })
+  .sort((a,b)=> Number(b.market_cap||0) - Number(a.market_cap||0));
+
+const PRIORITY_SET = new Set(
+  poolsByMc.slice(0, TOPN_BOOT).map(p => (p.address || "").toLowerCase())
+);
+	
+
     setStatus("Loading votes…"); const votesArr=await loadVotes(); const vmap=new Map(); let vmax=0;
     votesArr.forEach(v=>{ const ca=(v.contract||"").toLowerCase(); const n=Number(v.votes||0); vmap.set(ca,n); if(n>vmax)vmax=n; });
 
     setStatus("Loading creators…"); CREATOR=await loadCreators();
-    setStatus("Loading tg.csv…");   TGCSV=await loadTgCsv();
+    setStatus("Loading launchpad data…");   TGCSV=await loadTgCsv();
     setStatus("Loading council…");  COUNCIL=await loadCouncil();
 
     setStatus("Indexing…");
@@ -580,7 +589,9 @@ async function boot(){
     let firstPaint=false;
 
     for(const pool of POOLS){
-      const ca=(pool.address||"").toLowerCase(); if(!ca){ continue; }
+
+	  const ca = (pool.address||"").toLowerCase();
+	  if (!ca || BLOCKLIST.has(ca)) continue;
       // Basic fields from pool
       let poolTs=null; const tsKeys=['created_at','createdAt','first_trade_at','first_trade_time','launched_at','launchTime','timestamp'];
       for(const k of tsKeys){ if(pool && pool[k]!=null){ poolTs = Number(pool[k]); break; } }
@@ -608,7 +619,7 @@ async function boot(){
 
 		// Age: prefer CSV creationTs (launchpad). Otherwise fallback to poolTs for first paint.
 		const ageInfo = launchpad
-		  ? { days: deriveAgeDaysFrom(creationTsCsv), source: 'Launchpad CSV' }
+		  ? { days: deriveAgeDaysFrom(creationTsCsv), source: 'Launchpad' }
 		  : deriveAge(poolTs,null,poolTs,'Cache');
 
 		const row = {
