@@ -262,28 +262,48 @@ async function loadCouncil(){
 }
 async function loadTgCsv(){
   try{
-    const r=await fetch(TG_CSV_URL,{cache:'no-cache'});
+    const r = await fetch(TG_CSV_URL, { cache: 'no-cache' });
     if(!r.ok) throw new Error('tg '+r.status);
-    const txt=await r.text();
-    const lines=txt.split(/\r?\n/).filter(Boolean);
-    const header=lines.shift();
-    const idx={};
-    header.split(',').forEach((h,i)=> idx[h.trim().toLowerCase()]=i);
-    const map=new Map();
+    const txt = await r.text();
+
+    const lines = txt.split(/\r?\n/).filter(Boolean);
+    const header = lines.shift();
+    const idx = {};
+    header.split(',').forEach((h,i)=> idx[h.trim().toLowerCase()] = i);
+
+    const map = new Map();
     for(const ln of lines){
-      const cells=ln.split(',');
-      const token=(cells[idx.token]||'').trim().toLowerCase();
+      const cells = ln.split(',');
+
+      const token = (cells[idx.token]||'').trim().toLowerCase();
       if(!token) continue;
-      map.set(token,{
-        telegramUrl:(cells[idx.tg]||'').trim()||null,
-        websiteUrl:(cells[idx.website]||'').trim()||null,
-        xUrl:(cells[idx.xurl]||'').trim()||null,
-        iconUrl:(cells[idx.iconurl]||'').trim()||null,
-        minter:(cells[idx.minter]||'').trim().toLowerCase()||null
+
+      // Parse blockTimestamp (can be empty). Accept seconds or ms.
+      let btRaw = (cells[idx.blocktimestamp] || '').trim();
+      let btSec = null;
+      if (btRaw) {
+        const n = Number(btRaw);
+        if (Number.isFinite(n) && n > 0) {
+          btSec = (n > 1e12) ? Math.floor(n/1000) : Math.floor(n); // ms -> s
+        }
+      }
+
+      map.set(token, {
+        symbol      : (cells[idx.symbol]||'').trim() || null,
+        name        : (cells[idx.name]||'').trim() || null,
+        telegramUrl : (cells[idx.tg]||'').trim() || null,
+        websiteUrl  : (cells[idx.website]||'').trim() || null,
+        xUrl        : (cells[idx.xurl]||'').trim() || null,
+        iconUrl     : (cells[idx.iconurl]||'').trim() || null,
+        minter      : ((cells[idx.minter]||'').trim() || '').toLowerCase() || null,
+        blockTimestampSec: btSec  // null if outside launchpad
       });
     }
     return map;
-  }catch(e){ console.warn('tg.csv not available',e); return new Map(); }
+  }catch(e){
+    console.warn('tg.csv not available', e);
+    return new Map();
+  }
 }
 
 async function fetchJsonRelay(url){ const r=await fetch(WORKER+encodeURIComponent(url),{cache:'no-cache'}); if(!r.ok) throw new Error('relay '+r.status); return r.json(); }
@@ -470,26 +490,37 @@ async function hydrateSupplyAndLocks(rows){
   await Promise.all(Array.from({length:CONC},()=>run()));
 }
 async function hydrateCreators(rows){
-  const CONC=4; let i=0;
+  const CONC = 4; let i = 0;
   async function run(){
-    while(i<rows.length){
-      const r=rows[i++];
+    while(i < rows.length){
+      const r = rows[i++];
+
+      // Only fetch from Explorer when we don't have a CSV timestamp (outside launchpad)
+      // or we still miss creator/creationTs.
+      const needsExplorer = !r.launchpad || (!r.creator || !r.creationTs);
+
+      if (!needsExplorer) { scheduleRender(); continue; }
+
       try{
         const expl = await fetchCreatorAndCreation(r.ca);
-		if (expl.creator && !r.creator) r.creator = (expl.creator || '').toLowerCase();
-		if (expl.creationTx) r.creationTx = expl.creationTx;   // <-- add this line
-		if (expl.creationTs){
-		  let poolTs = r.poolTs || null;
-		  const ageInfo = deriveAge(poolTs, expl.creationTs, poolTs, 'Explorer');
-		  r.ageDays = ageInfo.days; r.ageSource = ageInfo.source;
-		  r.p_age = sAge(r.ageDays);
-		}		
+
+        if (expl.creator && !r.creator) r.creator = (expl.creator || '').toLowerCase();
+        if (expl.creationTx) r.creationTx = expl.creationTx;
+
+        if (expl.creationTs && !r.creationTs) {
+          r.creationTs = expl.creationTs;
+          const ageInfo = deriveAge(r.poolTs, expl.creationTs, r.poolTs, 'Explorer');
+          r.ageDays = ageInfo.days;
+          r.ageSource = r.launchpad ? 'Launchpad CSV' : 'Explorer';
+          r.p_age = sAge(r.ageDays);
+        }
+
         recomputeScore(r);
-      }catch(e){}
+      }catch(e){ /* ignore */ }
       finally{ scheduleRender(); }
     }
   }
-  await Promise.all(Array.from({length:CONC},()=>run()));
+  await Promise.all(Array.from({length:CONC}, ()=> run()));
 }
 async function hydrateCounters(rows){
   const CONC=6; let i=0;
@@ -551,43 +582,70 @@ async function boot(){
       let poolTs=null; const tsKeys=['created_at','createdAt','first_trade_at','first_trade_time','launched_at','launchTime','timestamp'];
       for(const k of tsKeys){ if(pool && pool[k]!=null){ poolTs = Number(pool[k]); break; } }
       if(Number.isFinite(poolTs) && poolTs>1e12) poolTs=Math.floor(poolTs/1000);
-      const ageInfo=deriveAge(poolTs,null,poolTs,'Cache');
+
 
       // Compose initial row (no chain calls yet)
-      const cr = CREATOR.get(ca) || {};
-      const csv = TGCSV.get(ca) || {};
-      const websiteUrl = cr.websiteUrl || csv.websiteUrl || null;
-      const telegramUrl = cr.telegramUrl || csv.telegramUrl || null;
-      const xUrl       = cr.xUrl       || csv.xUrl       || null;
-      const iconUrl    = cr.iconUrl    || csv.iconUrl    || null;
+		const csv = TGCSV.get(ca) || {};
+		const websiteUrl = csv.websiteUrl || null;
+		const telegramUrl = csv.telegramUrl || null;
+		const xUrl       = csv.xUrl       || null;
+		const iconUrl    = csv.iconUrl    || null;
 
-      const council = COUNCIL.get(ca)||{avg:null,count:0};
-      const councilAvg = Number.isFinite(council.avg)?Number(council.avg):null;
-      const councilCount = Number(council.count||0);
+		const council = COUNCIL.get(ca)||{avg:null,count:0};
+		const councilAvg = Number.isFinite(council.avg)?Number(council.avg):null;
+		const councilCount = Number(council.count||0);
 
-      const v=vmap.get(ca)||0; const reserve=Number(pool.reserve_in_usd||0); const vol24=Number(pool.volume_24h_usd||0);
+		const v=vmap.get(ca)||0;
+		const reserve=Number(pool.reserve_in_usd||0);
+		const vol24=Number(pool.volume_24h_usd||0);
+
+		// Launchpad detection from CSV:
+		const creationTsCsv = csv.blockTimestampSec || null;
+		const launchpad = Number.isFinite(creationTsCsv) && creationTsCsv > 0;
+
+		// Age: prefer CSV creationTs (launchpad). Otherwise fallback to poolTs for first paint.
+		const ageInfo = launchpad
+		  ? { days: deriveAgeDaysFrom(creationTsCsv), source: 'Launchpad CSV' }
+		  : deriveAge(poolTs,null,poolTs,'Cache');
+
 		const row = {
 		  ca, pool, poolTs,
-		  // placeholders (will be filled by hydrators)
-		  totalN:0, burnedN:0, lockedN:0, lockedPct:0, avgDays:0,
-		  totalBI:'0', burnedBI:'0', lockedBI:'0',
-		  creator:(cr.minter||csv.minter||'').toLowerCase()||null,
-		  creationTx: null,
-		  priority: PRIORITY_SET.has(ca), // <--- add comma here
+		  totalN:0,burnedN:0,lockedN:0,lockedPct:0,avgDays:0,
+		  totalBI:'0',burnedBI:'0',lockedBI:'0',
+
+		  creator: (csv.minter||'').toLowerCase() || null,
+		  creationTx: null,               // explorer will fill if needed
+		  // ↓ mark launch source
+		  launchpad,
+		  priority: PRIORITY_SET.has(ca),   // <-- ADD THIS
+
 		  creatorLocked:false,
 		  ageDays:ageInfo.days, ageSource:ageInfo.source,
 		  iconUrl, xUrl, telegramUrl, websiteUrl,
+
 		  top10Share:null, topHolders:[], holders:0, transfers:0,
 		  votes:v, votesMax:vmax, councilAvg, councilCount,
 		  reserve, vol24, hasLock:false,
-		  p_locked:0, p_time:0,
-		  p_dev:sDev(false, ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+((({xUrl,telegramUrl,websiteUrl})[k])?1:0),0)),
-		  p_age:sAge(ageInfo.days), p_depth:sDepth(reserve,P90), p_vol:sVol(vol24,reserve),
-		  p_votes:sVotes(v,vmax), p_council:sCouncil(councilAvg), p_hold:0, score:0
+
+		  p_locked:0,
+		  p_time:0,
+		  p_dev:sDev(false, ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(csv[k]?1:0),0)),
+		  p_age:sAge(ageInfo.days),
+		  p_depth:sDepth(reserve,P90),
+		  p_vol:sVol(vol24,reserve),
+		  p_votes:sVotes(v,vmax),
+		  p_council:sCouncil(councilAvg),
+		  p_hold:0,
+		  score:0
 		};
 
-      recomputeScore(row);
-      ROWS_ALL.push(row);
+		// If CSV has creationTs, keep it so Age stays consistent even after explorer runs
+		if (launchpad) {
+		  row.creationTs = creationTsCsv;
+		}
+
+		recomputeScore(row);
+		ROWS_ALL.push(row);
 
       DONE++; updateProgress();
       if(!firstPaint && DONE>=EAGER){ firstPaint=true; showOverlay(false); scheduleRender(); }
@@ -654,9 +712,11 @@ function render(){
   let list = ROWS_ALL.slice();
 
   // If not searching, only show the priority set (Top-10) on the main page
-  if (!q && SHOW_PRIORITY_ONLY) {
-    list = list.filter(r => r.priority);
-  }
+	if (!q && SHOW_PRIORITY_ONLY && list.some(r => r.priority)) {
+	  list = list.filter(r => r.priority);
+	}
+  
+
 
   // Search should find everything
   if (q){
@@ -711,7 +771,12 @@ function render(){
           <div class="title-left">
             ${r.iconUrl ? `<img class="logo" src="${r.iconUrl}" alt="logo">` : `<div class="logo" style="display:grid;place-items:center">🪙</div>`}
             <div>
-              <div class="name">${sym || name || short(r.ca)}</div>
+
+				<div class="name">
+				  ${sym || name || short(r.ca)}
+				  ${r.launchpad ? '' : '<span class="pill" title="This token was launched outside the launchpad">outside launchpad</span>'}
+				</div>
+			  
               <div class="sub">${name || sym} • Price: $${Number(price||0).toFixed(8)}</div>
             </div>
           </div>
@@ -758,6 +823,7 @@ function render(){
 		<div class="subline">
 		  Total ${niceCompact(r.totalN)} • 🔥 ${niceCompact(r.burnedN)} • 🔒 ${niceCompact(r.lockedN)} • ✅ ${niceCompact(Math.max(0,r.totalN-r.burnedN-r.lockedN))}
 		</div>
+	  </div> <!-- close .supply -->
       <div class="metrics">
         ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:40, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/10`})}
         ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:10, ratio:clamp01(r.p_dev/10), state:stateBool(!!r.p_dev), title:(r.creatorLocked? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
