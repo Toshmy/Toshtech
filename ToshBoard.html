@@ -188,7 +188,7 @@ const TOPN_BOOT = 10;            // show only Top-10 MC on initial load
 let SHOW_PRIORITY_ONLY = true;    // when true: render only top-N unless searching
 
 /* ================== Weights ================== */
-const W_LOCKED = 22.5, W_TIME=7.5, W_DEV=10, W_AGE=10;
+const W_LOCKED = 30, W_TIME=10, W_DEV=10, W_AGE=10;
 const W_HEALTH_DEPTH=7, W_HEALTH_VOL=8, W_HEALTH=W_HEALTH_DEPTH+W_HEALTH_VOL;
 const W_VOTES=10, W_COUNCIL=10, W_HOLD=15;
 
@@ -209,6 +209,15 @@ const fmtNDash = (v, d=2) => isNum(v) ? v.toFixed(d) : '—';
 
 let renderPending=false;
 function scheduleRender(){ if(renderPending) return; renderPending=true; requestAnimationFrame(()=>{ renderPending=false; render(); }); }
+
+function niceCompact(v){
+  if(v==null || Number.isNaN(v)) return "—";
+  const n = Number(v);
+  if (n >= 1e9) return (n/1e9).toFixed(2).replace(/\.0+$/,'') + "B";
+  if (n >= 1e6) return (n/1e6).toFixed(2).replace(/\.0+$/,'') + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(2).replace(/\.0+$/,'') + "K";
+  return n.toString();
+}
 
 /* ================== Fetchers ================== */
 async function loadPools(){ const r=await fetch(POOLS_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('pools '+r.status); const js=await r.json(); return js?.data||[]; }
@@ -741,9 +750,10 @@ function render(){
           <i class="seg-locked" style="width:${lockW.toFixed(2)}%"></i>
           <i class="seg-circ"   style="width:${circW.toFixed(2)}%"></i>
         </div>
-        <div class="subline">Total ${niceNum(r.totalN)} • 🔥 ${niceNum(r.burnedN)} • 🔒 ${niceNum(r.lockedN)} • ✅ ${niceNum(Math.max(0,r.totalN-r.burnedN-r.lockedN))}</div>
-      </div>
 
+		<div class="subline">
+		  Total ${niceCompact(r.totalN)} • 🔥 ${niceCompact(r.burnedN)} • 🔒 ${niceCompact(r.lockedN)} • ✅ ${niceCompact(Math.max(0,r.totalN-r.burnedN-r.lockedN))}
+		</div>
       <div class="metrics">
         ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:40, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/10`})}
         ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:10, ratio:clamp01(r.p_dev/10), state:stateBool(!!r.p_dev), title:(r.creatorLocked? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
