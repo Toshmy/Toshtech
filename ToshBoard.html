@@ -2,83 +2,98 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>ToshBoard — Mainnet ToshScore (Scorecards)</title>
+<title>ToshBoard — Mainnet ToshScore</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
   :root{
-    --bg:#0c1222; --bg2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
-    --accent:#00ffae; --accent2:#00d99c; --card:rgba(255,255,255,.05);
-    --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
-    --red:#ff6b6b; --green:#19f9a9; --blue:#49a8ff; --amber:#f6c945; --gray:#9aa3b2;
+    --bg:#0c1222; --fg:#e6fff6; --muted:#9fead1;
+    --card:rgba(255,255,255,.05); --border:rgba(0,255,174,.22);
+    --accent:#00ffae; --accent2:#00d99c;
+    --red:#ef4444; --amber:#f59e0b; --green:#22c55e; --blue:#49a8ff;
   }
-  html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
-  .wrap{max-width:1200px;margin:22px auto;padding:0 16px}
-  .glow{ text-shadow:0 0 8px var(--accent), 0 0 18px var(--accent) }
-  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  html,body{margin:0;background:radial-gradient(circle at 18% 8%, #17223c 0%, #0c1222 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+  .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
+  .glow{ text-shadow:0 0 10px var(--accent), 0 0 24px var(--accent) }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .between{justify-content:space-between}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:.25rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:var(--muted);font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:.28rem .6rem;border-radius:999px;background:#09122a;border:1px solid var(--border);color:var(--muted);font-size:12px}
   input,button,select{border-radius:12px;border:1px solid var(--border);background:#0f1730;color:#fff;padding:10px}
   button{cursor:pointer}
-  .btn{background:linear-gradient(135deg, var(--accent), var(--accent2));color:#00251b;border:0;font-weight:700}
+  .btn{background:linear-gradient(135deg, var(--accent), var(--accent2));color:#00251b;border:0;font-weight:800}
   .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
-  .muted{color:#bfeede}
   a{color:#93c5fd;text-decoration:none}
-  .grid{display:grid;gap:12px}
-  @media(min-width:700px){ .grid{grid-template-columns:repeat(2,1fr)} }
-  @media(min-width:1024px){ .grid{grid-template-columns:repeat(3,1fr)} }
 
-  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:16px;box-shadow:var(--shadow);padding:14px}
-  .token-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-  .token-title{display:flex;flex-direction:column;gap:2px}
-  .token-title .sym{font-weight:800;font-size:16px}
-  .token-title .sub{font-size:12px;color:#bfeede}
-  .score-badge{min-width:86px;min-height:86px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--border);background:#0b162f;position:relative}
-  .score-num{font-size:22px;font-weight:900}
-  .score-lbl{font-size:10px;color:#bfeede}
-  .ring{position:absolute;inset:6px}
-  .rowchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-  .chip{border:1px solid var(--border);border-radius:999px;padding:.15rem .5rem;background:#0f1730;font-size:12px;white-space:nowrap}
-  .chip.metric{display:inline-flex;align-items:center;gap:6px}
+  .grid{display:grid;gap:12px;grid-template-columns:1fr}
+
+  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.14);padding:14px}
+  .token-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .title-left{display:flex;align-items:center;gap:10px}
+  .logo{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:#0b162f;object-fit:cover}
+  .name{font-weight:900;font-size:18px}
+  .sub{font-size:12px;color:#bfeede}
+
+  .score-badge{min-width:92px;min-height:64px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--border);background:#0b162f;padding:6px 10px}
+  .score-badge.good{box-shadow:0 0 0 1px rgba(34,197,94,.25), 0 0 22px rgba(34,197,94,.18);color:#34d399}
+  .score-badge.ok{box-shadow:0 0 0 1px rgba(132,204,22,.25), 0 0 22px rgba(132,204,22,.18);color:#bef264}
+  .score-badge.warn{box-shadow:0 0 0 1px rgba(245,158,11,.25), 0 0 22px rgba(245,158,11,.18);color:#fbbf24}
+  .score-badge.bad{box-shadow:0 0 0 1px rgba(239,68,68,.25), 0 0 22px rgba(239,68,68,.18);color:#f87171}
+  .score-num{font-size:22px;font-weight:900;letter-spacing:.3px}
+  .score-caption{font-size:11px;color:#bfeede;margin-top:2px;text-align:center}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .chip{border:1px solid var(--border);border-radius:999px;padding:.18rem .55rem;background:#0f1730;font-size:12px;white-space:nowrap}
+  .chip.bad{border-color:rgba(239,68,68,.6);color:#fecaca}
+
+  .ca-row{display:flex;gap:8px;align-items:center;margin-top:4px}
+  .addr{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;background:#0e1836;border:1px solid var(--border);padding:6px 8px;border-radius:10px;flex:1}
+  .actbar{display:flex;gap:6px}
+  .act{border:1px solid var(--border);background:#0e1836;color:#cfe;padding:6px 10px;border-radius:10px;font-size:12px}
+  .act.buy{background:linear-gradient(135deg,#22c55e,#10b981);color:#042e24;font-weight:800}
+
+  .social{display:flex;gap:6px;margin-top:6px}
+  .socbtn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:linear-gradient(180deg,#0f1a3a,#0a1330)}
+  .socbtn:hover{box-shadow:0 0 0 2px rgba(0,255,174,.18) inset}
+  .socbtn span{filter:drop-shadow(0 0 6px rgba(0,255,174,.28))}
+
   .supply{margin-top:8px}
   .bar{height:10px;border-radius:999px;background:#0f1730;border:1px solid var(--border);display:flex;overflow:hidden}
   .seg-burn{background:var(--red)}
   .seg-locked{background:var(--blue)}
   .seg-circ{background:var(--green)}
-  .breakdown{margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px}
-  .brow{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin:4px 0}
-  .bleft{color:#cfe}
-  .bright{color:#cfe}
-  .bad{color:var(--red)!important}
-  .warn{color:var(--amber)!important}
-  .ok{color:#86efac!important}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  .section-title{margin:16px 0 8px;font-weight:800}
-  .footer-note{font-size:12px;color:#9fead1;margin-top:8px}
+  .subline{font-size:12px;color:#bfeede;margin-top:6px}
 
-  /* Desktop inline metrics vs Mobile full scorecard */
-  .metrics-line{display:none;gap:8px;flex-wrap:wrap;margin:8px 0}
-  @media(min-width:1024px){
-    .metrics-line{display:flex}
-    .breakdown{display:none}
-  }
-  @media(max-width:1023px){
-    .metrics-line{display:none}
-    .breakdown{display:block}
-  }
+  .metrics{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:10px;align-items:center;margin:10px 0 4px}
+  @media(max-width:900px){ .metrics{grid-template-columns:1fr 1fr} }
+  .m{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:12px;padding:7px 8px;background:#0f1730}
+  .m .ico{width:22px;text-align:center}
+  .m .val{width:58px;text-align:right;opacity:.95}
+  .m .meter{flex:1;height:8px;border-radius:999px;background:#0e1732;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+  .m .meter>i{display:block;height:100%;width:0}
+  .m.ok   .meter>i{background:var(--green)}
+  .m.warn .meter>i{background:var(--amber)}
+  .m.bad  .meter>i{background:var(--red)}
 
-  /* Score badge coloring */
-  .score-badge.good{box-shadow:0 0 0 1px rgba(34,197,94,.25), 0 0 22px rgba(34,197,94,.18)}
-  .score-badge.ok{box-shadow:0 0 0 1px rgba(132,204,22,.25), 0 0 22px rgba(132,204,22,.18)}
-  .score-badge.warn{box-shadow:0 0 0 1px rgba(245,158,11,.25), 0 0 22px rgba(245,158,11,.18)}
-  .score-badge.bad{box-shadow:0 0 0 1px rgba(239,68,68,.25), 0 0 22px rgba(239,68,68,.18)}
-  .score-badge.good .score-num{color:#34d399}
-  .score-badge.ok .score-num{color:#a3e635}
-  .score-badge.warn .score-num{color:#f59e0b}
-  .score-badge.bad .score-num{color:#ef4444}
+  details.more{margin-top:6px}
+  details.more summary{cursor:pointer;color:#9fead1}
 
-  /* loading overlay */
-  .overlay{position:fixed;inset:0;background:rgba(6,10,24,.8);backdrop-filter:blur(3px);display:none;place-items:center;z-index:50}
-  .overlay .panel{width:min(680px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+  @media(max-width:900px){ .detail-grid{grid-template-columns:1fr} }
+  .panel{background:#0b162f;border:1px solid var(--border);border-radius:12px;padding:12px}
+  .rowline{display:grid;grid-template-columns:180px 84px 1fr;gap:10px;align-items:center;margin:10px 0}
+  .rowline .meter{height:10px;border-radius:999px;background:#0e1732;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+  .rowline .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .subrow{display:flex;justify-content:space-between;font-size:12px;margin:4px 0;color:#bfeede}
+  .desc{font-size:11px;color:#9fd;opacity:.9;margin:-6px 0 8px 0}
+
+  .holders-list{font-size:12px;margin-top:6px}
+  .holders-list div{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center}
+  .holders-list a{color:#8ac7ff;word-break:break-all}
+  .muted{color:#a8ffd9;opacity:.8}
+
+  .footer-note{font-size:12px;color:#9fead1;margin-top:10px}
+
+  .overlay{position:fixed;inset:0;background:rgba(6,10,24,.82);backdrop-filter:blur(3px);display:none;place-items:center;z-index:50}
+  .overlay .panel{width:min(680px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.18);padding:16px}
   .progress{height:12px;border-radius:999px;background:#0b1430;border:1px solid var(--border);overflow:hidden}
   .progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 </style>
@@ -89,7 +104,7 @@
   <header class="row between">
     <h1 class="glow" style="margin:0">📊 ToshBoard — Mainnet ToshScore</h1>
     <div class="row">
-      <input id="search" placeholder="Search name / symbol / 0x…" style="min-width:220px">
+      <input id="search" placeholder="Search name / symbol / 0x…" style="min-width:240px">
       <select id="sorter" title="Sort">
         <option value="score">Sort: Score (desc)</option>
         <option value="locked">Sort: Locked %</option>
@@ -103,10 +118,10 @@
   </header>
 
   <div id="cards" class="grid" style="margin-top:10px"></div>
-  <div class="footer-note">Data: pools_cache.json (price/liquidity/24h vol), Launchpad subgraph (creator+age), Explorer via Worker (holders), HolderRadar via Worker (votes). P90 calculated across all pools’ reserve_in_usd.</div>
+  <div class="footer-note">Data: pools_cache.json • Launchpad subgraph • Explorer (holders & counters + creator fallback) • HolderRadar (votes) • Council JSON. P90 uses pools’ reserve_in_usd.</div>
 </div>
 
-<!-- Loading overlay with live progress (all tokens) -->
+<!-- Loading overlay -->
 <div id="overlay" class="overlay">
   <div class="panel">
     <div class="row between" style="margin-bottom:8px">
@@ -115,19 +130,23 @@
     </div>
     <div class="progress" aria-label="overall loading progress"><i id="progressFill"></i></div>
     <div class="row between" style="margin-top:6px">
-      <span class="muted" id="stage">Starting…</span>
-      <span class="muted" id="elapsed">—</span>
+      <span class="pill" id="stage">Starting…</span>
+      <span class="pill" id="elapsed">—</span>
     </div>
   </div>
 </div>
 
 <script>
-/* ================== CONFIG (Mainnet only) ================== */
+/* ================== CONFIG ================== */
 const RPC = "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz";
 const EXPLORER = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz";
 const LOCKER = "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F";
-const WORKER = "https://odd-feather-f250.toshtech777.workers.dev/?url=";    // CORS relay
-const POOLS_URL = "https://www.toshtech.xyz/pools_cache.json";                // local cache
+const WORKER = "https://odd-feather-f250.toshtech777.workers.dev/?url=";
+const POOLS_URL = "https://www.toshtech.xyz/pools_cache.json";
+const COUNCIL_URL = "https://www.toshtech.xyz/council_votes.json";
+const PEPUSCAN_TOKEN = "https://pepuscan.com/token/";
+const PEPUSCAN = "https://pepuscan.com/address/";
+const PEPUSWAP_BUY_BASE = "https://pepuswap.com/#/swap?inputCurrency=ETH&outputCurrency=";
 
 const BURNS = [
   "0xa9fD599cd8857e90059c83e4885Dc09986039085",
@@ -148,16 +167,9 @@ const LOCKER_ABI = [
 const ro = new ethers.providers.JsonRpcProvider(RPC);
 
 /* ================== Weights ================== */
-const W_LOCKED = 30;     // Locked % (cap 50%)
-const W_TIME   = 10;     // Avg remaining lock time
-const W_DEV    = 10;     // Only “creator locked?”
-const W_AGE    = 10;     // Age from GQL
-// Responsive health: Depth 7 + Volume 8 (sqrt turnover)
-const W_HEALTH_DEPTH = 7;
-const W_HEALTH_VOL   = 8;
-const W_HEALTH = W_HEALTH_DEPTH + W_HEALTH_VOL; // 15
-const W_VOTES  = 10;
-const W_HOLD   = 15;
+const W_LOCKED = 30, W_TIME=10, W_DEV=10, W_AGE=10;
+const W_HEALTH_DEPTH=7, W_HEALTH_VOL=8, W_HEALTH=W_HEALTH_DEPTH+W_HEALTH_VOL;
+const W_VOTES=10, W_COUNCIL=10, W_HOLD=15;
 
 /* ================== Utils ================== */
 const $ = id => document.getElementById(id);
@@ -165,154 +177,145 @@ const setStatus = t => { $("status").textContent = t; $("stage").textContent = t
 const niceUSD = v => (v==null||isNaN(v)) ? "—" : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(+v);
 const niceNum = v => (v==null||isNaN(v)) ? "—" : new Intl.NumberFormat('en-US').format(+v);
 const short = a => a.slice(0,6)+"…"+a.slice(-4);
-const pct = v => isFinite(v) ? v.toFixed(2)+"%" : "—";
-function p90(arr){
-  const xs = arr.filter(v=>isFinite(v)&&v>0).sort((a,b)=>a-b);
-  if(!xs.length) return 0;
-  const idx = Math.ceil(xs.length*0.9)-1;
-  return xs[Math.max(0,Math.min(xs.length-1,idx))];
-}
+const fmtScore = v => (isFinite(v)? (+v).toFixed(2) : "0.00");
+const clamp01 = x => Math.max(0,Math.min(1,Number(x||0)));
+function p90(arr){ const xs=arr.filter(v=>isFinite(v)&&v>0).sort((a,b)=>a-b); if(!xs.length) return 0; const idx=Math.ceil(xs.length*0.9)-1; return xs[Math.max(0,Math.min(xs.length-1,idx))]; }
 function clock(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); const rs=s%60; return (m?m+"m ":"")+rs+"s"; }
-function crown(show){ return show? " 👑":""; }
-function bracketClass(v, a, b){ // return bad/warn/ok based on thresholds
-  if(v<=a) return 'bad'; if(v<=b) return 'warn'; return 'ok';
-}
 function scoreClass(s){ if(s>=75) return 'good'; if(s>=60) return 'ok'; if(s>=40) return 'warn'; return 'bad'; }
 
 /* ================== Fetchers ================== */
-async function loadPools(){
-  const r = await fetch(POOLS_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('pools '+r.status);
-  const js = await r.json(); return js?.data || [];
-}
+async function loadPools(){ const r=await fetch(POOLS_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('pools '+r.status); const js=await r.json(); return js?.data||[]; }
 async function loadVotes(){
-  try{
-    const u = WORKER + encodeURIComponent("https://holderradar.com/api/votes/ranking?period=30d&limit=100");
-    const r = await fetch(u,{cache:'no-cache'}); if(!r.ok) throw new Error('votes '+r.status);
-    return await r.json();
-  }catch(e){ console.warn("votes failed", e); return []; }
+  try{ const u=WORKER+encodeURIComponent("https://holderradar.com/api/votes/ranking?period=30d&limit=100");
+    const r=await fetch(u,{cache:'no-cache'}); if(!r.ok) throw new Error('votes '+r.status); return await r.json();
+  }catch(e){ console.warn("votes failed",e); return []; }
 }
 async function loadCreators(){
-  const url = "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad";
-  const query = `
-    query Q { presales(orderBy:blockTimestamp, orderDirection:desc, first:1000){
-      token minter blockTimestamp
-    } }`;
+  const url="https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad";
+  const query=`query Q { presales(orderBy:blockTimestamp, orderDirection:desc, first:1000){ token minter blockTimestamp data } }`;
   try{
-    const r = await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query})});
+    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query})});
     if(!r.ok) throw new Error('gql '+r.status);
-    const js = await r.json();
-    const map = new Map();
+    const js=await r.json(); const map=new Map();
     (js?.data?.presales||[]).forEach(p=>{
-      const key = (p.token||"").toLowerCase();
-      const ts  = Number(p.blockTimestamp||0);
-      const prev= map.get(key);
-      if(!prev || ts>prev.blockTimestamp) map.set(key,{minter:(p.minter||"").toLowerCase(),blockTimestamp:ts});
+      const key=(p.token||"").toLowerCase(); const ts=Number(p.blockTimestamp||0); let meta={}; try{ meta=JSON.parse(p.data||"{}"); }catch(_){}
+      const prev=map.get(key);
+      const website = meta.websiteUrl || meta.website || meta.site || meta.siteUrl || meta.url || null;
+      if(!prev || ts>prev.blockTimestamp) map.set(key,{
+        minter:(p.minter||"").toLowerCase(),
+        blockTimestamp:ts,
+        iconUrl: meta.iconUrl || null,
+        xUrl: meta.xUrl || null,
+        telegramUrl: meta.telegramUrl || null,
+        websiteUrl: website
+      });
     });
     return map;
-  }catch(e){ console.warn("gql creators failed", e); return new Map(); }
+  }catch(e){ console.warn("gql creators failed",e); return new Map(); }
 }
-async function fetchJsonRelay(url){
-  const r = await fetch(WORKER+encodeURIComponent(url),{cache:'no-cache'}); if(!r.ok) throw new Error('relay '+r.status);
-  return r.json();
+async function loadCouncil(){
+  try{ const r=await fetch(COUNCIL_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('council '+r.status);
+    const js=await r.json(); const map=new Map();
+    Object.entries(js||{}).forEach(([k,v])=>{ const ca=(k||"").toLowerCase(); const avg=Number(v?.avg||0); const count=Number(v?.count||0);
+      if(ca) map.set(ca,{avg:isFinite(avg)?Math.max(0,Math.min(100,avg)):0, count:Math.max(0,count)}); });
+    return map;
+  }catch(e){ console.warn("council failed",e); return new Map(); }
+}
+async function fetchJsonRelay(url){ const r=await fetch(WORKER+encodeURIComponent(url),{cache:'no-cache'}); if(!r.ok) throw new Error('relay '+r.status); return r.json(); }
+async function fetchCounters(ca){
+  try{ const js=await fetchJsonRelay(`${EXPLORER}/api/v2/tokens/${ca}/counters`); return {holders:Number(js?.token_holders_count||0), transfers:Number(js?.transfers_count||0)}; }
+  catch(_){ return {holders:0, transfers:0}; }
 }
 
-// Fetch top holders (EOA only), paginate until we have N (or out of pages)
-async function fetchTopHolders(token, N=10, maxPages=10){
-  const base = `${EXPLORER}/api/v2/tokens/${token}/holders`;
-  let js = await fetchJsonRelay(base);
-  if(!js?.items) return { raw: [], top: [] };
-  const burnSet = new Set(BURNS.map(a=>a.toLowerCase()));
+/* --- explorer fallback for creator + creation time --- */
+async function fetchCreatorAndCreation(ca){
+  try{
+    // 1) Find creation tx for the token address
+    const addr = await fetchJsonRelay(`${EXPLORER}/api/v2/addresses/${ca}`);
+    const creationTx =
+      addr?.creation_transaction_hash ||
+      addr?.data?.attributes?.creation_transaction_hash ||
+      null;
+    if(!creationTx) return { creator:null, creationTs:null, creationTx:null };
 
-  let eoa = (js.items||[])
-    .map(it=>({ address:(it.address?.hash)||"", is_contract:!!(it.address?.is_contract), value:BigInt(it.value||"0") }))
-    .filter(it=> it.address && !burnSet.has(it.address.toLowerCase()) && !it.is_contract && it.value>0n);
+    // 2) Read the tx; timestamp might be ISO string ("2025-06-11T15:07:10.000000Z")
+    const tx = await fetchJsonRelay(`${EXPLORER}/api/v2/transactions/${creationTx}`);
+    const creator =
+      (tx?.from?.hash) ||
+      (tx?.data?.attributes?.from?.hash) ||
+      tx?.from ||
+      null;
 
-  let next = js.next_page_params; let page = 1;
-  while(eoa.length < N && next && page < maxPages){
-    const qp = new URLSearchParams(); for(const k in next) qp.set(k,String(next[k]));
-    js = await fetchJsonRelay(base+"?"+qp.toString());
-    const more = (js.items||[])
-      .map(it=>({ address:(it.address?.hash)||"", is_contract:!!(it.address?.is_contract), value:BigInt(it.value||"0") }))
-      .filter(it=> it.address && !burnSet.has(it.address.toLowerCase()) && !it.is_contract && it.value>0n);
-    eoa = eoa.concat(more);
-    next = js.next_page_params; page++;
+    let ts = tx?.timestamp || tx?.data?.attributes?.timestamp || tx?.time || tx?.block?.timestamp || null;
+    let epoch = null;
+    if (typeof ts === 'number' && isFinite(ts)) {
+      epoch = ts;                                     // already seconds
+    } else if (typeof ts === 'string') {
+      const d = Date.parse(ts);                       // parse ISO to ms
+      if (!Number.isNaN(d)) epoch = Math.floor(d/1000);
+    }
+
+    return { creator, creationTs: epoch, creationTx };
+  }catch(e){
+    return { creator:null, creationTs:null, creationTx:null };
   }
-  eoa.sort((a,b)=> (a.value<b.value?1:-1));
-  return { raw: eoa, top: eoa.slice(0,N) };
 }
 
-/* ================== Onchain helpers ================== */
-async function getLocksAndSupply(token){
-  const erc = new ethers.Contract(token, ERC20, ro);
-  const [dec, total, ...burns] = await Promise.all([
-    erc.decimals().catch(()=>18),
-    erc.totalSupply().catch(()=>ethers.BigNumber.from(0)),
-    ...BURNS.map(a=>erc.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
-  ]);
-  let burned = ethers.BigNumber.from(0); for(const b of burns) burned=burned.add(b);
-  const locker = new ethers.Contract(LOCKER, LOCKER_ABI, ro);
-  const [ids, owners, amounts, unlocks] = await locker.getActiveLocksByToken(token,0,1000).catch(()=>[[],[],[],[]]);
 
-  const now = Math.floor(Date.now()/1000);
-  let totalLocked = ethers.BigNumber.from(0), sumRem=0, cnt=0;
-  const ownerTotals = new Map();
-  for(let i=0;i<amounts.length;i++){
-    const amt = amounts[i]; totalLocked=totalLocked.add(amt);
-    const own = owners[i].toLowerCase();
-    ownerTotals.set(own,(ownerTotals.get(own)||ethers.BigNumber.from(0)).add(amt));
-    const rem = Number(unlocks[i])-now; if(rem>0){ sumRem+=rem; cnt++; }
-  }
-  const avgDays = cnt ? (sumRem/cnt)/86400 : 0;
-  return { dec, total, burned, totalLocked, avgDays, ownerTotals };
+/* ================== Age logic ================== */
+function deriveAgeDaysFrom(tsSeconds){
+  if(!isFinite(tsSeconds) || tsSeconds<=0) return 0;
+  return Math.max(0, Math.floor((Date.now()/1000 - tsSeconds)/86400));
+}
+function deriveAge(poolTs, crTs, cacheTs, sourceHint){
+  // priority: Launchpad > Explorer > cache
+  if(isFinite(crTs) && crTs>0) return {days: deriveAgeDaysFrom(crTs), source:'Explorer'};
+  if(isFinite(poolTs) && poolTs>0) return {days: deriveAgeDaysFrom(poolTs), source:(sourceHint||'Cache')};
+  return {days:0, source:'Unknown'};
 }
 
-/* ================== Scoring (continuous activity) ================== */
-function sLockedPct(p){ const cap = Math.min(p,50); return +(W_LOCKED*(cap/50)).toFixed(2); }
+/* ================== Scoring ================== */
+function sLockedPct(p){ const cap=Math.min(p,50); return +(W_LOCKED*(cap/50)).toFixed(2); }
 function sLockTime(days){ if(days>=180)return 10; if(days>=90)return 8; if(days>=30)return 6; if(days>=7)return 3; return 0; }
-function sDev(creatorLocked){ return creatorLocked? W_DEV : 0; }
+function sDev(creatorLocked, linksCount){ const base = creatorLocked?W_DEV:0; const bonus = Math.min(3, linksCount); return +(Math.min(W_DEV, base + bonus)).toFixed(2); }
 function sAge(days){ if(days>=90)return 10; if(days>=30)return 7; if(days>=7)return 4; return 1; }
-function sDepth(reserve,p90v){ if(!p90v) return 0; const x=Math.max(0,Math.min(1,reserve/p90v)); return +(W_HEALTH_DEPTH*x).toFixed(2); }
-function sVol(vol,res){
-  if(!res || vol<=0) return 0;
-  const r = vol/res;              // 1.0 = full turnover per day
-  const x = Math.min(1, Math.sqrt(r)); // diminishing returns
-  return +(W_HEALTH_VOL * x).toFixed(2);
-}
+function sDepth(reserve,p90v){ if(!p90v) return 0; const x=clamp01(reserve/p90v); return +(W_HEALTH_DEPTH*x).toFixed(2); }
+function sVol(vol,res){ if(!res || vol<=0) return 0; const x=Math.min(1, Math.sqrt(vol/res)); return +(W_HEALTH_VOL*x).toFixed(2); }
 function sVotes(v,max){ if(!max) return 0; return +(W_VOTES*(Math.min(v,max)/max)).toFixed(2); }
-function sHold(top10){
-  if(top10==null || !isFinite(top10)) return 0;
-  if(top10<=20) return 15;
-  if(top10<=40) return 9;
-  if(top10<=60) return 5;
-  return 0;
+function sCouncil(avg){ if(!isFinite(avg)||avg<=0) return 0; return +(W_COUNCIL*(Math.max(0,Math.min(100,avg))/100)).toFixed(2); }
+function sHold(top10, holders){
+  let conc=0; if(top10==null||!isFinite(top10)) conc=0; else if(top10<=20) conc=12; else if(top10<=40) conc=7; else if(top10<=60) conc=3; else conc=0;
+  const h=Number(holders||0); const bonus = h>0 ? +(3*Math.min(1, Math.sqrt(h/500))).toFixed(2) : 0;
+  return +(conc+bonus).toFixed(2);
 }
 
 /* ================== State & leaders ================== */
-let POOLS=[], CREATOR=new Map(), P90=0;
-let ROWS_ALL=[];
-let LEADERS={ lock:0, time:0, dev:0, age:0, depth:0, vol:0, votes:0, hold:0, score:0 };
-
+let POOLS=[], CREATOR=new Map(), COUNCIL=new Map(), P90=0, ROWS_ALL=[];
+let LEADERS={ score:null, mc:null, liq:null, lock:null, age:null, health:null, votes:null, distr:null, council:null };
 function computeLeaders(){
-  LEADERS.lock = Math.max(0, ...ROWS_ALL.map(r=>r.p_locked));
-  LEADERS.time = Math.max(0, ...ROWS_ALL.map(r=>r.p_time));
-  LEADERS.dev  = Math.max(0, ...ROWS_ALL.map(r=>r.p_dev));
-  LEADERS.age  = Math.max(0, ...ROWS_ALL.map(r=>r.p_age));
-  LEADERS.depth= Math.max(0, ...ROWS_ALL.map(r=>r.p_depth));
-  LEADERS.vol  = Math.max(0, ...ROWS_ALL.map(r=>r.p_vol));
-  LEADERS.votes= Math.max(0, ...ROWS_ALL.map(r=>r.p_votes));
-  LEADERS.hold = Math.max(0, ...ROWS_ALL.map(r=>r.p_hold));
-  LEADERS.score= Math.max(0, ...ROWS_ALL.map(r=>r.score));
+  if(!ROWS_ALL.length) return;
+  const a=ROWS_ALL;
+  const pickMax=(arr,sel)=>arr.reduce((b,c)=>sel(c)>sel(b)?c:b,arr[0]);
+  const pickMin=(arr,sel)=>arr.reduce((b,c)=>sel(c)<sel(b)?c:b,arr[0]);
+  LEADERS.score  = pickMax(a,r=>r.score)?.ca||null;
+  LEADERS.mc     = pickMax(a,r=>Number(r.pool.market_cap||0))?.ca||null;
+  LEADERS.liq    = pickMax(a,r=>Number(r.reserve||0))?.ca||null;
+  LEADERS.lock   = pickMax(a,r=> (r.p_locked+r.p_time))?.ca||null;
+  LEADERS.age    = pickMax(a,r=>Number(r.ageDays||0))?.ca||null;
+  LEADERS.health = pickMax(a,r=> (r.p_depth+r.p_vol))?.ca||null;
+  LEADERS.votes  = pickMax(a,r=>Number(r.votes||0))?.ca||null;
+  LEADERS.distr  = pickMin(a.filter(r=>r.top10Share!=null), r=>Number(r.top10Share))?.ca||null;
+  LEADERS.council= pickMax(a,r=>Number(r.councilAvg||0))?.ca||null;
 }
-function isLeader(val, key, eps=0.01){ return Math.abs(val - (LEADERS[key]||0)) <= eps && val>0; }
 
 /* ================== Progress ================== */
-let START_TS=0, DONE=0, TOTAL=0;
+let START_TS=0,DONE=0,TOTAL=0;
 function showOverlay(show){ $("overlay").style.display = show? 'grid':'none'; }
 function updateProgress(){
-  const pct = TOTAL? Math.min(100,Math.max(0, (DONE/TOTAL)*100)) : 0;
-  $("count").textContent = `${DONE} / ${TOTAL}`;
-  $("progressFill").style.width = pct.toFixed(1)+"%";
-  $("elapsed").textContent = clock(Date.now()-START_TS);
+  const p = TOTAL? Math.min(100,Math.max(0,(DONE/TOTAL)*100)) : 0;
+  $("count").textContent=`${DONE} / ${TOTAL}`;
+  $("progressFill").style.width=p.toFixed(1)+"%";
+  $("elapsed").textContent=clock(Date.now()-START_TS);
 }
 
 /* ================== Build ================== */
@@ -320,37 +323,66 @@ $("search").oninput=()=> render();
 $("sorter").onchange=()=> render();
 $("reload").onclick=()=> boot();
 
+async function getLocksAndSupply(token){
+  const erc=new ethers.Contract(token, ERC20, ro);
+  const [dec,total,...burns]=await Promise.all([
+    erc.decimals().catch(()=>18),
+    erc.totalSupply().catch(()=>ethers.BigNumber.from(0)),
+    ...BURNS.map(a=>erc.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
+  ]);
+  let burned=ethers.BigNumber.from(0); for(const b of burns) burned=burned.add(b);
+  const locker=new ethers.Contract(LOCKER, LOCKER_ABI, ro);
+  const [ids,owners,amounts,unlocks]=await locker.getActiveLocksByToken(token,0,1000).catch(()=>[[],[],[],[]]);
+  const now=Math.floor(Date.now()/1000);
+  let totalLocked=ethers.BigNumber.from(0), sumRem=0, cnt=0;
+  const ownerTotals=new Map();
+  for(let i=0;i<amounts.length;i++){
+    const amt=amounts[i]; totalLocked=totalLocked.add(amt);
+    const own=owners[i].toLowerCase(); ownerTotals.set(own,(ownerTotals.get(own)||ethers.BigNumber.from(0)).add(amt));
+    const rem=Number(unlocks[i])-now; if(rem>0){ sumRem+=rem; cnt++; }
+  }
+  const avgDays = cnt ? (sumRem/cnt)/86400 : 0;
+  return {dec,total,burned,totalLocked,avgDays,ownerTotals};
+}
+
+async function fetchTopHolders(token,N=10,maxPages=8){
+  const base=`${EXPLORER}/api/v2/tokens/${token}/holders`;
+  let js=await fetchJsonRelay(base); if(!js?.items) return {raw:[],top:[]};
+  const burnSet=new Set(BURNS.map(a=>a.toLowerCase()));
+  let eoa=(js.items||[]).map(it=>({address:(it.address?.hash)||"",is_contract:!!(it.address?.is_contract),value:BigInt(it.value||"0")})).filter(it=>it.address && !it.is_contract && !burnSet.has(it.address.toLowerCase()) && it.value>0n);
+  let next=js.next_page_params; let page=1;
+  while(eoa.length<N && next && page<maxPages){
+    const qp=new URLSearchParams(); for(const k in next) qp.set(k,String(next[k]));
+    js=await fetchJsonRelay(base+"?"+qp.toString());
+    const more=(js.items||[]).map(it=>({address:(it.address?.hash)||"",is_contract:!!(it.address?.is_contract),value:BigInt(it.value||"0")})).filter(it=>it.address && !it.is_contract && !burnSet.has(it.address.toLowerCase()) && it.value>0n);
+    eoa=eoa.concat(more); next=js.next_page_params; page++;
+  }
+  eoa.sort((a,b)=> (a.value<b.value?1:-1));
+  return {raw:eoa, top:eoa.slice(0,N)};
+}
+
 async function computeHoldersForRow(row){
-  const holders = await fetchTopHolders(row.ca,10,10);
-  const totalBI  = BigInt(row.totalBI);
-  const burnedBI = BigInt(row.burnedBI);
-  const lockedBI = BigInt(row.lockedBI);
+  const holders=await fetchTopHolders(row.ca,10,8);
+  const totalBI=BigInt(row.totalBI), burnedBI=BigInt(row.burnedBI), lockedBI=BigInt(row.lockedBI);
   const denomAdj = totalBI>burnedBI ? (totalBI - burnedBI) : 0n;
   const denomCirc= denomAdj>lockedBI ? (denomAdj - lockedBI) : 0n;
-  const top10Sum = holders.raw.slice(0,10).reduce((a,b)=>a+b.value,0n);
+  const top=holders.top; const top10Sum = top.reduce((a,b)=>a+b.value,0n);
   const top10Share = denomCirc>0n ? Number(top10Sum*10000n/denomCirc)/100 : null;
-  const topHolders = holders.top.map(h=>({
-    address: h.address,
-    pctAdj:  denomAdj>0n  ? Number(h.value*10000n/denomAdj)/100  : 0,
-    pctTotal: totalBI>0n  ? Number(h.value*10000n/totalBI)/100   : 0,
-    pctCirc:  denomCirc>0n? Number(h.value*10000n/denomCirc)/100 : 0
-  }));
-  return { top10Share, topHolders };
+  const topList = top.map(h=>({ address:h.address, pctCirc: denomCirc>0n ? Number(h.value*10000n/denomCirc)/100 : 0 }));
+  return { top10Share, topList };
 }
 
 async function hydrateHoldersInBackground(){
   const targets = ROWS_ALL.filter(r=> r.top10Share == null);
-  let idx=0; const CONC=3;
+  let i=0; const CONC=3;
   async function runner(){
-    while(idx < targets.length){
-      const r = targets[idx++];
-      try{
-        const { top10Share, topHolders } = await computeHoldersForRow(r);
-        r.top10Share = top10Share; r.topHolders = topHolders; r.p_hold = sHold(top10Share);
-        r.score = +(r.p_locked+r.p_time+r.p_dev+r.p_age+r.p_depth+r.p_vol+r.p_votes+r.p_hold).toFixed(2);
-        computeLeaders();
-        render();
-      }catch(e){ /* ignore per-token */ }
+    while(i<targets.length){
+      const r=targets[i++];
+      try{ const {top10Share,topList}=await computeHoldersForRow(r);
+        r.top10Share=top10Share; r.topHolders=topList; r.p_hold=sHold(top10Share, r.holders||0);
+        r.score = +(r.p_locked+r.p_time+r.p_dev+r.p_age+r.p_depth+r.p_vol+r.p_votes+r.p_council+r.p_hold).toFixed(2);
+        computeLeaders(); render();
+      }catch(e){}
     }
   }
   await Promise.all(Array.from({length:CONC},()=>runner()));
@@ -359,242 +391,280 @@ async function hydrateHoldersInBackground(){
 async function boot(){
   try{
     showOverlay(true); START_TS=Date.now(); DONE=0; TOTAL=0; updateProgress();
-    setStatus("Loading pools…");
-    POOLS = await loadPools(); TOTAL = POOLS.length; updateProgress();
-    P90 = p90(POOLS.map(p=>Number(p.reserve_in_usd||0)));
+    setStatus("Loading pools…"); POOLS=await loadPools(); TOTAL=POOLS.length; updateProgress();
+    P90=p90(POOLS.map(p=>Number(p.reserve_in_usd||0)));
 
-    setStatus("Loading votes…");
-    const votesArr = await loadVotes();
-    const vmap = new Map(); let vmax=0;
+    setStatus("Loading votes…"); const votesArr=await loadVotes(); const vmap=new Map(); let vmax=0;
     votesArr.forEach(v=>{ const ca=(v.contract||"").toLowerCase(); const n=Number(v.votes||0); vmap.set(ca,n); if(n>vmax)vmax=n; });
 
-    setStatus("Loading creators…");
-    CREATOR = await loadCreators();
+    setStatus("Loading creators…"); CREATOR=await loadCreators();
+    setStatus("Loading council…"); COUNCIL=await loadCouncil();
 
-    setStatus("Scanning tokens…");
-    ROWS_ALL=[];
-    const MAX_CONC=4; let i=0;
-    const FIRST_PAINT_COUNT = 10; let firstPainted=false;
+    setStatus("Scanning tokens…"); ROWS_ALL=[]; const MAX_CONC=4; let idx=0; const EAGER=10; let firstPaint=false;
 
     async function worker(){
-      while(i<POOLS.length){
-        const pool = POOLS[i++], ca=(pool.address||"").toLowerCase();
-        if(!ca) { DONE++; updateProgress(); continue; }
+      while(idx<POOLS.length){
+        const pool=POOLS[idx++]; const ca=(pool.address||"").toLowerCase(); if(!ca){ DONE++; updateProgress(); continue; }
         try{
-          const { dec,total,burned,totalLocked,avgDays,ownerTotals } = await getLocksAndSupply(ca);
-          const totalN = Number(ethers.utils.formatUnits(total,dec));
-          const burnedN= Number(ethers.utils.formatUnits(burned,dec));
-          const lockedN= Number(ethers.utils.formatUnits(totalLocked,dec));
-          const adjusted = Math.max(0, totalN - burnedN);
+          const {dec,total,burned,totalLocked,avgDays,ownerTotals}=await getLocksAndSupply(ca);
+          const totalN=Number(ethers.utils.formatUnits(total,dec));
+          const burnedN=Number(ethers.utils.formatUnits(burned,dec));
+          const lockedN=Number(ethers.utils.formatUnits(totalLocked,dec));
+          const adjusted=Math.max(0,totalN-burnedN);
           const lockedPct = adjusted>0 ? (lockedN/adjusted*100) : 0;
 
-          const cr = CREATOR.get(ca)||{minter:null,blockTimestamp:null};
-          const ageDays = cr.blockTimestamp ? Math.floor((Date.now()/1000 - cr.blockTimestamp)/86400) : 0;
+          let cr=CREATOR.get(ca)||{minter:null,blockTimestamp:null,iconUrl:null,xUrl:null,telegramUrl:null,websiteUrl:null};
+          // explorer fallback (creator + creation ts)
+          const expl = await fetchCreatorAndCreation(ca);
+          const creatorAddr = (cr.minter || expl.creator || '').toLowerCase() || null;
+          const creationTs  = expl.creationTs || null;
+
+          // figure age: prefer launchpad ts, then explorer creation ts, then any pool timestamp-like field
+          let poolTs = null;
+          const tsKeys=['created_at','createdAt','first_trade_at','first_trade_time','launched_at','launchTime','timestamp'];
+          for(const k of tsKeys){ if(pool && pool[k]!=null){ poolTs = Number(pool[k]); break; } }
+          if(isFinite(poolTs) && poolTs>1e12) poolTs = Math.floor(poolTs/1000);
+          const ageInfo = (cr.blockTimestamp)
+            ? {days: Math.floor((Date.now()/1000 - cr.blockTimestamp)/86400), source:'Launchpad'}
+            : deriveAge(poolTs, creationTs, poolTs, 'Cache');
+
+          const ageDays= ageInfo.days;
+          const ageSource= ageInfo.source;
 
           let creatorLocked=false;
-          if(cr.minter){
-            const tot = ownerTotals.get(cr.minter)||ethers.BigNumber.from(0);
-            creatorLocked = tot.gt(0);
-          }
+          if(creatorAddr){ const tot=ownerTotals.get(creatorAddr)||ethers.BigNumber.from(0); creatorLocked = tot.gt(0); }
 
-          const v = vmap.get(ca)||0;
-          const reserve = Number(pool.reserve_in_usd||0);
-          const vol24   = Number(pool.volume_24h_usd||0);
+          const linksCount = ['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=> n+(cr[k]?1:0), 0);
 
-          // early holders for first paint items only (rest hydrated bg)
-          let top10Share=null, topHolders=[];
-          try{
-            if(DONE < FIRST_PAINT_COUNT){
-              const { top10Share:ts, topHolders:th } = await computeHoldersForRow({
-                ca,
-                totalBI: total.toString(), burnedBI: burned.toString(), lockedBI: totalLocked.toString()
-              });
-              top10Share = ts; topHolders = th;
-            }
-          }catch(e){ top10Share=null; topHolders=[]; }
+          const v=vmap.get(ca)||0; const reserve=Number(pool.reserve_in_usd||0); const vol24=Number(pool.volume_24h_usd||0);
 
-          const p_locked = sLockedPct(lockedPct);
-          const p_time   = sLockTime(avgDays);
-          const p_dev    = sDev(creatorLocked);
-          const p_age    = sAge(ageDays);
-          const p_depth  = sDepth(reserve,P90);
-          const p_vol    = sVol(vol24,reserve);
-          const p_votes  = sVotes(v,vmax);
-          const p_hold   = sHold(top10Share);
-          const score    = +(p_locked+p_time+p_dev+p_age+p_depth+p_vol+p_votes+p_hold).toFixed(2);
+          const cv=COUNCIL.get(ca)||{avg:null,count:0};
+          const councilAvg=isFinite(cv.avg)?Number(cv.avg):null; const councilCount=Number(cv.count||0);
 
-          const row = {
-            ca, pool, totalN, burnedN, lockedN, adjusted,
-            lockedPct, avgDays, reserve, vol24, votes:v, votesMax:vmax,
-            creator: cr.minter, ageDays, top10Share,
-            topHolders,
-            p_locked,p_time,p_dev,p_age,p_depth,p_vol,p_votes:p_votes,p_hold,
+          let holdersCnt=0, transfersCnt=0; try{ const c=await fetchCounters(ca); holdersCnt=c.holders; transfersCnt=c.transfers; }catch(_){}
+
+          let top10Share=null, topHolders=[]; try{
+            if(DONE < EAGER){ const t=await computeHoldersForRow({ca,totalBI:total.toString(),burnedBI:burned.toString(),lockedBI:totalLocked.toString()});
+              top10Share=t.top10Share; topHolders=t.topList; }
+          }catch(_){}
+
+          const p_locked=sLockedPct(lockedPct);
+          const p_time=sLockTime(avgDays);
+          const p_dev=sDev(creatorLocked, linksCount);
+          const p_age=sAge(ageDays);
+          const p_depth=sDepth(reserve,P90);
+          const p_vol=sVol(vol24,reserve);
+          const p_votes=sVotes(v,vmax);
+          const p_council=sCouncil(councilAvg);
+          const p_hold=sHold(top10Share,holdersCnt);
+          const score=+(p_locked+p_time+p_dev+p_age+p_depth+p_vol+p_votes+p_council+p_hold).toFixed(2);
+
+          ROWS_ALL.push({
+            ca,pool,totalN,burnedN,lockedN,adjusted,lockedPct,avgDays,reserve,vol24,
+            votes:v, votesMax:vmax,
+            creator: creatorAddr, creationTx: expl.creationTx || null,
+            ageDays, ageSource,
+            iconUrl:cr.iconUrl, xUrl:cr.xUrl, telegramUrl:cr.telegramUrl, websiteUrl:cr.websiteUrl,
+            top10Share, topHolders, holders:holdersCnt, transfers:transfersCnt, councilAvg, councilCount,
+            p_locked,p_time,p_dev,p_age,p_depth,p_vol,p_votes,p_council,p_hold,
             score, hasLock: lockedN>0,
             totalBI: total.toString(), burnedBI: burned.toString(), lockedBI: totalLocked.toString()
-          };
-          ROWS_ALL.push(row);
-        }catch(e){ /* ignore one token */ }
+          });
+        }catch(e){}
         finally{
           DONE++; updateProgress();
-          if(!firstPainted && DONE>=FIRST_PAINT_COUNT){ firstPainted=true; computeLeaders(); showOverlay(false); render(); }
+          if(!firstPaint && DONE>=EAGER){ firstPaint=true; computeLeaders(); showOverlay(false); render(); }
         }
       }
     }
     await Promise.all(Array.from({length:MAX_CONC},()=>worker()));
-
-    // Finalize
-    computeLeaders();
-    hydrateHoldersInBackground();
-    setStatus("Ready");
-    showOverlay(false);
-    render();
-  }catch(e){
-    console.error(e);
-    setStatus("Error: "+(e.message||String(e)));
-    showOverlay(false);
-  }
+    computeLeaders(); hydrateHoldersInBackground(); setStatus("Ready"); showOverlay(false); render();
+  }catch(e){ console.error(e); setStatus("Error: "+(e.message||String(e))); showOverlay(false); }
 }
 
-/* ============== Helpers: category mini-bars & score ring ============== */
-function catBarHTML(val, max){
-  const pct = max? Math.max(0,Math.min(100,(val/max)*100)) : 0;
-  return `<div class="chip metric"><span class="muted">${(val||0).toFixed(1)}</span>/<span class="muted">${max}</span></div>`;
+/* ======= UI helpers ======= */
+function metricHTML({ico='•', val=0, max=null, ratio=0, state='', title=''}) {
+  const w = clamp01(ratio)*100;
+  const txt = (isFinite(val) ? Number(val).toFixed(1) : '—') + (max!=null ? '/'+max : '');
+  return `
+    <div class="m ${state}" title="${title}">
+      <span class="ico">${ico}</span>
+      <span class="val mono">${txt}</span>
+      <div class="meter" aria-hidden="true"><i style="width:${w.toFixed(0)}%"></i></div>
+    </div>`;
 }
-function scoreRingSVG(score){
-  const s = Math.max(0,Math.min(100,score));
-  const r = 36, c=2*Math.PI*r, o=c*(1-s/100);
-  return `<svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
-    <circle cx="50" cy="50" r="36" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>
-    <circle cx="50" cy="50" r="36" fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round"
-            stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${o.toFixed(2)}"/>
-    <defs>
-      <linearGradient id="g" x1="0" x2="1">
-        <stop offset="0%" stop-color="var(--accent)"/>
-        <stop offset="100%" stop-color="var(--accent2)"/>
-      </linearGradient>
-    </defs>
-  </svg>`;
-}
+function stateLock(pct){ if(!isFinite(pct)||pct<=0) return 'bad'; if(pct<5) return 'bad'; if(pct<15) return 'warn'; return 'ok'; }
+function stateBool(ok){ return ok? 'ok':'bad'; }
+function stateAge(days){ if(days<7) return 'bad'; if(days<30) return 'warn'; return 'ok'; }
+function stateHealth(r){ if(r<0.3) return 'bad'; if(r<0.6) return 'warn'; return 'ok'; }
+function stateVotes(r){ if(r<0.1) return 'bad'; if(r<0.5) return 'warn'; return 'ok'; }
+function stateHold(top10){ if(top10==null) return 'warn'; if(top10>60) return 'bad'; if(top10>40) return 'warn'; return 'ok'; }
 
-/* ================== Render ================== */
 function render(){
-  const q = $("search").value.trim().toLowerCase();
-  let list = ROWS_ALL.slice();
+  const q=$("search").value.trim().toLowerCase();
+  let list=ROWS_ALL.slice();
+  if(q){ list=list.filter(r=>{ const sym=(r.pool.symbol||"").toLowerCase(), name=(r.pool.name||"").toLowerCase(); return r.ca.includes(q)||sym.includes(q)||name.includes(q); }); }
 
-  if(q){
-    list = list.filter(r=>{
-      const sym=(r.pool.symbol||"").toLowerCase(), name=(r.pool.name||"").toLowerCase();
-      return r.ca.includes(q) || sym.includes(q) || name.includes(q);
-    });
-  }
-
-  const how = $("sorter").value;
+  const how=$("sorter").value;
   if(how==='score') list.sort((a,b)=> b.score - a.score);
   if(how==='locked') list.sort((a,b)=> b.lockedPct - a.lockedPct);
   if(how==='mc') list.sort((a,b)=> Number(b.pool.market_cap||0)-Number(a.pool.market_cap||0));
   if(how==='liq') list.sort((a,b)=> b.reserve - a.reserve);
   if(how==='age') list.sort((a,b)=> b.ageDays - a.ageDays);
 
-  cards.innerHTML = "";
-  list.forEach((r)=>{
-    const link = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
-    const sym = r.pool.symbol||"";
-    const name= r.pool.name||"";
-    const price = r.pool.price, mc=r.pool.market_cap;
+  const cards=$("cards"); cards.innerHTML="";
 
-    const total = r.totalN||0;
-    const burnW = total>0 ? (r.burnedN/total*100) : 0;
-    const lockW = total>0 ? (r.lockedN/total*100) : 0;
-    const circW = Math.max(0, 100 - burnW - lockW);
+  list.forEach(r=>{
+    const sym=r.pool.symbol||""; const name=r.pool.name||""; const price=r.pool.price; const mc=r.pool.market_cap;
+    const total=r.totalN||0; const burnW = total>0?(r.burnedN/total*100):0; const lockW=total>0?(r.lockedN/total*100):0; const circW=Math.max(0,100-burnW-lockW);
+    const scoreCls=scoreClass(r.score);
 
-    const scoreCls = scoreClass(r.score);
+    const ratioLock   = clamp01((r.p_locked + r.p_time)/40);
+    const ratioHealth = clamp01((r.p_depth + r.p_vol)/15);
+    const ratioVotes  = clamp01((r.p_votes)/10);
+    const ratioHold   = clamp01((r.p_hold||0)/W_HOLD);
 
-    const el = document.createElement('div');
-    el.className="card";
+    const el=document.createElement('div'); el.className="card";
     el.innerHTML = `
       <div class="token-head">
-        <div class="token-title">
-          <a class="sym" href="${link}" target="_blank">${sym || name || short(r.ca)}</a>
-          <div class="sub">${name || sym} • <span class="mono">${short(r.ca)}</span></div>
-          <div class="sub">Price: $${Number(price||0).toFixed(8)}</div>
-        </div>
-        <div class="score-badge ${scoreCls}" title="ToshScore">
-          ${scoreRingSVG(r.score)}
-          <div style="display:flex;flex-direction:column;align-items:center;z-index:1">
-            <div class="score-num">${r.score.toFixed(0)}${crown(isLeader(r.score,'score'))}</div>
-            <div class="score-lbl">ToshScore</div>
+        <div>
+          <div class="title-left">
+            ${r.iconUrl ? `<img class="logo" src="${r.iconUrl}" alt="logo">` : `<div class="logo" style="display:grid;place-items:center">🪙</div>`}
+            <div>
+              <div class="name">${sym || name || short(r.ca)}</div>
+              <div class="sub">${name || sym} • Price: $${Number(price||0).toFixed(8)}</div>
+            </div>
           </div>
+
+          <!-- Contract row: short display, link to PepuScan TOKEN page; Copy copies full CA; Buy goes to PepuSwap -->
+          <div class="ca-row">
+            <a class="addr" href="${PEPUSCAN_TOKEN}${r.ca}" target="_blank" title="Open on PepuScan">${short(r.ca)}</a>
+            <div class="actbar">
+              <button class="act copy-btn" data-ca="${r.ca}" title="Copy contract">Copy</button>
+              <a class="act buy" href="${PEPUSWAP_BUY_BASE}${r.ca}" target="_blank" title="Buy on PepuSwap">Buy</a>
+            </div>
+          </div>
+
+          <div class="social">
+            ${r.websiteUrl ? `<a class="socbtn" href="${r.websiteUrl}" target="_blank" title="Website"><span>🔗</span></a>`:''}
+            ${r.telegramUrl ? `<a class="socbtn" href="${r.telegramUrl.startsWith('http')?r.telegramUrl:'https://t.me/'+r.telegramUrl.replace('@','')}" target="_blank" title="Telegram"><span>✈️</span></a>`:''}
+            ${r.xUrl ? `<a class="socbtn" href="${r.xUrl}" target="_blank" title="X (Twitter)"><span>𝕏</span></a>`:''}
+          </div>
+        </div>
+
+        <div>
+          <div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
+            <span class="score-num">${fmtScore(r.score)}</span>
+          </div>
+          <div class="score-caption">ToshScore</div>
         </div>
       </div>
 
-      <div class="rowchips">
-        <span class="chip mono">${short(r.ca)}</span>
+      <div class="chips">
         <span class="chip">MC ${niceUSD(mc)}</span>
         <span class="chip">Liq ${niceUSD(r.reserve)}</span>
-        <span class="chip">24h Vol ${niceUSD(r.vol24)}</span>
-        <span class="chip">Age ${r.ageDays}d</span>
+        <span class="chip">Vol 24h ${niceUSD(r.vol24)}</span>
+        <span class="chip">Age ${r.ageDays}d <span class="muted">(${r.ageSource})</span></span>
+        <span class="chip">Holders ${niceNum(r.holders||0)}</span>
         ${!r.hasLock? `<span class="chip bad">No lock</span>` : ''}
       </div>
 
-      <!-- Desktop inline metrics -->
-      <div class="metrics-line">
-        <span class="chip metric ${bracketClass(r.lockedPct,5,15)}">🔒 ${pct(r.lockedPct)}${crown(isLeader(r.p_locked,'lock')||isLeader(r.p_time,'time'))}</span>
-        <span class="chip metric ${bracketClass(r.p_depth, W_HEALTH_DEPTH*0.3, W_HEALTH_DEPTH*0.6)}">💧 ${(r.p_depth).toFixed(1)}/${W_HEALTH_DEPTH}${crown(isLeader(r.p_depth,'depth'))}</span>
-        <span class="chip metric ${bracketClass(r.p_vol, W_HEALTH_VOL*0.3, W_HEALTH_VOL*0.6)}">🔄 ${(r.p_vol).toFixed(1)}/${W_HEALTH_VOL}${crown(isLeader(r.p_vol,'vol'))}</span>
-        <span class="chip metric ${r.p_dev? 'ok':'bad'}">🧑‍💻 ${r.p_dev? 'Dev lock✅':'Dev lock❌'}${crown(isLeader(r.p_dev,'dev'))}</span>
-        <span class="chip metric ${bracketClass(r.ageDays,7,30).replace('ok','ok')}">⏳ ${r.ageDays}d${crown(isLeader(r.p_age,'age'))}</span>
-        <span class="chip metric ${r.top10Share==null? '' : (r.top10Share>60?'bad':(r.top10Share>40?'warn':'ok'))}">👥 ${r.top10Share==null ? 'Holders…' : r.top10Share.toFixed(1)+'%'}${crown(isLeader(r.p_hold,'hold'))}</span>
-        <span class="chip metric ${bracketClass(r.p_votes,1,5)}">🗳 ${(r.p_votes).toFixed(1)}/${W_VOTES}${crown(isLeader(r.p_votes,'votes'))}</span>
-      </div>
-
-      <!-- Mobile detailed scorecard -->
-      <div class="breakdown">
-        <div class="brow"><div class="bleft"><strong>Liquidity Lock</strong></div><div class="bright">${(r.p_locked+r.p_time).toFixed(1)}/40</div></div>
-        <div class="brow"><div class="bleft">• Locked % (cap 50%)</div><div class="bright ${bracketClass(r.lockedPct,5,15)}">${r.p_locked.toFixed(1)}/${W_LOCKED}${crown(isLeader(r.p_locked,'lock'))}</div></div>
-        <div class="brow"><div class="bleft">• Time safety (avg ${r.avgDays.toFixed(1)}d)</div><div class="bright ${r.p_time>=8?'ok':(r.p_time>=3?'warn':'bad')}">${r.p_time}/${W_TIME}${crown(isLeader(r.p_time,'time'))}</div></div>
-
-        <div class="brow"><div class="bleft"><strong>Dev Transparency</strong></div><div class="bright ${r.p_dev? 'ok':'bad'}">${r.p_dev}/${W_DEV}${crown(isLeader(r.p_dev,'dev'))}</div></div>
-        <div class="brow"><div class="bleft">• Creator locked?</div><div class="bright ${r.p_dev? 'ok':'bad'}">${r.p_dev? 'yes':'no'}</div></div>
-
-        <div class="brow"><div class="bleft"><strong>Age & Consistency</strong></div><div class="bright">${r.p_age}/${W_AGE}${crown(isLeader(r.p_age,'age'))}</div></div>
-        <div class="brow"><div class="bleft">• Age days</div><div class="bright ${r.ageDays<7?'bad':(r.ageDays<30?'warn':'ok')}">${r.ageDays}</div></div>
-
-        <div class="brow"><div class="bleft"><strong>On-chain health</strong></div><div class="bright">${(r.p_depth+r.p_vol).toFixed(1)}/${W_HEALTH}</div></div>
-        <div class="brow"><div class="bleft">• Depth vs P90</div><div class="bright ${bracketClass(r.p_depth, W_HEALTH_DEPTH*0.3, W_HEALTH_DEPTH*0.6)}">${r.p_depth.toFixed(1)}/${W_HEALTH_DEPTH}${crown(isLeader(r.p_depth,'depth'))}</div></div>
-        <div class="brow"><div class="bleft">• 24h turnover</div><div class="bright ${bracketClass(r.p_vol, W_HEALTH_VOL*0.3, W_HEALTH_VOL*0.6)}">${r.p_vol.toFixed(1)}/${W_HEALTH_VOL}${crown(isLeader(r.p_vol,'vol'))}</div></div>
-
-        <div class="brow"><div class="bleft"><strong>Community</strong></div><div class="bright ${bracketClass(r.p_votes,1,5)}">${r.p_votes}/${W_VOTES}${crown(isLeader(r.p_votes,'votes'))}</div></div>
-        <div class="brow"><div class="bleft">• Votes 30d</div><div class="bright">${niceNum(r.votes)}</div></div>
-
-        <div class="brow"><div class="bleft"><strong>Holders Quality</strong></div><div class="bright ${r.top10Share==null? '' : (r.top10Share>60?'bad':(r.top10Share>40?'warn':'ok'))}">${r.p_hold}/${W_HOLD}${crown(isLeader(r.p_hold,'hold'))}</div></div>
-        <div class="brow"><div class="bleft">• Top-10 share (excl. contracts, vs circulating)</div><div class="bright ${r.top10Share==null? '': (r.top10Share>60?'bad':(r.top10Share>40?'warn':'ok'))}">${r.top10Share==null ? 'Pending…' : r.top10Share.toFixed(2)+'%'}</div></div>
-
-        <details class="holders">
-          <summary>Top holders (percent of circulating, excludes burns & contracts)</summary>
-          <div class="holders-list">
-            ${r.topHolders && r.topHolders.length ? r.topHolders.map((h,i)=>`<div><span>#${i+1} <span class="mono">${short(h.address)}</span></span><span>${Number(h.pctCirc ?? 0).toFixed(2)}%</span></div>`).join("") : '<div class="muted">Fetching…</div>'}
-          </div>
-        </details>
-      </div>
-
-      <div class="supply">
-        <div class="bar" title="Burn / Locked / Circulating (of total)">
+      <div class="supply" title="Burn / Locked / Circulating (share of total supply)">
+        <div class="bar">
           <i class="seg-burn"   style="width:${burnW.toFixed(2)}%"></i>
           <i class="seg-locked" style="width:${lockW.toFixed(2)}%"></i>
           <i class="seg-circ"   style="width:${circW.toFixed(2)}%"></i>
         </div>
-        <div class="sub" style="margin-top:6px">
-          Total: ${niceNum(r.totalN)} • 🔥 ${niceNum(r.burnedN)} • 🔒 ${niceNum(r.lockedN)} • ✅ ${niceNum(Math.max(0,r.totalN-r.burnedN-r.lockedN))}
-        </div>
+        <div class="subline">Total ${niceNum(r.totalN)} • 🔥 ${niceNum(r.burnedN)} • 🔒 ${niceNum(r.lockedN)} • ✅ ${niceNum(Math.max(0,r.totalN-r.burnedN-r.lockedN))}</div>
       </div>
+
+      <div class="metrics">
+        ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:40, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${r.lockedPct.toFixed(2)}% · Avg lock ${r.p_time}/10`})}
+        ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:10, ratio:clamp01(r.p_dev/10), state:stateBool(!!r.p_dev), title:(r.p_dev? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
+        ${metricHTML({ico:'⏳', val:r.p_age, max:10, ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`Age ${r.ageDays} days (${r.ageSource})`})}
+        ${metricHTML({ico:'💧', val:(r.p_depth+r.p_vol), max:15, ratio:ratioHealth, state:stateHealth(ratioHealth), title:`Depth ${r.p_depth}/7 · Turnover ${r.p_vol}/8`})}
+        ${metricHTML({ico:'🗳', val:r.p_votes, max:10, ratio:clamp01(r.p_votes/10), state:stateVotes(ratioVotes), title:`Votes ${niceNum(r.votes||0)} (30d)`})}
+        ${metricHTML({ico:'👥', val:r.p_hold, max:15, ratio:ratioHold, state:stateHold(r.top10Share), title:(r.top10Share==null ? 'Top-10 pending…' : `Top-10 share ${r.top10Share.toFixed(2)}%`) + ` · Holders ${niceNum(r.holders||0)}`})}
+      </div>
+
+      <details class="more">
+        <summary>Details</summary>
+        <div class="detail-grid">
+          <div class="panel">
+            <div class="rowline"><div>🔒 Lock</div><div class="mono">${(r.p_locked+r.p_time).toFixed(1)}/40</div><div class="meter"><i style="width:${(ratioLock*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">How much liquidity is locked and for how long.</div>
+            <div class="subrow"><span>• Locked % (cap 50%)</span><span class="mono">${r.p_locked.toFixed(1)}/30</span></div>
+            <div class="subrow"><span>• Avg lock (days)</span><span class="mono">${r.p_time}/10 · ${r.avgDays?.toFixed? r.avgDays.toFixed(1) : r.avgDays}d</span></div>
+
+            <div class="rowline"><div>👨‍💻 Dev</div><div class="mono">${r.p_dev}/10</div><div class="meter"><i style="width:${(clamp01(r.p_dev/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Basic transparency: did the creator lock tokens? Are links (X/TG/Website) provided?</div>
+            <div class="subrow"><span>• Creator locked?</span>
+              <span class="mono">${r.p_dev? 'yes':'no'}</span></div>
+			<div class="subrow">
+			  <span>• Creator</span>
+			  <span class="mono">
+				${r.creator
+				  ? `<a href="${PEPUSCAN}${r.creator}" target="_blank">${short(r.creator)}</a>${
+					  r.creationTx
+						? ` &nbsp;(tx:&nbsp;<a href="${EXPLORER}/api/v2/transactions/${r.creationTx}" target="_blank">${r.creationTx.slice(0,6)}…${r.creationTx.slice(-4)}</a>)`
+						: ''
+					}`
+				  : '—'}
+			  </span>
+			</div>
+            <div class="subrow"><span>• Links (X/TG/Web)</span><span class="mono">${['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0)}/3</span></div>
+
+            <div class="rowline"><div>⏳ Age</div><div class="mono">${r.p_age}/10</div><div class="meter"><i style="width:${(clamp01(r.p_age/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Project lifetime. Source: <span class="mono">${r.ageSource}</span>.</div>
+            <div class="subrow"><span>• Days</span><span class="mono">${r.ageDays}</span></div>
+
+            <div class="rowline"><div>💧 Health</div><div class="mono">${(r.p_depth+r.p_vol).toFixed(1)}/15</div><div class="meter"><i style="width:${(ratioHealth*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Liquidity depth vs network P90 and how much trading happens vs reserve (turnover).</div>
+            <div class="subrow"><span>• Depth vs P90</span><span class="mono">${r.p_depth.toFixed(1)}/7</span></div>
+            <div class="subrow"><span>• 24h turnover</span><span class="mono">${r.p_vol}/8</span></div>
+
+            <div class="rowline"><div>🗳 Community</div><div class="mono">${r.p_votes}/10</div><div class="meter"><i style="width:${(clamp01(r.p_votes/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">HolderRadar votes over 30 days (normalized).</div>
+
+            <div class="rowline"><div>🏛 Council</div><div class="mono">${r.p_council||0}/10</div><div class="meter"><i style="width:${(clamp01((r.p_council||0)/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">Score from vetted community auditors.</div>
+            <div class="subrow"><span>• Avg</span><span class="mono">${isFinite(r.councilAvg)? r.councilAvg.toFixed(1):'—'}/100 · ${r.councilCount||0} votes</span></div>
+
+            <div class="rowline"><div>👥 Distribution</div><div class="mono">${r.p_hold}/15</div><div class="meter"><i style="width:${(clamp01(r.p_hold/15)*100).toFixed(0)}%"></i></div></div>
+            <div class="desc">How spread the supply is across EOA holders (lower Top-10 share is better) + breadth by total holders.</div>
+            <div class="subrow"><span>• Top-10 share (lower is better)</span><span class="mono">${r.top10Share==null? '—' : r.top10Share.toFixed(2)+'%'}</span></div>
+            <div class="subrow"><span>• Holders</span><span class="mono">${niceNum(r.holders||0)}</span></div>
+            <div class="subrow"><span>• Transfers (lifetime)</span><span class="mono">${niceNum(r.transfers||0)}</span></div>
+          </div>
+
+          <div class="panel">
+            <div class="subrow"><span>Top holders (EOA, % of circulating)</span><span class="mono">${r.top10Share==null?'':r.top10Share.toFixed(2)+'%'}</span></div>
+            <div class="holders-list">
+              ${(r.topHolders && r.topHolders.length)
+                ? r.topHolders.map((h,i)=>`<div><a href="${PEPUSCAN}${h.address}" target="_blank">${h.address}</a><span>${Number(h.pctCirc||0).toFixed(2)}%</span></div>`).join('')
+                : '<div class="muted">Top holders pending…</div>'}
+            </div>
+          </div>
+        </div>
+      </details>
     `;
     cards.appendChild(el);
   });
 }
 
+/* copy handler */
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('.copy-btn');
+  if(!b) return;
+  const ca = b.getAttribute('data-ca'); navigator.clipboard.writeText(ca).then(()=>{
+    const old=b.textContent; b.textContent='Copied!'; setTimeout(()=>b.textContent=old, 900);
+  }).catch(()=>{});
+});
+
 /* ================== Run ================== */
-showOverlay(false);
-boot();
+let STARTED=false;
+function start(){ if(STARTED) return; STARTED=true; showOverlay(false); boot(); }
+start();
 </script>
 </body>
 </html>
