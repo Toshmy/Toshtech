@@ -166,6 +166,7 @@ const PEPUSCAN_TOKEN = "https://pepuscan.com/token/";
 const PEPUSCAN = "https://pepuscan.com/address/";
 const PEPUSCAN_TX = "https://pepuscan.com/tx/";
 const PEPUSWAP_BUY_BASE = "https://pepuswap.com/#/swap?inputCurrency=ETH&outputCurrency=";
+const TOKENLOCK_URL = "https://www.toshtech.xyz/tokenlock.json"; // <-- new, can 404
 const BLOCKLIST = new Set([
   "0x20fb684bfc1abaad3acec5712f2aa30bd494df74".toLowerCase()
 ]);
@@ -252,6 +253,62 @@ async function loadCreators(){
     return map;
   }catch(e){ console.warn("gql creators failed",e); return new Map(); }
 }
+/* Manually-maintained lock file loader (very flexible schema) */
+async function loadManualLocks(){
+  try{
+    const r = await fetch(TOKENLOCK_URL, { cache: 'no-cache' });
+    if(!r.ok) throw new Error('tokenlock '+r.status);
+    const js = await r.json();
+
+    // Accept either:
+    //  A) array of items: [{token, amount, unlock, owner, unit, name}, ...]
+    //  B) object map: { "0xToken": [ {amount, unlock, owner, unit, name}, ... ], ... }
+    //
+    // Fields:
+    //  - token/address: token CA (required for array form)
+    //  - amount: number or string; if unit=="raw" it is raw units; otherwise it's in token units
+    //  - unlock/until/unlockTime: ISO string or epoch (s or ms)
+    //  - owner: address string (optional, improves creatorLocked)
+    //  - unit: "tokens" (default) or "raw"
+    //  - name/note: label, optional
+
+    const now = Math.floor(Date.now()/1000);
+    const push = (map, ca, e) => {
+      ca = (ca||'').toLowerCase();
+      if(!ca) return;
+      let amt = Number(e.amount ?? e.amt ?? 0);
+      if(!(amt>0)) return;
+
+      // parse unlock -> epoch seconds (nullable)
+      let u = e.unlock ?? e.until ?? e.unlockTime ?? e.time ?? e.unlock_ts ?? null;
+      let unlockSec = null;
+      if (typeof u === 'number') unlockSec = u > 1e12 ? Math.floor(u/1000) : Math.floor(u);
+      else if (typeof u === 'string' && u) { const d = Date.parse(u); if(!Number.isNaN(d)) unlockSec = Math.floor(d/1000); }
+
+      const unit = String(e.unit || 'tokens').toLowerCase();  // "tokens" | "raw"
+      const owner = (e.owner || '').toLowerCase();
+      const name = e.name || e.note || 'manual';
+
+      const arr = map.get(ca) || [];
+      arr.push({ amount: amt, unit, unlock: unlockSec, owner, name });
+      map.set(ca, arr);
+    };
+
+    const map = new Map();
+    if (Array.isArray(js)) {
+      js.forEach(e => push(map, e.token || e.address, e));
+    } else if (js && typeof js === 'object') {
+      for (const [ca, arr] of Object.entries(js)) {
+        if (Array.isArray(arr)) arr.forEach(e => push(map, ca, e));
+      }
+    }
+    return map;
+  }catch(e){
+    console.warn('tokenlock.json not available', e);
+    return new Map();
+  }
+}
+
 async function loadCouncil(){
   try{
     const r=await fetch(COUNCIL_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('council '+r.status);
@@ -384,6 +441,7 @@ function sHold(top10, holders){
 
 /* ================== State & leaders ================== */
 let POOLS=[], CREATOR=new Map(), TGCSV=new Map(), COUNCIL=new Map(), P90=0, ROWS_ALL=[];
+let MANUAL_LOCKS = new Map(); // <-- new
 function recomputeScore(r){
   r.score = +( (r.p_locked||0)+(r.p_time||0)+(r.p_dev||0)+(r.p_age||0)+(r.p_depth||0)+(r.p_vol||0)+(r.p_votes||0)+(r.p_council||0)+(r.p_hold||0) ).toFixed(2);
 }
@@ -412,19 +470,49 @@ async function getLocksAndSupply(token){
     ...BURNS.map(a=>erc.balanceOf(a).catch(()=>ethers.BigNumber.from(0)))
   ]);
   let burned=ethers.BigNumber.from(0); for(const b of burns) burned=burned.add(b);
+
   const locker=new ethers.Contract(LOCKER, LOCKER_ABI, ro);
   const [ids,owners,amounts,unlocks]=await locker.getActiveLocksByToken(token,0,1000).catch(()=>[[],[],[],[]]);
+
   const now=Math.floor(Date.now()/1000);
   let totalLocked=ethers.BigNumber.from(0), sumRem=0, cnt=0;
   const ownerTotals=new Map();
+
+  // on-chain (ToshLock) locks
   for(let i=0;i<amounts.length;i++){
-    const amt=amounts[i]; totalLocked=totalLocked.add(amt);
-    const own=(owners[i]||'').toLowerCase(); if(!own) continue;
-    ownerTotals.set(own,(ownerTotals.get(own)||ethers.BigNumber.from(0)).add(amt));
+    const amt=amounts[i];
+    totalLocked=totalLocked.add(amt);
+    const own=(owners[i]||'').toLowerCase();
+    if(own) ownerTotals.set(own,(ownerTotals.get(own)||ethers.BigNumber.from(0)).add(amt));
     const rem=Number(unlocks[i])-now; if(rem>0){ sumRem+=rem; cnt++; }
   }
+
+  // --- NEW: manual locks from tokenlock.json
+  const manual = MANUAL_LOCKS.get(token.toLowerCase()) || [];
+  let manualTotal = ethers.BigNumber.from(0), manualCnt=0, manualSumRem=0;
+  for(const m of manual){
+    let amtBI;
+    if ((m.unit||'tokens') === 'raw') {
+      // raw units
+      try { amtBI = ethers.BigNumber.from(String(m.amount)); } catch{ amtBI = ethers.constants.Zero; }
+    } else {
+      // token units -> raw using decimals
+      try { amtBI = ethers.utils.parseUnits(String(m.amount), dec); } catch{ amtBI = ethers.constants.Zero; }
+    }
+    manualTotal = manualTotal.add(amtBI);
+    if (m.owner) ownerTotals.set(m.owner, (ownerTotals.get(m.owner)||ethers.constants.Zero).add(amtBI));
+    if (Number.isFinite(m.unlock) && m.unlock>now){ manualSumRem += (m.unlock-now); manualCnt++; }
+  }
+  totalLocked = totalLocked.add(manualTotal);
+  sumRem += manualSumRem; cnt += manualCnt;
+
   const avgDays = cnt ? (sumRem/cnt)/86400 : 0;
-  return {dec,total,burned,totalLocked,avgDays,ownerTotals};
+
+  return {
+    dec,total,burned,totalLocked,avgDays,ownerTotals,
+    manualCount: manual.length,
+    manualLocked: manualTotal
+  };
 }
 
 async function fetchTopHolders(token,N=10,maxPages=8){
@@ -462,15 +550,21 @@ async function hydrateSupplyAndLocks(rows){
       const r=rows[i++];
       try{
         const got=await getLocksAndSupply(r.ca);
-        const totalN=Number(ethers.utils.formatUnits(got.total,got.dec));
-        const burnedN=Number(ethers.utils.formatUnits(got.burned,got.dec));
-        const lockedN=Number(ethers.utils.formatUnits(got.totalLocked,got.dec));
-        const adjusted=Math.max(0,totalN-burnedN);
-        const lockedPct = adjusted>0 ? (lockedN/adjusted*100) : 0;
 
-        r.totalN=totalN; r.burnedN=burnedN; r.lockedN=lockedN;
-        r.totalBI=got.total.toString(); r.burnedBI=got.burned.toString(); r.lockedBI=got.totalLocked.toString();
-        r.avgDays=got.avgDays; r.lockedPct=lockedPct;
+		const totalN=Number(ethers.utils.formatUnits(got.total,got.dec));
+		const burnedN=Number(ethers.utils.formatUnits(got.burned,got.dec));
+		const lockedNAll=Number(ethers.utils.formatUnits(got.totalLocked,got.dec));
+		const manualN = Number(ethers.utils.formatUnits(got.manualLocked || 0, got.dec)); // <-- new
+
+		const adjusted=Math.max(0,totalN-burnedN);
+		const lockedPct = adjusted>0 ? (lockedNAll/adjusted*100) : 0;		
+		r.totalN=totalN; r.burnedN=burnedN;
+		r.lockedN=lockedNAll;                 // includes manual add-on
+		r.manualLockedN = manualN;            // keep for display
+		r.totalBI=got.total.toString();
+		r.burnedBI=got.burned.toString();
+		r.lockedBI=got.totalLocked.toString();
+		r.avgDays=got.avgDays; r.lockedPct=lockedPct;
 
         // creator lock flag: check minter balance in lock ownerTotals
         let creatorAddr = r.creator || null;
@@ -581,7 +675,8 @@ const PRIORITY_SET = new Set(
     setStatus("Loading creators…"); CREATOR=await loadCreators();
     setStatus("Loading launchpad data…");   TGCSV=await loadTgCsv();
     setStatus("Loading council…");  COUNCIL=await loadCouncil();
-
+	setStatus("Loading manual locks…");
+	MANUAL_LOCKS = await loadManualLocks();
     setStatus("Indexing…");
     ROWS_ALL.length=0;
 
@@ -836,7 +931,9 @@ function render(){
 
 		<div class="subline">
 		  Total ${niceCompact(r.totalN)} • 🔥 ${niceCompact(r.burnedN)} • 🔒 ${niceCompact(r.lockedN)} • ✅ ${niceCompact(Math.max(0,r.totalN-r.burnedN-r.lockedN))}
-		</div>
+		  ${ (r.manualLockedN>0) ? ` • <span class="muted">(+${niceCompact(r.manualLockedN)} manual)</span>` : '' }
+		  ${ (r.manualLockedN>0) ? `<span class="chip">+ Manual lock</span>` : '' }
+		</div>		
 	  </div> <!-- close .supply -->
       <div class="metrics">
         ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:40, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/10`})}

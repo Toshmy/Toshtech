@@ -1,0 +1,17 @@
+[
+  {
+    "token": "0xd42fabf08d04d1eb5c69f770c6e049832b69d788",
+    "amount": 100000000,
+    "unit": "HoRa",
+    "unlock": "2026-01-01T00:00:00Z",
+    "owner": "0xCreatorAddr...",
+    "name": "Team lock"
+  },
+  {
+    "token": "0x1234...abcd",
+    "amount": "750000000000000000000000",
+    "unit": "raw",
+    "unlock": 1767225600,
+    "name": "Liquidity add-on"
+  }
+]
