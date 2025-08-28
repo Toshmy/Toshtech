@@ -113,6 +113,20 @@
     .score-caption{ display:none; }
     .rowline{ grid-template-columns:140px 64px 1fr; }
   }
+	/* Right column wrapper to stack its panels vertically */
+	.rightcol{ display:flex; flex-direction:column; gap:12px; }
+
+	/* Compact, scrollable holders list */
+	.holders-list.compact{
+	  max-height:220px;           /* tweak this value if you like */
+	  overflow:auto;
+	  padding-right:4px;
+	}
+	/* optional: slim scrollbar (webkit) */
+	.holders-list.compact::-webkit-scrollbar{ width:6px }
+	.holders-list.compact::-webkit-scrollbar-thumb{
+	  background:rgba(255,255,255,.2); border-radius:8px
+	}  
 </style>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
@@ -191,12 +205,24 @@ const ro = new ethers.providers.JsonRpcProvider(RPC);
 const TOPN_BOOT = 10;            // show only Top-10 MC on initial load
 let SHOW_PRIORITY_ONLY = true;    // when true: render only top-N unless searching
 
-/* ================== Weights ================== */
-const W_LOCKED = 30, W_TIME=10, W_DEV=10, W_AGE=10;
-const W_HEALTH_DEPTH=7, W_HEALTH_VOL=8, W_HEALTH=W_HEALTH_DEPTH+W_HEALTH_VOL;
-const W_VOTES=10, W_COUNCIL=10, W_HOLD=15;
+// === New weights (sum = 100) ===
+const W_LOCKED = 18;   // part of "Locked" (share)
+const W_TIME   = 7;    // part of "Locked" (duration)  -> 18 + 7 = 25
+const W_DEV    = 15;   // Dev transparency
+const W_AGE    = 10;   // Age
+const W_HEALTH_DEPTH = 7, W_HEALTH_VOL = 8, W_HEALTH = W_HEALTH_DEPTH + W_HEALTH_VOL; // 15
+const W_VOTES  = 10;   // Community
+const W_COUNCIL= 15;   // Council (−15..+15)
+const W_HOLD   = 10;   // Distribution
 
 /* ================== Utils ================== */
+// Minimal HTML escaper for text nodes/attributes
+const esc = s => String(s ?? '')
+  .replace(/&/g,'&amp;')
+  .replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;')
+  .replace(/'/g,'&#39;');
 const $ = id => document.getElementById(id);
 const setStatus = t => { $("status").textContent = t; $("stage").textContent = t; };
 const niceUSD = v => (v==null||Number.isNaN(v)) ? "—" : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(+v);
@@ -311,92 +337,47 @@ async function loadManualLocks(){
 
 async function loadCouncil(){
   try{
-    const r = await fetch(COUNCIL_URL,{cache:'no-cache'});
+    const r=await fetch(COUNCIL_URL,{cache:'no-cache'});
     if(!r.ok) throw new Error('council '+r.status);
-    const js = await r.json();
+    const js=await r.json();
 
-    // Defaults (will normalize)
-    const DEFAULT_WEIGHTS = {
-      liquidity_locking: 0.30,
-      distribution_risk: 0.25,
-      team_transparency: 0.20,
-      execution_progress: 0.15,
-      contract_risks:    0.10
-    };
-    function normalizeWeights(w){
-      const ww = {...DEFAULT_WEIGHTS, ...(w||{})};
-      const s = Object.values(ww).reduce((a,b)=>a+Number(b||0),0);
-      if (s > 0 && Math.abs(s-1) > 1e-6){
-        for(const k in ww) ww[k] = ww[k]/s;
-      }
-      return ww;
-    }
-
-    // ---- Rich format ----
+    // Rich format: { schema_version, tokens: { ca: { votes:[{score, categories, notes, voter_id, display, timestamp}], launch_type? } } }
     if (js && js.tokens && typeof js.tokens === 'object'){
-      const W = normalizeWeights(js.weights);
       const map = new Map();
-
       for (const [caRaw, entry] of Object.entries(js.tokens)){
-        const ca = (caRaw||'').toLowerCase();
-        if(!ca) continue;
-
-        const launch_type = entry.launch_type === 'manual' ? 'manual' : 'launchpad';
-        const votesIn = Array.isArray(entry.votes) ? entry.votes : [];
-        let sum = 0, count = 0;
-
-        const votesOut = votesIn.map(v=>{
-          const cats = v.categories || {};
-          // weighted mean over non-null categories
-          let acc = 0, wsum = 0;
-          const usedCats = {};
-          for (const [k,w] of Object.entries(W)){
-            const raw = cats[k];
-            const val = Number(raw);
-            if (!Number.isFinite(val)) continue;
-            usedCats[k] = val;
-            acc += val * Number(w);
-            wsum += Number(w);
-          }
-          const score = wsum>0 ? acc/wsum : null;
-          if (score!=null){ sum += score; count++; }
-
+        const ca=(caRaw||'').toLowerCase(); if(!ca) continue;
+        const votes = Array.isArray(entry.votes)? entry.votes : [];
+        const clean = votes.map(v=>{
+          const s = Number(v.score);
           return {
             voter_id : v.voter_id || v.id || null,
             display  : v.display || null,
-            score    : (score==null ? null : Math.max(-100, Math.min(100, score))),
-            categories: usedCats,
-            notes    : v.notes || null,
+            score    : Number.isFinite(s) ? Math.max(-100, Math.min(100, s)) : null,
+            categories: v.categories || {},
+            notes    : v.notes || v.remark || v.remarque || null, // accept multiple keys for "remarks"
             timestamp: v.timestamp || null
           };
-        }).filter(v => v.score!=null);
+        }).filter(v=> v.score!=null);
 
-        const avg = count ? sum/count : null;
-
-        map.set(ca, {
-          avg   : (avg==null ? null : Math.max(-100, Math.min(100, avg))),
-          count : count,
-          votes : votesOut,
-          launch_type
-        });
+        const count = clean.length;
+        const avg = count ? clean.reduce((a,b)=>a+(b.score||0),0)/count : null;
+        map.set(ca,{ avg:(avg==null?null:avg), count, votes:clean });
       }
       return map;
     }
 
-    // ---- Legacy compact format ----
-    const map = new Map();
+    // Legacy compact format: { "0x..": {avg, count}, ... }
+    const map=new Map();
     if (js && typeof js === 'object'){
       Object.entries(js).forEach(([k,v])=>{
         const ca=(k||'').toLowerCase();
-        const avg=Number(v?.avg||0);
-        const count=Number(v?.count||0);
-        if (ca) map.set(ca,{ avg: Math.max(-100,Math.min(100,avg)), count: Math.max(0,count), votes:[], launch_type: null });
+        const avg=Number(v?.avg||0); const count=Number(v?.count||0);
+        if (ca) map.set(ca,{ avg: Math.max(-100,Math.min(100,avg)), count: Math.max(0,count), votes:[] });
       });
     }
     return map;
-
   }catch(e){
-    console.warn("council failed", e);
+    console.warn("council failed",e);
     return new Map();
   }
 }
@@ -503,8 +484,22 @@ function deriveAge(poolTs, crTs, cacheTs, sourceHint){
 
 /* ================== Scoring ================== */
 function sLockedPct(p){ const cap=Math.min(p,50); return +(W_LOCKED*(cap/50)).toFixed(2); }
-function sLockTime(days){ if(days>=180)return 10; if(days>=90)return 8; if(days>=30)return 6; if(days>=7)return 3; return 0; }
-function sDev(creatorLocked, linksCount){ const base = creatorLocked?W_DEV:0; const bonus = Math.min(3, linksCount); return +(Math.min(W_DEV, base + bonus)).toFixed(2); }
+// Scale lock-time tiers to W_TIME
+function sLockTime(days){
+  if(days>=180) return +W_TIME.toFixed(2);
+  if(days>=90)  return +(W_TIME*0.8).toFixed(2);
+  if(days>=30)  return +(W_TIME*0.6).toFixed(2);
+  if(days>=7)   return +(W_TIME*0.3).toFixed(2);
+  return 0;
+}
+
+// Dev: creator lock gives (W_DEV - 3); links (X/TG/Web) add up to +3
+function sDev(creatorLocked, linksCount){
+  const bonus = Math.min(3, linksCount|0);
+  const base  = creatorLocked ? Math.max(0, W_DEV - 3) : 0;
+  return +(Math.min(W_DEV, base + bonus)).toFixed(2);
+}
+
 function sAge(days){ if(days>=90)return 10; if(days>=30)return 7; if(days>=7)return 4; return 1; }
 function sDepth(reserve,p90v){ if(!p90v) return 0; const x=clamp01(reserve/p90v); return +(W_HEALTH_DEPTH*x).toFixed(2); }
 function sVol(vol,res){ if(!res || vol<=0) return 0; const x=Math.min(1, Math.sqrt(vol/res)); return +(W_HEALTH_VOL*x).toFixed(2); }
@@ -935,26 +930,99 @@ function render(){
     const total=r.totalN||0; const burnW = total>0?(r.burnedN/total*100):0; const lockW=total>0?(r.lockedN/total*100):0; const circW=Math.max(0,100-burnW-lockW);
     const scoreCls=scoreClass(r.score);
 
-    const ratioLock   = clamp01(((r.p_locked||0) + (r.p_time||0))/40);
+    const ratioLock   = clamp01(((r.p_locked||0) + (r.p_time||0))/25);
     const ratioHealth = clamp01(((r.p_depth||0) + (r.p_vol||0))/15);
     const ratioVotes  = clamp01((r.p_votes||0)/10);
     const ratioHold   = clamp01(((r.p_hold||0))/W_HOLD);
+	const listMax = Math.min(220, ((r.topHolders?.length || 0) * 24) + 12); // dynamic cap
 
-    const rightPanel = `
-      <div class="panel">
-        <div class="rowline"><div>👥 Distribution</div><div class="mono">${fmtN(r.p_hold,1)}/15</div><div class="meter"><i style="width:${(clamp01(r.p_hold/15)*100).toFixed(0)}%"></i></div></div>
-        <div class="desc">How spread the supply is across EOA holders (lower Top-10 share is better) + breadth by total holders.</div>
-        <div class="subrow"><span>• Top-10 share (lower is better)</span><span class="mono">${r.top10Share==null? '—' : fmtNDash(r.top10Share,2)+'%'}</span></div>
-        <div class="subrow"><span>• Holders</span><span class="mono">${niceNum(r.holders||0)}</span></div>
-        <div class="subrow"><span>• Transfers (lifetime)</span><span class="mono">${niceNum(r.transfers||0)}</span></div>
+	const rightPanel = `
+	  <div class="rightcol">
+		<div class="panel">
+		  <div class="rowline">
+			<div>👥 Distribution</div>
+			<div class="mono">${fmtN(r.p_hold,1)}/${W_HOLD}</div>
+			<div class="meter"><i style="width:${(clamp01(r.p_hold/W_HOLD)*100).toFixed(0)}%"></i></div>
+		  </div>
+		  <div class="desc">How spread the supply is across EOA holders (lower Top-10 share is better) + breadth by total holders.</div>
+		  <div class="subrow"><span>• Top-10 share (lower is better)</span><span class="mono">${r.top10Share==null ? '—' : fmtNDash(r.top10Share,2)+'%'}</span></div>
+		  <div class="subrow"><span>• Holders</span><span class="mono">${niceNum(r.holders||0)}</span></div>
+		  <div class="subrow"><span>• Transfers (lifetime)</span><span class="mono">${niceNum(r.transfers||0)}</span></div>
 
-        <div class="subrow" style="margin-top:8px"><span>Top holders (EOA, % of circulating)</span><span class="mono">${r.top10Share==null?'—':fmtNDash(r.top10Share,2)+'%'}</span></div>
-        <div class="holders-list">
-          ${(r.topHolders && r.topHolders.length)
-            ? r.topHolders.map((h)=>`<div><a href="${PEPUSCAN}${h.address}" target="_blank">${h.address}</a><span>${fmtNDash(h.pctCirc,2)}%</span></div>`).join('')
-            : '<div class="muted">Top holders pending…</div>'}
-        </div>
-      </div>`;
+		  <div class="subrow" style="margin-top:8px"><span>Top holders (EOA, % of circulating)</span><span class="mono">${r.top10Share==null ? '—' : fmtNDash(r.top10Share,2)+'%'}</span></div>
+		  <div class="holders-list compact" style="max-height:${listMax}px">
+			${(r.topHolders && r.topHolders.length)
+			  ? r.topHolders.map((h)=>`<div><a href="${PEPUSCAN}${h.address}" target="_blank">${h.address}</a><span>${fmtNDash(h.pctCirc,2)}%</span></div>`).join('')
+			  : '<div class="muted">Top holders pending…</div>'}
+		  </div>
+		</div>
+
+		<!-- Council comes AFTER Distribution, still in the right column -->
+		<div class="panel">
+		  <div class="rowline">
+			<div>🏛 Council</div>
+			<div class="mono">${fmtN(r.p_council||0,1)}/${W_COUNCIL}</div>
+			<div class="meter"><i style="width:${(clamp01((r.p_council||0)/W_COUNCIL)*100).toFixed(0)}%"></i></div>
+		  </div>
+		  <div class="desc">
+			Auditor reviews (−100..+100 scaled to −${W_COUNCIL}..+${W_COUNCIL}). Launch type:
+			<span class="mono">${r.launchpad ? 'Launchpad' : 'Manual'}</span>.
+		  </div>
+		  <div class="subrow"><span>• Avg</span><span class="mono">${fmtNDash(r.councilAvg,1)}/100 · ${r.councilCount||0} votes</span></div>
+
+		  ${(r.councilVotes && r.councilVotes.length) ? `
+			<div class="holders-list" style="margin-top:6px">
+			  ${r.councilVotes.map(v=>{
+				const nameRaw = v.display || v.voter_id || 'anon';
+				const name = esc(nameRaw);
+				const id   = String(v.voter_id||'');
+				const isTg = id.startsWith('tg:@');
+				const handle = isTg ? id.replace('tg:@','') : '';
+
+				const link = isTg ? `https://t.me/${encodeURIComponent(handle)}` : null;
+				const left = link ? `<a href="${link}" target="_blank">${name}</a>` : `<span>${name}</span>`;
+				const s    = Number(v.score||0);
+				const bar  = Math.max(0, Math.min(100, (s+100)/2));
+				const cats = v.categories || {};
+
+				const ts = v.timestamp;
+				let tsStr = '';
+				if (ts) {
+				  const ms = (typeof ts === 'number') ? (ts > 1e12 ? ts : ts*1000) : Date.parse(ts);
+				  if (!Number.isNaN(ms)) tsStr = new Date(ms).toLocaleString();
+				}
+
+				function catLine(label, key){
+				  const val = Number(cats[key]);
+				  if (!Number.isFinite(val)) return '';
+				  return `<div class="subrow"><span>• ${label}</span><span class="mono">${val.toFixed(0)}/100</span></div>`;
+				}
+
+				const note = v.notes ? `<div class="muted" style="margin-top:4px">“${esc(v.notes)}”</div>` : '';
+				const when = tsStr ? `<div class="subrow"><span>• At</span><span class="mono">${esc(tsStr)}</span></div>` : '';
+
+				return `
+				  <div style="margin:8px 0">
+					<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+					  ${left}
+					  <span class="mono">${s.toFixed(0)}</span>
+					</div>
+					<div class="meter" style="margin:4px 0"><i style="width:\${bar.toFixed(0)}%"></i></div>
+					${catLine('Liquidity locking','liquidity_locking')}
+					${catLine('Distribution risk','distribution_risk')}
+					${catLine('Team transparency','team_transparency')}
+					${catLine('Execution progress','execution_progress')}
+					${catLine('Contract risks','contract_risks')}
+					${when}
+					${note}
+				  </div>
+				`;
+			  }).join('')}
+			</div>
+		  ` : `<div class="muted">No individual council votes yet.</div>`}
+		</div>
+	  </div>
+	`;
 
     const el=document.createElement('div'); el.className="card";
     el.innerHTML = `
@@ -1019,12 +1087,12 @@ function render(){
 		</div>		
 	  </div> <!-- close .supply -->
       <div class="metrics">
-        ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:40, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/10`})}
-        ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:10, ratio:clamp01(r.p_dev/10), state:stateBool(!!r.p_dev), title:(r.creatorLocked? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
+        ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:25, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/${W_TIME}`})}
+        ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:W_DEV, ratio:clamp01(r.p_dev/W_DEV), state:stateBool(!!r.p_dev), title:(r.creatorLocked? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
         ${metricHTML({ico:'⏳', val:r.p_age, max:10, ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`Age ${r.ageDays} days (${r.ageSource})`})}
         ${metricHTML({ico:'💧', val:(r.p_depth+r.p_vol), max:15, ratio:ratioHealth, state:stateHealth(ratioHealth), title:`Depth ${fmtN(r.p_depth,1)}/7 · Turnover ${fmtN(r.p_vol,1)}/8`})}
         ${metricHTML({ico:'🗳', val:r.p_votes, max:10, ratio:clamp01(r.p_votes/10), state:stateVotes(ratioVotes), title:`Votes ${niceNum(r.votes||0)} (30d)`})}
-        ${metricHTML({ico:'👥', val:r.p_hold, max:15, ratio:ratioHold, state:stateHold(r.top10Share), title:(r.top10Share==null ? 'Top-10 pending…' : `Top-10 share ${fmtNDash(r.top10Share,2)}%`) + ` · Holders ${niceNum(r.holders||0)}`})}
+        ${metricHTML({ico:'👥', val:r.p_hold, max:W_HOLD, ratio:ratioHold, state:stateHold(r.top10Share), title:(r.top10Share==null ? 'Top-10 pending…' : `Top-10 share ${fmtNDash(r.top10Share,2)}%`) + ` · Holders ${niceNum(r.holders||0)}`})}
       </div>
 
       <details class="more">
@@ -1032,12 +1100,12 @@ function render(){
         <div class="detail-grid">
           <!-- Left column: everything but Distribution -->
           <div class="panel">
-            <div class="rowline"><div>🔒 Lock</div><div class="mono">${fmtN((r.p_locked||0)+(r.p_time||0),1)}/40</div><div class="meter"><i style="width:${(ratioLock*100).toFixed(0)}%"></i></div></div>
+            <div class="rowline"><div>🔒 Lock</div><div class="mono">${fmtN((r.p_locked||0)+(r.p_time||0),1)}/25</div><div class="meter"><i style="width:${(ratioLock*100).toFixed(0)}%"></i></div></div>
             <div class="desc">How much liquidity is locked and for how long.</div>
-            <div class="subrow"><span>• Locked % (cap 50%)</span><span class="mono">${fmtN(r.p_locked,1)}/30</span></div>
-            <div class="subrow"><span>• Avg lock (days)</span><span class="mono">${fmtN(r.p_time,1)}/10 · ${isNum(r.avgDays)? r.avgDays.toFixed(1) : '0.0'}d</span></div>
+            <div class="subrow"><span>• Locked % (cap 50%)</span><span class="mono">${fmtN(r.p_locked,1)}/${W_LOCKED}</span></div>
+            <div class="subrow"><span>• Avg lock (days)</span><span class="mono">${fmtN(r.p_time,1)}/${W_TIME} · ${isNum(r.avgDays)? r.avgDays.toFixed(1) : '0.0'}d</span></div>
 
-            <div class="rowline"><div>👨‍💻 Dev</div><div class="mono">${fmtN(r.p_dev,1)}/10</div><div class="meter"><i style="width:${(clamp01(r.p_dev/10)*100).toFixed(0)}%"></i></div></div>
+            <div class="rowline"><div>👨‍💻 Dev</div><div class="mono">${fmtN(r.p_dev,1)}/${W_DEV}</div><div class="meter"><i style="width:${(clamp01(r.p_dev/W_DEV)*100).toFixed(0)}%"></i></div></div>
             <div class="desc">Basic transparency: did the creator lock tokens? Are links (X/TG/Website) provided?</div>
             <div class="subrow"><span>• Creator locked?</span><span class="mono">${r.creatorLocked? 'yes':'no'}</span></div>
 			<div class="subrow">
@@ -1071,33 +1139,7 @@ function render(){
             <div class="rowline"><div>🗳 Community</div><div class="mono">${fmtN(r.p_votes,1)}/10</div><div class="meter"><i style="width:${(clamp01(r.p_votes/10)*100).toFixed(0)}%"></i></div></div>
             <div class="desc">HolderRadar votes over 30 days (normalized).</div>
 
-            <div class="rowline"><div>🏛 Council</div><div class="mono">${fmtN(r.p_council||0,1)}/10</div><div class="meter"><i style="width:${(clamp01((r.p_council||0)/10)*100).toFixed(0)}%"></i></div></div>
-            <div class="desc">Score from vetted community auditors.</div>
-            <div class="subrow"><span>• Avg</span><span class="mono">${fmtNDash(r.councilAvg,1)}/100 · ${r.councilCount||0} votes</span></div>
-			<div class="subrow"><span>• Launch type</span><span class="mono">${r.launchpad ? 'Launchpad' : 'Manual'}</span></div>
-
-			${(r.councilVotes && r.councilVotes.length) ? `
-			  <div class="subrow" style="margin-top:6px"><span>Voters</span><span class="mono">${r.councilVotes.length}</span></div>
-			  <div class="holders-list">
-				${r.councilVotes.map(v=>{
-				  const name = v.display || v.voter_id || 'anon';
-				  const id = (v.voter_id || '');
-				  const isTg = id.startsWith('tg:@');
-				  const link = isTg ? `https://t.me/${id.replace('tg:@','')}` : null;
-				  const left = link ? `<a href="${link}" target="_blank">${name}</a>` : `<span>${name}</span>`;
-				  const s = Number(v.score || 0);
-				  const bar = Math.max(0, Math.min(100, (s + 100) / 2)); // -100..100 -> 0..100
-				  const note = v.notes ? ` title="${String(v.notes).replace(/"/g,'&quot;')}"` : '';
-				  return `
-					<div${note}>
-					  ${left}
-					  <span class="mono">${s.toFixed(0)}</span>
-					</div>
-					<div class="meter" style="margin:4px 0"><i style="width:${bar.toFixed(0)}%"></i></div>
-				  `;
-				}).join('')}
-			  </div>
-			` : `<div class="muted">No individual council votes yet.</div>`}			
+			
           </div>
 
           <!-- Right column: Distribution + Top holders -->
