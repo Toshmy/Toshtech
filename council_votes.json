@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.1",
+  "weights": {
+    "liquidity_locking": 0.30,
+    "distribution_risk": 0.25,
+    "team_transparency": 0.20,
+    "execution_progress": 0.15,
+    "contract_risks": 0.10
+  },
+  "voters": [
+    { "id": "tg:@alice", "display": "Alice" },
+    { "id": "tg:@bob",   "display": "Bob"  },
+    { "id": "tg:@cara",  "display": "Cara" },
+    { "id": "tg:@dave",  "display": "Dave" },
+    { "id": "tg:@emma",  "display": "Emma" }
+  ],
+  "tokens": {
+    "0xLAUNCHPAD...": {
+      "launch_type": "launchpad",
+      "votes": [
+        {
+          "voter_id": "tg:@alice",
+          "display": "Alice",
+          "categories": {
+            "liquidity_locking": 75,
+            "distribution_risk": 40,
+            "team_transparency": 80,
+            "execution_progress": 65,
+            "contract_risks": null
+          },
+          "notes": "LP 6m, links OK",
+          "timestamp": "2025-08-29T12:34:56Z"
+        }
+      ]
+    },
+    "0xMANUAL...": {
+      "launch_type": "manual",
+      "votes": [
+        {
+          "voter_id": "tg:@bob",
+          "display": "Bob",
+          "categories": {
+            "liquidity_locking": 60,
+            "distribution_risk": 50,
+            "team_transparency": 30,
+            "execution_progress": 20,
+            "contract_risks": -20
+          },
+          "notes": "Owner can set 25% tax; no renounce",
+          "timestamp": 1767139200
+        }
+      ]
+    }
+  }
+}

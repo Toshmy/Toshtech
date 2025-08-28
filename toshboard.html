@@ -311,15 +311,96 @@ async function loadManualLocks(){
 
 async function loadCouncil(){
   try{
-    const r=await fetch(COUNCIL_URL,{cache:'no-cache'}); if(!r.ok) throw new Error('council '+r.status);
-    const js=await r.json(); const map=new Map();
-    Object.entries(js||{}).forEach(([k,v])=>{
-      const ca=(k||"").toLowerCase(); const avg=Number(v?.avg||0); const count=Number(v?.count||0);
-      if(ca) map.set(ca,{avg:Number.isFinite(avg)?Math.max(0,Math.min(100,avg)):0, count:Math.max(0,count)});
-    });
+    const r = await fetch(COUNCIL_URL,{cache:'no-cache'});
+    if(!r.ok) throw new Error('council '+r.status);
+    const js = await r.json();
+
+    // Defaults (will normalize)
+    const DEFAULT_WEIGHTS = {
+      liquidity_locking: 0.30,
+      distribution_risk: 0.25,
+      team_transparency: 0.20,
+      execution_progress: 0.15,
+      contract_risks:    0.10
+    };
+    function normalizeWeights(w){
+      const ww = {...DEFAULT_WEIGHTS, ...(w||{})};
+      const s = Object.values(ww).reduce((a,b)=>a+Number(b||0),0);
+      if (s > 0 && Math.abs(s-1) > 1e-6){
+        for(const k in ww) ww[k] = ww[k]/s;
+      }
+      return ww;
+    }
+
+    // ---- Rich format ----
+    if (js && js.tokens && typeof js.tokens === 'object'){
+      const W = normalizeWeights(js.weights);
+      const map = new Map();
+
+      for (const [caRaw, entry] of Object.entries(js.tokens)){
+        const ca = (caRaw||'').toLowerCase();
+        if(!ca) continue;
+
+        const launch_type = entry.launch_type === 'manual' ? 'manual' : 'launchpad';
+        const votesIn = Array.isArray(entry.votes) ? entry.votes : [];
+        let sum = 0, count = 0;
+
+        const votesOut = votesIn.map(v=>{
+          const cats = v.categories || {};
+          // weighted mean over non-null categories
+          let acc = 0, wsum = 0;
+          const usedCats = {};
+          for (const [k,w] of Object.entries(W)){
+            const raw = cats[k];
+            const val = Number(raw);
+            if (!Number.isFinite(val)) continue;
+            usedCats[k] = val;
+            acc += val * Number(w);
+            wsum += Number(w);
+          }
+          const score = wsum>0 ? acc/wsum : null;
+          if (score!=null){ sum += score; count++; }
+
+          return {
+            voter_id : v.voter_id || v.id || null,
+            display  : v.display || null,
+            score    : (score==null ? null : Math.max(-100, Math.min(100, score))),
+            categories: usedCats,
+            notes    : v.notes || null,
+            timestamp: v.timestamp || null
+          };
+        }).filter(v => v.score!=null);
+
+        const avg = count ? sum/count : null;
+
+        map.set(ca, {
+          avg   : (avg==null ? null : Math.max(-100, Math.min(100, avg))),
+          count : count,
+          votes : votesOut,
+          launch_type
+        });
+      }
+      return map;
+    }
+
+    // ---- Legacy compact format ----
+    const map = new Map();
+    if (js && typeof js === 'object'){
+      Object.entries(js).forEach(([k,v])=>{
+        const ca=(k||'').toLowerCase();
+        const avg=Number(v?.avg||0);
+        const count=Number(v?.count||0);
+        if (ca) map.set(ca,{ avg: Math.max(-100,Math.min(100,avg)), count: Math.max(0,count), votes:[], launch_type: null });
+      });
+    }
     return map;
-  }catch(e){ console.warn("council failed",e); return new Map(); }
+
+  }catch(e){
+    console.warn("council failed", e);
+    return new Map();
+  }
 }
+
 async function loadTgCsv(){
   try{
     const r = await fetch(TG_CSV_URL, { cache: 'no-cache' });
@@ -700,9 +781,11 @@ const PRIORITY_SET = new Set(
 		const xUrl       = csv.xUrl       || null;
 		const iconUrl    = csv.iconUrl    || null;
 
-		const council = COUNCIL.get(ca)||{avg:null,count:0};
-		const councilAvg = Number.isFinite(council.avg)?Number(council.avg):null;
-		const councilCount = Number(council.count||0);
+		const councilEntry = COUNCIL.get(ca) || { avg:null, count:0, votes:[], launch_type:null };
+		const councilAvg   = Number.isFinite(councilEntry.avg) ? Number(councilEntry.avg) : null;
+		const councilCount = Number(councilEntry.count || 0);
+		const councilVotes = Array.isArray(councilEntry.votes) ? councilEntry.votes : [];
+		const councilLaunchType = councilEntry.launch_type; // optional (we still rely on r.launchpad for UI)
 
 		const v=vmap.get(ca)||0;
 		const reserve=Number(pool.reserve_in_usd||0);
@@ -733,7 +816,7 @@ const PRIORITY_SET = new Set(
 		  iconUrl, xUrl, telegramUrl, websiteUrl,
 
 		  top10Share:null, topHolders:[], holders:0, transfers:0,
-		  votes:v, votesMax:vmax, councilAvg, councilCount,
+		  votes:v, votesMax:vmax, councilAvg, councilCount,councilVotes,           
 		  reserve, vol24, hasLock:false,
 
 		  p_locked:0,
@@ -931,7 +1014,7 @@ function render(){
 
 		<div class="subline">
 		  Total ${niceCompact(r.totalN)} • 🔥 ${niceCompact(r.burnedN)} • 🔒 ${niceCompact(r.lockedN)} • ✅ ${niceCompact(Math.max(0,r.totalN-r.burnedN-r.lockedN))}
-		  ${ (r.manualLockedN>0) ? ` • <span class="muted">(+${niceCompact(r.manualLockedN)} manual)</span>` : '' }
+		  ${ (r.manualLockedN>0) ? ` • <span class="muted">(+${niceCompact(r.manualLockedN)})</span>` : '' }
 		  ${ (r.manualLockedN>0) ? `<span class="chip">+ Manual lock</span>` : '' }
 		</div>		
 	  </div> <!-- close .supply -->
@@ -991,6 +1074,30 @@ function render(){
             <div class="rowline"><div>🏛 Council</div><div class="mono">${fmtN(r.p_council||0,1)}/10</div><div class="meter"><i style="width:${(clamp01((r.p_council||0)/10)*100).toFixed(0)}%"></i></div></div>
             <div class="desc">Score from vetted community auditors.</div>
             <div class="subrow"><span>• Avg</span><span class="mono">${fmtNDash(r.councilAvg,1)}/100 · ${r.councilCount||0} votes</span></div>
+			<div class="subrow"><span>• Launch type</span><span class="mono">${r.launchpad ? 'Launchpad' : 'Manual'}</span></div>
+
+			${(r.councilVotes && r.councilVotes.length) ? `
+			  <div class="subrow" style="margin-top:6px"><span>Voters</span><span class="mono">${r.councilVotes.length}</span></div>
+			  <div class="holders-list">
+				${r.councilVotes.map(v=>{
+				  const name = v.display || v.voter_id || 'anon';
+				  const id = (v.voter_id || '');
+				  const isTg = id.startsWith('tg:@');
+				  const link = isTg ? `https://t.me/${id.replace('tg:@','')}` : null;
+				  const left = link ? `<a href="${link}" target="_blank">${name}</a>` : `<span>${name}</span>`;
+				  const s = Number(v.score || 0);
+				  const bar = Math.max(0, Math.min(100, (s + 100) / 2)); // -100..100 -> 0..100
+				  const note = v.notes ? ` title="${String(v.notes).replace(/"/g,'&quot;')}"` : '';
+				  return `
+					<div${note}>
+					  ${left}
+					  <span class="mono">${s.toFixed(0)}</span>
+					</div>
+					<div class="meter" style="margin:4px 0"><i style="width:${bar.toFixed(0)}%"></i></div>
+				  `;
+				}).join('')}
+			  </div>
+			` : `<div class="muted">No individual council votes yet.</div>`}			
           </div>
 
           <!-- Right column: Distribution + Top holders -->
