@@ -348,7 +348,11 @@ function sAge(days){ if(days>=90)return 10; if(days>=30)return 7; if(days>=7)ret
 function sDepth(reserve,p90v){ if(!p90v) return 0; const x=clamp01(reserve/p90v); return +(W_HEALTH_DEPTH*x).toFixed(2); }
 function sVol(vol,res){ if(!res || vol<=0) return 0; const x=Math.min(1, Math.sqrt(vol/res)); return +(W_HEALTH_VOL*x).toFixed(2); }
 function sVotes(v,max){ if(!max) return 0; return +(W_VOTES*(Math.min(v,max)/max)).toFixed(2); }
-function sCouncil(avg){ if(!Number.isFinite(avg)||avg<=0) return 0; return +(W_COUNCIL*(Math.max(0,Math.min(100,avg))/100)).toFixed(2); }
+function sCouncil(avg){
+  if(!Number.isFinite(avg)) return 0;
+  // allow auditors to give -100 to +100 → mapped to -10 to +10
+  return +(W_COUNCIL * (Math.max(-100, Math.min(100, avg)) / 100)).toFixed(2);
+}
 function sHold(top10, holders){
   let conc=0; if(top10==null||!Number.isFinite(top10)) conc=0; else if(top10<=20) conc=12; else if(top10<=40) conc=7; else if(top10<=60) conc=3; else conc=0;
   const h=Number(holders||0); const bonus = h>0 ? +(3*Math.min(1, Math.sqrt(h/500))).toFixed(2) : 0;
