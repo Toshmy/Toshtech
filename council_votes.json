@@ -45,6 +45,39 @@
           "timestamp": "2025-08-29T12:34:56Z"
         }		
       ]
+    },
+  "tokens": {
+    "0x910c1acdbefc866f2cb2c482e044582e44395152": {
+      "launch_type": "launchpad",
+      "category": "Bobby token",
+      "votes": [
+        {
+          "voter_id": "tg:@alice",
+          "display": "Alice",
+          "categories": {
+            "liquidity_locking": 90,
+            "distribution_risk": 85,
+            "team_transparency": 70,
+            "execution_progress": 75,
+            "contract_risks": 80
+          },
+          "notes": "Strong lock and good distribution.",
+          "timestamp": "2025-08-30T12:00:00Z"
+        },
+        {
+          "voter_id": "tg:@bob",
+          "display": "Bob",
+          "categories": {
+            "liquidity_locking": 60,
+            "distribution_risk": 55,
+            "team_transparency": 65,
+            "execution_progress": 50,
+            "contract_risks": 60
+          },
+          "notes": "Some concerns about execution speed.",
+          "timestamp": 1767200000
+        }
+      ]
     },	
     "0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
       "launch_type": "launchpad",
