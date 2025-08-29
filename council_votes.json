@@ -26,7 +26,7 @@
             "distribution_risk": 100,
             "team_transparency": 100,
             "execution_progress": 100,
-            "contract_risks": null
+            "contract_risks": 100
           },
           "notes": "Number 1 MC",
           "timestamp": "2025-08-29T12:34:56Z"
@@ -44,7 +44,7 @@
             "distribution_risk": 40,
             "team_transparency": 80,
             "execution_progress": 65,
-            "contract_risks": null
+            "contract_risks": 1
           },
           "notes": "LP 6m, links OK",
           "timestamp": "2025-08-29T12:34:56Z"
