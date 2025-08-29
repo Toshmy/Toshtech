@@ -1100,20 +1100,24 @@ async function paintSnapshot(){
 
 async function mergeCouncilFromLive(){
   try{
-    const cm = await loadCouncil();  // you already have this loader
+    const cm = await loadCouncil();
+    // DEBUG safely here:
+    // console.log('council map entry', cm.get('0x82144c93bd531e46f31033fe22d1055af17a514c'));
+
     for (const r of ROWS_ALL){
       const e = cm.get(r.ca);
       if (!e) continue;
       r.councilAvg   = Number.isFinite(e.avg) ? Number(e.avg) : null;
       r.councilCount = Number(e.count || 0);
       r.councilVotes = Array.isArray(e.votes) ? e.votes : [];
-	  r.councilCategory = e.category || r.councilCategory || null;
+      r.councilCategory = e.category || r.councilCategory || null;
       r.p_council    = sCouncil(r.councilAvg);
       recomputeScore(r);
     }
     scheduleRender();
   }catch(_){}
 }
+
 
 // After paintSnapshot() success:
 
@@ -1153,6 +1157,7 @@ async function boot(){
   if (ok){
     // council.json: refresh council data on top of snapshot
     mergeCouncilFromLive();
+	console.log('council map entry', cm.get('0x82144c93bd531e46f31033fe22d1055af17a514c'));
 
     // tokenlock.json: add manual URLs & compute chip (no chain calls)
     applyManualLocksFromJsonOnly();
@@ -1379,7 +1384,9 @@ function catItem(label, valRaw){
 }
 
 function renderCouncilPanel(r){
-  const avgStr = isNum(r.councilAvg) ? `${fmtNDash(r.councilAvg,1)}/100 · ${(r.councilCount||0)===1?'1 vote':niceNum(r.councilCount||0)+' votes'}` : '—';
+  const avgStr = isNum(r.councilAvg)
+    ? `${fmtNDash(r.councilAvg,1)}/100 · ${(r.councilCount||0)===1?'1 vote':niceNum(r.councilCount||0)+' votes'}`
+    : '—';
 
   const votes = (r.councilVotes||[]).slice().sort((a,b)=>{
     const ta = (typeof a.timestamp==='number') ? (a.timestamp>1e12?a.timestamp:a.timestamp*1000) : Date.parse(a.timestamp||0);
@@ -1387,12 +1394,7 @@ function renderCouncilPanel(r){
     return (tb||0)-(ta||0);
   });
 
-  // collapse if many votes
-  const MAX_SHOWN = 5;
-  const hasMore = votes.length > MAX_SHOWN;
-  const shown = votes.slice(0, MAX_SHOWN);
-  const rest  = votes.slice(MAX_SHOWN);
-
+  // Vote card (define BEFORE using it)
   const voteCard = v=>{
     const s = Number(v.score||0);
     const bar = Math.max(0, Math.min(100, (s+100)/2));
@@ -1422,6 +1424,12 @@ function renderCouncilPanel(r){
       </div>`;
   };
 
+  // collapse if many votes
+  const MAX_SHOWN = 5;
+  const hasMore = votes.length > MAX_SHOWN;
+  const shown = votes.slice(0, MAX_SHOWN);
+  const rest  = votes.slice(MAX_SHOWN);
+
   const moreHtml = hasMore
     ? `<div id="more-${r.ca}" style="display:none">${rest.map(voteCard).join('')}</div>
        <div style="margin-top:8px">
@@ -1444,6 +1452,9 @@ function renderCouncilPanel(r){
     window.__councilMoreBound = true;
   }
 
+  console.log('render votes for', r.ca, (r.councilVotes||[]).length);
+
+  // ⬇⬇⬇ SAME LINE as return
   return `
     <div class="panel">
       <div class="rowline">
@@ -1460,6 +1471,7 @@ function renderCouncilPanel(r){
                      : '<div class="muted" style="margin-top:6px">No individual council votes yet.</div>'}
     </div>`;
 }
+
 
 
 /* ======= Render ======= */

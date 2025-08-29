@@ -225,7 +225,23 @@ details.more summary{cursor:pointer;color:#9fead1}
 .cbtn:hover{box-shadow:0 0 0 2px rgba(0,255,174,.12) inset}
 .vote-meter{height:6px;border-radius:999px;background:#0b1430;border:1px solid var(--border);margin:.2rem 0 .6rem;overflow:hidden}
 .vote-meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+/* --- Badges under the score ------------------------------------------ */
+.score-extras{ margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+.mini-badge{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:4px 8px; border-radius:999px; font-size:11px; font-weight:700;
+  border:1px solid var(--border); background:#0b162f; width:max-content
+}
+.mini-badge.og    { color:#34d399; box-shadow:0 0 0 1px rgba(34,197,94,.25) }
+.mini-badge.warn  { color:#fbbf24; box-shadow:0 0 0 1px rgba(245,158,11,.25) }
+.mini-badge.rug   { color:#f87171; box-shadow:0 0 0 1px rgba(239,68,68,.25) }
+.mini-badge.dead  { color:#cbd5e1; box-shadow:0 0 0 1px rgba(148,163,184,.25) }
+.mini-badge.neutral{ color:#bfeede; box-shadow:0 0 0 1px rgba(0,255,174,.18) }
 
+@media (max-width:560px){
+  .score-extras{ gap:4px }
+  .mini-badge{ font-size:10px; padding:3px 7px }
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -514,6 +530,7 @@ async function loadCouncil(){
 		  votes: clean,
 		  launch_type: entry.launch_type || null,
 		  category: entry.category || entry.tag || entry.label || null   // <-- NEW
+		});
       }
       return map;
     }
@@ -955,6 +972,7 @@ function mapSnapshotToRow(s, prioritySet){
     poolTs: s.creationTs || null,
     creationTs: s.creationTs || null,
     creationTx: s.creationTx || null,
+	councilCategory : s.councilCategory || null,
     launchpad : !!s.launchpad,
 
     // supply/locks (numbers + bigints as strings)
@@ -1082,19 +1100,24 @@ async function paintSnapshot(){
 
 async function mergeCouncilFromLive(){
   try{
-    const cm = await loadCouncil();  // you already have this loader
+    const cm = await loadCouncil();
+    // DEBUG safely here:
+    // console.log('council map entry', cm.get('0x82144c93bd531e46f31033fe22d1055af17a514c'));
+
     for (const r of ROWS_ALL){
       const e = cm.get(r.ca);
       if (!e) continue;
       r.councilAvg   = Number.isFinite(e.avg) ? Number(e.avg) : null;
       r.councilCount = Number(e.count || 0);
       r.councilVotes = Array.isArray(e.votes) ? e.votes : [];
+      r.councilCategory = e.category || r.councilCategory || null;
       r.p_council    = sCouncil(r.councilAvg);
       recomputeScore(r);
     }
     scheduleRender();
   }catch(_){}
 }
+
 
 // After paintSnapshot() success:
 
@@ -1134,6 +1157,7 @@ async function boot(){
   if (ok){
     // council.json: refresh council data on top of snapshot
     mergeCouncilFromLive();
+	console.log('council map entry', cm.get('0x82144c93bd531e46f31033fe22d1055af17a514c'));
 
     // tokenlock.json: add manual URLs & compute chip (no chain calls)
     applyManualLocksFromJsonOnly();
@@ -1202,6 +1226,7 @@ const PRIORITY_SET = new Set(
 		const councilCount = Number(councilEntry.count || 0);
 		const councilVotes = Array.isArray(councilEntry.votes) ? councilEntry.votes : [];
 		const councilLaunchType = councilEntry.launch_type; // optional (we still rely on r.launchpad for UI)
+		const councilCategory = councilEntry.category || null;
 
 		const v=vmap.get(ca)||0;
 		const reserve=Number(pool.reserve_in_usd||0);
@@ -1232,7 +1257,7 @@ const PRIORITY_SET = new Set(
 		  iconUrl, xUrl, telegramUrl, websiteUrl,
 
 		  top10Share:null, topHolders:[], holders:0, transfers:0,
-		  votes:v, votesMax:vmax, councilAvg, councilCount,councilVotes,           
+		  votes:v, votesMax:vmax, councilAvg, councilCount,councilVotes,councilCategory,
 		  reserve, vol24, hasLock:false,
 
 		  p_locked:0,
@@ -1294,6 +1319,22 @@ const PRIORITY_SET = new Set(
 }
 
 /* ======= UI helpers ======= */
+function badgeClassForCategory(txt){
+  const s = String(txt||'').toLowerCase();
+  if (s.includes('og')) return 'og';
+  if (s.includes('dead')) return 'dead';
+  if (s.includes('rug')) return 'rug';
+  if (s.includes('warn')) return 'warn';
+  return 'neutral';
+}
+function fallbackCategoryFromAvg(avg){
+  if (!Number.isFinite(avg)) return null;
+  if (avg >= 75) return 'OG token';
+  if (avg >= 40) return null;           // no label for mid-range by default
+  if (avg >= 10) return 'WARNING';
+  return 'RUG';
+}
+
 function metricHTML({ico='•', val=0, max=null, ratio=0, state='', title=''}) {
   const w = clamp01(ratio)*100;
   const numericVal = isNum(val) ? fmtN(val, 1) : (max!=null ? '0' : '—');
@@ -1343,7 +1384,9 @@ function catItem(label, valRaw){
 }
 
 function renderCouncilPanel(r){
-  const avgStr = isNum(r.councilAvg) ? `${fmtNDash(r.councilAvg,1)}/100 · ${(r.councilCount||0)===1?'1 vote':niceNum(r.councilCount||0)+' votes'}` : '—';
+  const avgStr = isNum(r.councilAvg)
+    ? `${fmtNDash(r.councilAvg,1)}/100 · ${(r.councilCount||0)===1?'1 vote':niceNum(r.councilCount||0)+' votes'}`
+    : '—';
 
   const votes = (r.councilVotes||[]).slice().sort((a,b)=>{
     const ta = (typeof a.timestamp==='number') ? (a.timestamp>1e12?a.timestamp:a.timestamp*1000) : Date.parse(a.timestamp||0);
@@ -1351,12 +1394,7 @@ function renderCouncilPanel(r){
     return (tb||0)-(ta||0);
   });
 
-  // collapse if many votes
-  const MAX_SHOWN = 2;
-  const hasMore = votes.length > MAX_SHOWN;
-  const shown = votes.slice(0, MAX_SHOWN);
-  const rest  = votes.slice(MAX_SHOWN);
-
+  // Vote card (define BEFORE using it)
   const voteCard = v=>{
     const s = Number(v.score||0);
     const bar = Math.max(0, Math.min(100, (s+100)/2));
@@ -1386,6 +1424,12 @@ function renderCouncilPanel(r){
       </div>`;
   };
 
+  // collapse if many votes
+  const MAX_SHOWN = 5;
+  const hasMore = votes.length > MAX_SHOWN;
+  const shown = votes.slice(0, MAX_SHOWN);
+  const rest  = votes.slice(MAX_SHOWN);
+
   const moreHtml = hasMore
     ? `<div id="more-${r.ca}" style="display:none">${rest.map(voteCard).join('')}</div>
        <div style="margin-top:8px">
@@ -1408,6 +1452,9 @@ function renderCouncilPanel(r){
     window.__councilMoreBound = true;
   }
 
+  console.log('render votes for', r.ca, (r.councilVotes||[]).length);
+
+  // ⬇⬇⬇ SAME LINE as return
   return `
     <div class="panel">
       <div class="rowline">
@@ -1424,6 +1471,7 @@ function renderCouncilPanel(r){
                      : '<div class="muted" style="margin-top:6px">No individual council votes yet.</div>'}
     </div>`;
 }
+
 
 
 /* ======= Render ======= */
@@ -1496,6 +1544,14 @@ function render(){
 		${renderCouncilPanel(r)}
 	  </div>
 	`;
+	const categoryText  = r.councilCategory ?? fallbackCategoryFromAvg(r.councilAvg);
+	const categoryBadge = categoryText
+	  ? '<span class="mini-badge ' + badgeClassForCategory(categoryText) + '" title="Council category">' + esc(categoryText) + '</span>'
+	  : '';
+
+	const councilBadge = Number.isFinite(r.councilAvg)
+	  ? '<span class="mini-badge neutral" title="Council average score and votes">' + fmtNDash(r.councilAvg,1) + '/100 · ' + fmtVotesCount(r.councilCount) + '</span>'
+	  : '<span class="mini-badge neutral" title="No council reviews yet">No council score</span>';
 
     const el=document.createElement('div'); el.className="card";
     el.innerHTML = `
@@ -1543,11 +1599,15 @@ function render(){
 		  </div>
 
 		  <!-- RIGHT: score -->
-		  <div class="score-wrap">
-			<div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
-			  <span class="score-num">${fmtScore(r.score)}</span>
-			</div>
-			<div class="score-caption">ToshScore</div>
+
+		<div class="score-wrap">
+		  <div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
+			<span class="score-num">${fmtScore(r.score)}</span>
+		  </div>
+		  <div class="score-caption">ToshScore</div>
+		  <div class="score-extras">${categoryBadge}${councilBadge}</div>
+			
+
 		  </div>
 		</div>
 
