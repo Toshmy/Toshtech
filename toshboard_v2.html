@@ -1507,7 +1507,11 @@ function render(){
 				  ${sym || name || short(r.ca)}
 				  ${r.launchpad ? '' : '<span class="pill" title="This token was launched outside the launchpad">outside launchpad</span>'}
 				</div>
-				<div class="sub">${name || sym} • Price: $${Number(price||0).toFixed(8)}</div>
+				<div class="sub">
+				  ${name || sym}<br>
+				  Price: $${Number(price || 0).toFixed(8)}
+				</div>
+			
 			  </div>
 			</div>
 
