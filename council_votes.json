@@ -19,6 +19,19 @@
       "launch_type": "launchpad",
       "votes": [
         {
+          "voter_id": "tg:@Voldy",
+          "display": "Voldy",
+          "categories": {
+            "liquidity_locking": 100,
+            "distribution_risk": 100,
+            "team_transparency": 100,
+            "execution_progress": 100,
+            "contract_risks": 100
+          },
+          "notes": "Thank Venom & xyz",
+          "timestamp": "2025-08-29T12:34:56Z"
+        },
+        {
           "voter_id": "tg:@tosh_my",
           "display": "Tosh",
           "categories": {
@@ -30,25 +43,7 @@
           },
           "notes": "Number 1 MC",
           "timestamp": "2025-08-29T12:34:56Z"
-        }
-      ]
-    },
-    "0x82144c93bd531e46f31033fe22d1055af17a514c": {
-      "launch_type": "launchpad",
-      "votes": [
-        {
-          "voter_id": "tg:@Voldy",
-          "display": "Voldy",
-          "categories": {
-            "liquidity_locking": -100,
-            "distribution_risk": -100,
-            "team_transparency": -100,
-            "execution_progress": -100,
-            "contract_risks": -100
-          },
-          "notes": "Previous Escape",
-          "timestamp": "2025-08-29T12:34:56Z"
-        }
+        }		
       ]
     },	
     "0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
