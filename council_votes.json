@@ -22,10 +22,10 @@
           "voter_id": "tg:@tosh_my",
           "display": "Tosh",
           "categories": {
-            "liquidity_locking": 0,
-            "distribution_risk": 50,
+            "liquidity_locking": 100,
+            "distribution_risk": 100,
             "team_transparency": 100,
-            "execution_progress": 80,
+            "execution_progress": 100,
             "contract_risks": null
           },
           "notes": "Number 1 MC",
