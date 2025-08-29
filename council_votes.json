@@ -10,7 +10,7 @@
   "voters": [
     { "id": "tg:@alice", "display": "Alice" },
     { "id": "tg:@bob",   "display": "Bob"  },
-    { "id": "tg:@cara",  "display": "Cara" },
+    { "id": "tg:@tosh_my",  "display": "Tosh" },
     { "id": "tg:@dave",  "display": "Dave" },
     { "id": "tg:@emma",  "display": "Emma" }
   ],
