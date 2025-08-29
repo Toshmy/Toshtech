@@ -642,11 +642,10 @@ function sLockTime(days){
   return 0;
 }
 
-// Dev: creator lock gives (W_DEV - 3); links (X/TG/Web) add up to +3
-function sDev(creatorLocked, linksCount){
-  const bonus = Math.min(3, linksCount|0);
-  const base  = creatorLocked ? Math.max(0, W_DEV - 3) : 0;
-  return +(Math.min(W_DEV, base + bonus)).toFixed(2);
+// Dev: creator lock gives (W_DEV - 15); links (X/TG/Web) add up to +15
+function sDev(_creatorLocked, linksCount){
+  const pts = Math.min(3, linksCount|0) * 5; // 5 each, max 15
+  return +(Math.min(W_DEV, pts)).toFixed(2);
 }
 
 function sAge(days){ if(days>=90)return 10; if(days>=30)return 7; if(days>=7)return 4; return 1; }
@@ -1564,8 +1563,16 @@ function render(){
 	  </div> <!-- close .supply -->
       <div class="metrics">
         ${metricHTML({ico:'🔒', val:(r.p_locked+r.p_time), max:25, ratio:ratioLock,   state:stateLock(r.lockedPct), title:`Locked share ${Number(r.lockedPct||0).toFixed(2)}% · Avg lock ${fmtN(r.p_time,1)}/${W_TIME}`})}
-        ${metricHTML({ico:'👨‍💻', val:r.p_dev, max:W_DEV, ratio:clamp01(r.p_dev/W_DEV), state:stateBool(!!r.p_dev), title:(r.creatorLocked? 'Creator lock: yes' : 'Creator lock: no') + ' · Links '+(['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0))+'/3'})}
-        ${metricHTML({ico:'⏳', val:r.p_age, max:10, ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`Age ${r.ageDays} days (${r.ageSource})`})}
+ 
+		${metricHTML({
+		  ico:'🌐',
+		  val:r.p_dev,
+		  max:W_DEV,
+		  ratio:clamp01(r.p_dev/W_DEV),
+		  state:stateBool(!!r.p_dev),
+		  title:`Social links (X/TG/Web): ${['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0)}/3 · ${fmtN(r.p_dev,1)}/${W_DEV} (5 pts each)`
+		})}        
+		${metricHTML({ico:'⏳', val:r.p_age, max:10, ratio:clamp01(r.p_age/10), state:stateAge(r.ageDays), title:`Age ${r.ageDays} days (${r.ageSource})`})}
         ${metricHTML({ico:'💧', val:(r.p_depth+r.p_vol), max:15, ratio:ratioHealth, state:stateHealth(ratioHealth), title:`Depth ${fmtN(r.p_depth,1)}/7 · Turnover ${fmtN(r.p_vol,1)}/8`})}
         ${metricHTML({ico:'🗳', val:r.p_votes, max:10, ratio:clamp01(r.p_votes/10), state:stateVotes(ratioVotes), title:`Votes ${niceNum(r.votes||0)} (30d)`})}
         ${metricHTML({ico:'👥', val:r.p_hold, max:W_HOLD, ratio:ratioHold, state:stateHold(r.top10Share), title:(r.top10Share==null ? 'Top-10 pending…' : `Top-10 share ${fmtNDash(r.top10Share,2)}%`) + ` · Holders ${niceNum(r.holders||0)}`})}
@@ -1580,9 +1587,6 @@ function render(){
             <div class="desc">How much liquidity is locked and for how long.</div>
             <div class="subrow"><span>• Locked % (cap 50%)</span><span class="mono">${fmtN(r.p_locked,1)}/${W_LOCKED}</span></div>
             <div class="subrow"><span>• Avg lock (days)</span><span class="mono">${fmtN(r.p_time,1)}/${W_TIME} · ${isNum(r.avgDays)? r.avgDays.toFixed(1) : '0.0'}d</span></div>
-
-            <div class="rowline"><div>👨‍💻 Dev</div><div class="mono">${fmtN(r.p_dev,1)}/${W_DEV}</div><div class="meter"><i style="width:${(clamp01(r.p_dev/W_DEV)*100).toFixed(0)}%"></i></div></div>
-            <div class="desc">Basic transparency: did the creator lock tokens? Are links (X/TG/Website) provided?</div>
             <div class="subrow"><span>• Creator locked?</span><span class="mono">${r.creatorLocked? 'yes':'no'}</span></div>
 			<div class="subrow">
 			  <span>• Creator</span>
@@ -1600,9 +1604,9 @@ function render(){
 				  : '—'}
 			  </span>
 			</div>
-
-            <div class="subrow"><span>• Links (X/TG/Web)</span><span class="mono">${['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0)}/3</span></div>
-
+			<div class="rowline"><div>🌐 Social</div><div class="mono">${fmtN(r.p_dev,1)}/${W_DEV}</div><div class="meter"><i style="width:${(clamp01(r.p_dev/W_DEV)*100).toFixed(0)}%"></i></div></div>
+			<div class="desc">Presence of official links (X / Telegram / Website). 5 points per link.</div>
+			<div class="subrow"><span>• Links (X/TG/Web)</span><span class="mono">${['xUrl','telegramUrl','websiteUrl'].reduce((n,k)=>n+(r[k]?1:0),0)}/3</span></div>
             <div class="rowline"><div>⏳ Age</div><div class="mono">${fmtN(r.p_age,1)}/10</div><div class="meter"><i style="width:${(clamp01(r.p_age/10)*100).toFixed(0)}%"></i></div></div>
             <div class="desc">Project lifetime. Source: <span class="mono">${r.ageSource}</span>.</div>
             <div class="subrow"><span>• Days</span><span class="mono">${r.ageDays}</span></div>
