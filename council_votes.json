@@ -58,11 +58,11 @@
           "voter_id": "tg:@alice",
           "display": "Alice",
           "categories": {
-            "liquidity_locking": 75,
-            "distribution_risk": 40,
-            "team_transparency": 80,
-            "execution_progress": 65,
-            "contract_risks": 1
+            "liquidity_locking": 0,
+            "distribution_risk": 0,
+            "team_transparency": 0,
+            "execution_progress": 0,
+            "contract_risks": 0
           },
           "notes": "LP 6m, links OK",
           "timestamp": "2025-08-29T12:34:56Z"
@@ -76,11 +76,11 @@
           "voter_id": "tg:@bob",
           "display": "Bob",
           "categories": {
-            "liquidity_locking": 60,
-            "distribution_risk": 50,
-            "team_transparency": 30,
-            "execution_progress": 20,
-            "contract_risks": -20
+            "liquidity_locking": 0,
+            "distribution_risk": 0,
+            "team_transparency": 0,
+            "execution_progress": 0,
+            "contract_risks": 0
           },
           "notes": "Owner can set 25% tax; no renounce",
           "timestamp": 1767139200
