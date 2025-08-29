@@ -215,7 +215,7 @@ details.more summary{cursor:pointer;color:#9fead1}
 .council-bar{height:8px;border-radius:999px;background:#0e1732;border:1px solid rgba(255,255,255,.06);overflow:hidden;margin:6px 0}
 .council-bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .council-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px}
-.council-row{display:grid;grid-template-columns:auto 54px 1fr;gap:6px;align-items:center;font-size:12px}
+.council-row{display:grid;grid-template-columns:120px 54px 1fr;gap:6px;align-items:center;font-size:12px}
 .council-row .mono{opacity:.9}
 .council-note{font-size:12px;color:#a8ffd9;opacity:.9;margin-top:6px}
 .council-when{font-size:11px;color:#bfeede;margin-top:2px}
@@ -1372,13 +1372,13 @@ function catItem(label, valRaw){
   const v = Number(valRaw);
   if (!Number.isFinite(v)) return '';
   const width = v >= 0 ? Math.max(0, Math.min(100, v)) : Math.max(0, Math.min(100, (v + 100)/2));
-  const pretty = `${v.toFixed(0)}/100`;
+  const pretty = `${v.toFixed(0)}`;
   const negCls = (label === 'Contract risks' && v < 0) ? 'neg' : '';
   return `
     <div class="council-row">
       <span>${label}</span>
       <span class="mono ${negCls}">${pretty}</span>
-      <div class="council-bar"><i style="width:${width.toFixed(0)}%"></i></div>
+
     </div>
   `;
 }
@@ -1425,7 +1425,7 @@ function renderCouncilPanel(r){
   };
 
   // collapse if many votes
-  const MAX_SHOWN = 5;
+  const MAX_SHOWN = 1;
   const hasMore = votes.length > MAX_SHOWN;
   const shown = votes.slice(0, MAX_SHOWN);
   const rest  = votes.slice(MAX_SHOWN);
