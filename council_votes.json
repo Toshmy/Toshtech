@@ -10,11 +10,10 @@
   "voters": [
     { "id": "tg:@alice", "display": "Alice" },
     { "id": "tg:@bob",   "display": "Bob"  },
-    { "id": "tg:@tosh_my",  "display": "Tosh" },
+    { "id": "tg:@tosh_my", "display": "Tosh" },
     { "id": "tg:@dave",  "display": "Dave" },
     { "id": "tg:@emma",  "display": "Emma" }
   ],
-  
   "tokens": {
     "0x82144c93bd531e46f31033fe22d1055af17a514c": {
       "launch_type": "launchpad",
@@ -33,8 +32,7 @@
           "timestamp": "2025-08-29T12:34:56Z"
         }
       ]
-    },  
-  "tokens": {
+    },
     "0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
       "launch_type": "launchpad",
       "votes": [
