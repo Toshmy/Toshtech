@@ -5,30 +5,32 @@
 <title>ToshBoard — Mainnet ToshScore</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <style>
- :root{
+/* =========================================================
+   ToshBoard — Clean, responsive CSS (desktop + mobile)
+   ========================================================= */
+
+/* Theme */
+:root{
   --bg:#0c1222; --fg:#e6fff6; --muted:#9fead1;
   --card:rgba(255,255,255,.05); --border:rgba(0,255,174,.22);
   --accent:#00ffae; --accent2:#00d99c;
   --red:#ef4444; --amber:#f59e0b; --green:#22c55e; --blue:#49a8ff;
 }
+
 html,body{
   margin:0;
   background:radial-gradient(circle at 18% 8%, #17223c 0%, #0c1222 70%);
   color:var(--fg);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
 }
 
+/* Helpers */
 .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
 .glow{ text-shadow:0 0 10px var(--accent), 0 0 24px var(--accent) }
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .between{justify-content:space-between}
-.pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:.32rem .68rem;border-radius:999px;
-  background:#09122a;border:1px solid var(--border);
-  color:#d0fff0;font-size:12px;
-  box-shadow:0 0 0 2px rgba(0,255,174,.08) inset
-}
+a{color:#93c5fd;text-decoration:none}
+
 input,button,select{
   border-radius:12px;border:1px solid var(--border);
   background:#0f1730;color:#fff;padding:10px
@@ -39,61 +41,66 @@ button{cursor:pointer}
   color:#00251b;border:0;font-weight:800
 }
 .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
-a{color:#93c5fd;text-decoration:none}
 
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:.32rem .68rem;border-radius:999px;
+  background:#09122a;border:1px solid var(--border);
+  color:#d0fff0;font-size:12px;
+  box-shadow:0 0 0 2px rgba(0,255,174,.08) inset
+}
+.pill.tiny{ font-size:10px; padding:.18rem .46rem; opacity:.9 }
+
+/* Cards */
 .grid{display:grid;gap:12px;grid-template-columns:1fr}
-
 .card{
   background:var(--card);border:1px solid var(--border);
   backdrop-filter:blur(6px);border-radius:16px;
   box-shadow:0 0 30px rgba(0,255,174,.14);padding:14px
 }
 
-/* --- Header layout (desktop) ------------------------------------------ */
-/* info | chips | score, all vertically centered */
+/* =========================================================
+   TOKEN HEADER
+   Desktop:  info | chips | score
+             social | chips | score
+   Mobile :  info | score
+             chips | score
+             chips | social
+   ========================================================= */
 .token-head{
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(260px,360px) auto;
-  grid-template-areas:"info tags score";
   gap:12px;
-  align-items:center;          /* ⬅ center everything vertically */
+  align-items:start;
+  grid-template-columns:minmax(0,1fr) minmax(260px,360px) 150px;
+  grid-template-areas:
+    "info   tags   score"
+    "social tags   score";
   margin-bottom:8px;
 }
-.head-info{ grid-area:info; }
-.score-wrap{ grid-area:score; }
-
-/* Chips: keep 3 per row and vertically center in the header too */
+.head-info{ grid-area:info; min-width:0; }
 .chips{
   grid-area:tags;
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:6px;
   margin:0;
-  align-self:center;           /* ⬅ align chips with the logo/score */
 }
-.chip{
-  border:1px solid var(--border);
-  border-radius:999px;
-  padding:.25rem .5rem;
-  background:#0f1730;
-  font-size:12px;
-  white-space:nowrap;
-  display:flex; align-items:center; justify-content:center;
+.score-wrap{
+  grid-area:score;
+  justify-self:end;
+  align-self:start;
+  text-align:right;
 }
-.chip a{ color:inherit; text-decoration:none }
-.chip a + a{ margin-left:.35rem; }
+.social{ grid-area:social; display:flex; gap:6px; margin-top:6px }
 
-.chip.bad{border-color:rgba(239,68,68,.6);color:#fecaca}
-.chip.lock {
-  border-color: color-mix(in srgb, var(--green) 60%, transparent);
-  color: var(--green);
-}
-/* === Title + score badge === */
+/* Title line */
 .title-left{display:flex;align-items:center;gap:10px}
 .logo{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:#0b162f;object-fit:cover}
 .name{font-weight:900;font-size:18px}
 .sub{font-size:12px;color:#bfeede}
+.name .pill{ font-size:11px; padding:.12rem .42rem }
 
+/* Score badge */
 .score-badge{
   min-width:92px;min-height:64px;
   display:flex;align-items:center;justify-content:center;
@@ -107,35 +114,43 @@ a{color:#93c5fd;text-decoration:none}
 .score-num{font-size:22px;font-weight:900;letter-spacing:.3px}
 .score-caption{font-size:11px;color:#bfeede;margin-top:2px;text-align:center}
 
-/* --- Mobile (≤560px): info + score on one line, chips below ----------- */
-@media (max-width:560px){
-  .token-head{
-    grid-template-columns:1fr auto;     /* left: info, right: score */
-    grid-template-areas:
-      "info score"
-      "tags tags";                       /* chips below, full width */
-  }
-  .score-wrap{
-    justify-self:end;                    /* push score to the right edge */
-  }
-  .score-badge{ min-width:70px; min-height:50px; padding:4px 8px; }
-  .score-num{ font-size:18px; }
-  .score-caption{ display:none; }
-  .chips{ grid-template-columns:repeat(3,1fr); }
-  .rowline{ grid-template-columns:140px 64px 1fr; }
+/* Chips */
+.chip{
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:.25rem .5rem;
+  background:#0f1730;
+  font-size:12px;
+  white-space:nowrap;
+  display:flex; align-items:center; justify-content:center;
 }
+.chip.bad{border-color:rgba(239,68,68,.6);color:#fecaca}
+.chip.lock{border-color: color-mix(in srgb, var(--green) 60%, transparent); color: var(--green);}
 
-.ca-row{display:flex;gap:8px;align-items:center;margin-top:4px}
-.addr{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;background:#0e1836;border:1px solid var(--border);padding:6px 8px;border-radius:10px;flex:1}
-.actbar{display:flex;gap:6px}
-.act{border:1px solid var(--border);background:#0e1836;color:#cfe;padding:6px 10px;border-radius:10px;font-size:12px}
-.act.buy{background:linear-gradient(135deg,#22c55e,#10b981);color:#042e24;font-weight:800}
-
-.social{display:flex;gap:6px;margin-top:6px}
+/* Social buttons */
 .socbtn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:linear-gradient(180deg,#0f1a3a,#0a1330)}
 .socbtn:hover{box-shadow:0 0 0 2px rgba(0,255,174,.18) inset}
 .socbtn span{filter:drop-shadow(0 0 6px rgba(0,255,174,.28))}
 
+/* Contract address row */
+.ca-row{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.addr{
+  flex:1 1 auto; min-width:260px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  background:#0e1836;border:1px solid var(--border);
+  padding:6px 8px;border-radius:10px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis; /* short on desktop */
+}
+.act{border:1px solid var(--border);background:#0e1836;color:#cfe;padding:6px 10px;border-radius:10px;font-size:12px}
+.act.buy{background:linear-gradient(135deg,#22c55e,#10b981);color:#042e24;font-weight:800}
+
+/* Show short CA on desktop, full on mobile (toggled below) */
+.ca-short{ display:inline; }
+.ca-full { display:none; }
+
+/* =========================================================
+   Bars, metrics, details
+   ========================================================= */
 .supply{margin-top:8px}
 .bar{height:10px;border-radius:999px;background:#0f1730;border:1px solid var(--border);display:flex;overflow:hidden}
 .seg-burn{background:var(--red)}
@@ -166,24 +181,18 @@ details.more summary{cursor:pointer;color:#9fead1}
 .subrow{display:flex;justify-content:space-between;font-size:12px;margin:4px 0;color:#bfeede}
 .desc{font-size:11px;color:#9fd;opacity:.9;margin:-6px 0 8px 0}
 
+.rightcol{display:flex;flex-direction:column;gap:12px}
+
 .holders-list{font-size:12px;margin-top:6px}
 .holders-list div{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:center}
 .holders-list a{color:#8ac7ff;word-break:break-all}
-.muted{color:#a8ffd9;opacity:.8}
-
-.footer-note{font-size:12px;color:#9fead1;margin-top:10px}
-
-.overlay{position:fixed;inset:0;background:rgba(6,10,24,.82);backdrop-filter:blur(3px);display:none;place-items:center;z-index:50}
-.overlay .panel{width:min(680px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.18);padding:16px}
-.progress{height:12px;border-radius:999px;background:#0b1430;border:1px solid var(--border);overflow:hidden}
-.progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-
-.rightcol{display:flex;flex-direction:column;gap:12px}
-
 .holders-list.compact{max-height:220px;overflow:auto;padding-right:4px}
 .holders-list.compact::-webkit-scrollbar{width:6px}
 .holders-list.compact::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:8px}
 
+.muted{color:#a8ffd9;opacity:.8}
+
+/* Council */
 .council-vote{padding:10px;border:1px solid var(--border);border-radius:10px;background:#0f1830;margin-top:8px}
 .council-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .council-name{display:flex;align-items:center;gap:8px;font-weight:600}
@@ -192,7 +201,6 @@ details.more summary{cursor:pointer;color:#9fead1}
 .score-badge-sm.mid{color:#bef264;box-shadow:0 0 0 1px rgba(132,204,22,.25)}
 .score-badge-sm.warn{color:#fbbf24;box-shadow:0 0 0 1px rgba(245,158,11,.25)}
 .score-badge-sm.neg{color:#f87171;box-shadow:0 0 0 1px rgba(239,68,68,.25)}
-
 .council-bar{height:8px;border-radius:999px;background:#0e1732;border:1px solid rgba(255,255,255,.06);overflow:hidden;margin:6px 0}
 .council-bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .council-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px}
@@ -206,6 +214,64 @@ details.more summary{cursor:pointer;color:#9fead1}
 .cbtn:hover{box-shadow:0 0 0 2px rgba(0,255,174,.12) inset}
 .vote-meter{height:6px;border-radius:999px;background:#0b1430;border:1px solid var(--border);margin:.2rem 0 .6rem;overflow:hidden}
 .vote-meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+/* Footer + overlay */
+.footer-note{font-size:12px;color:#9fead1;margin-top:10px}
+.overlay{position:fixed;inset:0;background:rgba(6,10,24,.82);backdrop-filter:blur(3px);display:none;place-items:center;z-index:50}
+.overlay .panel{width:min(680px,92vw);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 0 30px rgba(0,255,174,.18);padding:16px}
+.progress{height:12px;border-radius:999px;background:#0b1430;border:1px solid var(--border);overflow:hidden}
+.progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+/* =========================================================
+   MOBILE (≤560px)
+   ========================================================= */
+@media (max-width:560px){
+  /* 2 columns: info | score
+     then chips | score
+     then chips | social (social sits under score) */
+  .token-head{
+    grid-template-columns:1fr 130px;
+    grid-template-areas:
+      "info   score"
+      "chips  score"
+      "chips  social";
+  }
+
+  .score-badge{ min-width:110px; min-height:76px; padding:8px 12px; border-radius:16px; }
+  .score-num{ font-size:26px; }
+  .score-caption{ display:none; }
+
+  .social{ align-self:start; justify-content:flex-end; }
+  .social .socbtn{ width:30px; height:30px; }
+
+  /* Chips get full left column; fewer columns so they don’t squish */
+  .chips{ grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:4px; }
+
+  /* CA = full line with Copy & Buy next to it */
+  .ca-row{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    gap:6px; align-items:center; margin-top:8px;
+  }
+  .addr{
+    white-space:normal; word-break:break-all; overflow:visible;  /* full CA on mobile */
+    min-width:0;
+  }
+  .act{ padding:6px 8px; font-size:11px; border-radius:8px }
+
+  /* Tiny “outside launchpad” on phones */
+  .name .pill{ font-size:10px; padding:.08rem .36rem; opacity:.9 }
+
+  /* Show full CA on mobile; hide short */
+  .ca-full{ display:inline; }
+  .ca-short{ display:none; }
+}
+
+/* Desktop toggle for CA (short) */
+@media (min-width:561px){
+  .ca-full{ display:none; }
+  .ca-short{ display:inline; }
+}
 
 </style>
 
@@ -928,60 +994,111 @@ function mapSnapshotToRow(s, prioritySet){
       price:  s.price ?? pool.price ?? 0,
       market_cap: s.market_cap ?? pool.market_cap ?? 0
     },
+
+    // basic timing
     poolTs: s.creationTs || null,
-
-    // ✅ add these two so chips display correctly
-    reserve: s.reserve ?? 0,
-    vol24:   s.vol24   ?? 0,
-
-    totalN: s.totalN ?? 0,
-    burnedN: s.burnedN ?? 0,
-    lockedN: s.lockedN ?? 0,
-    manualLockedN: s.manualLockedN ?? 0,
-    lockedPct: s.lockedPct ?? 0,
-    avgDays: s.avgLockDays ?? 0,
-    totalBI: (s.total ?? "0"),
-    burnedBI:(s.burned ?? "0"),
-    lockedBI:(s.locked ?? "0"),
-
-    creator: (s.creator || null),
-    creationTx: s.creationTx || null,
     creationTs: s.creationTs || null,
-    launchpad: !!s.launchpad,
-    priority: prioritySet ? prioritySet.has(ca) : false,
+    creationTx: s.creationTx || null,
+    launchpad : !!s.launchpad,
 
-    holders: s.holders ?? 0,
-    transfers: s.transfers ?? 0,
-    top10Share: s.top10Share ?? null,
-    topHolders: Array.isArray(s.topHolders) ? s.topHolders : [],
+    // supply/locks (numbers + bigints as strings)
+    dec        : s.dec ?? 18,
+    totalN     : s.totalN ?? 0,
+    burnedN    : s.burnedN ?? 0,
+    lockedN    : s.lockedN ?? 0,
+    manualLockedN : s.manualLockedN ?? 0,
+    lockedPct  : s.lockedPct ?? 0,
+    avgDays    : s.avgLockDays ?? 0,
+    totalBI    : s.total ?? "0",
+    burnedBI   : s.burned ?? "0",
+    lockedBI   : s.locked ?? "0",
 
-    iconUrl: s.iconUrl || null,
-    xUrl: s.xUrl || null,
-    telegramUrl: s.telegramUrl || null,
-    websiteUrl: s.websiteUrl || null,
+    // liquidity/volume
+    reserve    : s.reserve ?? 0,
+    vol24      : s.vol24   ?? 0,
 
-    votes: s.votes ?? 0,
-    votesMax: s.votesMax ?? 0,
-    councilAvg: (typeof s.councilAvg === 'number') ? s.councilAvg : null,
-    councilCount: s.councilCount ?? 0,
-    councilVotes: Array.isArray(s.councilVotes) ? s.councilVotes : [],
+    // creator & links
+    creator     : (s.creator || null),
+    iconUrl     : s.iconUrl || null,
+    xUrl        : s.xUrl || null,
+    telegramUrl : s.telegramUrl || null,
+    websiteUrl  : s.websiteUrl || null,
 
-    p_locked:  s.p_locked ?? 0,
-    p_time:    s.p_time ?? 0,
-    p_dev:     s.p_dev ?? 0,
-    p_age:     s.p_age ?? 0,
-    p_depth:   s.p_depth ?? 0,
-    p_vol:     s.p_vol ?? 0,
-    p_votes:   s.p_votes ?? 0,
-    p_council: s.p_council ?? 0,
-    p_hold:    s.p_hold ?? 0,
-    score:     s.score ?? 0,
+    // holders/top holders
+    holders     : s.holders ?? 0,
+    transfers   : s.transfers ?? 0,
+    top10Share  : s.top10Share ?? null,
+    topHolders  : Array.isArray(s.topHolders) ? s.topHolders : [],
 
-    ageDays: s.creationTs ? Math.max(0, Math.floor((Date.now()/1000 - s.creationTs)/86400)) : 0,
-    ageSource: s.launchpad ? 'Launchpad' : 'Explorer'
+    // votes / council
+    votes        : s.votes ?? 0,
+    votesMax     : s.votesMax ?? 0,
+    councilAvg   : (typeof s.councilAvg === 'number') ? s.councilAvg : null,
+    councilCount : s.councilCount ?? 0,
+    councilVotes : Array.isArray(s.councilVotes) ? s.councilVotes : [],
+
+    // precomputed category scores & overall
+    p_locked  : s.p_locked ?? 0,
+    p_time    : s.p_time ?? 0,
+    p_dev     : s.p_dev ?? 0,
+    p_age     : s.p_age ?? 0,
+    p_depth   : s.p_depth ?? 0,
+    p_vol     : s.p_vol ?? 0,
+    p_votes   : s.p_votes ?? 0,
+    p_council : s.p_council ?? 0,
+    p_hold    : s.p_hold ?? 0,
+    score     : s.score ?? 0,
+
+    // derived
+    ageDays   : s.creationTs ? Math.max(0, Math.floor((Date.now()/1000 - s.creationTs)/86400)) : 0,
+    ageSource : s.launchpad ? 'Launchpad' : 'Explorer',
+
+    // boot helpers
+    priority  : prioritySet ? prioritySet.has(ca) : false,
+
+    // lock chip defaults (can be overridden by tokenlock.json or chain hydration)
+    lockLabel : 'No lock',
+    lockHref  : 'https://www.toshtech.xyz/toshlock.html',
+    lockClass : 'bad',
+    manualLockUrls : []
   };
 }
 
+
+async function applyManualLocksFromJsonOnly(){
+  try{
+    MANUAL_LOCKS = await loadManualLocks();   // Map<token, [{amount, unit, unlock, owner, name, url}]>
+
+    for (const r of ROWS_ALL){
+      const arr = MANUAL_LOCKS.get(r.ca) || [];
+      // collect unique URLs from tokenlock.json
+      const urls = Array.from(new Set(arr.map(e => e.url).filter(Boolean))).map(normUrl).filter(Boolean);
+      r.manualLockUrls = urls;
+
+      // decide which chip to show using ONLY snapshot totals + tokenlock URLs
+      const onChainLockedPortion = Math.max(0, (r.lockedN || 0) - (r.manualLockedN || 0));
+      const hasToshLock = onChainLockedPortion > 0;
+      const hasManual   = (r.manualLockedN || 0) > 0 && urls.length > 0;
+
+      if (hasToshLock){
+        r.lockLabel = 'ToshLock';
+        r.lockHref  = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
+        r.lockClass = 'lock';
+      } else if (hasManual){
+        r.lockLabel = 'Ext Lock';
+        r.lockHref  = urls[0];
+        r.lockClass = 'lock';
+      } else {
+        r.lockLabel = 'No lock';
+        r.lockHref  = 'https://www.toshtech.xyz/toshlock.html';  // ← your requested target
+        r.lockClass = 'bad';
+      }
+    }
+    scheduleRender();
+  }catch(e){
+    console.warn('manual lock hydration failed', e);
+  }
+}
 async function paintSnapshot(){
   setStatus("Loading snapshot…");
   const snap = await fetch(SNAPSHOT_URL, { cache: 'no-cache' }).then(r=>r.json());
@@ -1055,19 +1172,22 @@ async function tryPaintSnapshotFirst() {
     return false;
   }
 }
-
 async function boot(){
   showOverlay(true);
   const ok = await paintSnapshot();
   if (ok){
-    // ✅ pull freshest council immediately
+    // council.json: refresh council data on top of snapshot
     mergeCouncilFromLive();
+
+    // tokenlock.json: add manual URLs & compute chip (no chain calls)
+    applyManualLocksFromJsonOnly();
+
+    showOverlay(false);
     return;
   }
   setStatus("Snapshot empty. Click Reload to refresh.");
   showOverlay(false);
 }
-
 
 
 
@@ -1424,33 +1544,34 @@ function render(){
     const el=document.createElement('div'); el.className="card";
     el.innerHTML = `
 
+
+
 		<div class="token-head">
 		  <!-- LEFT: project info -->
 		  <div class="head-info">
 			<div class="title-left">
 			  ${r.iconUrl ? `<img class="logo" src="${r.iconUrl}" alt="logo">` : `<div class="logo" style="display:grid;place-items:center">🪙</div>`}
 			  <div>
+
 				<div class="name">
 				  ${sym || name || short(r.ca)}
-				  ${r.launchpad ? '' : '<span class="pill" title="This token was launched outside the launchpad">outside launchpad</span>'}
-				</div>
+				  ${r.launchpad ? '' : '<span class="pill tiny" title="This token was launched outside the launchpad">outside launchpad</span>'}
+				</div>				
 				<div class="sub">${name || sym} • Price: $${Number(price||0).toFixed(8)}</div>
 			  </div>
 			</div>
 
-			<div class="ca-row">
-			  <a class="addr" href="${PEPUSCAN_TOKEN}${r.ca}" target="_blank" title="Open on PepuScan">${short(r.ca)}</a>
-			  <div class="actbar">
-				<button class="act copy-btn" data-ca="${r.ca}" title="Copy contract">Copy</button>
-				<a class="act buy" href="${PEPUSWAP_BUY_BASE}${r.ca}" target="_blank" title="Buy on PepuSwap">Buy</a>
-			  </div>
-			</div>
 
-			<div class="social">
-			  ${(r.websiteUrl) ? `<a class="socbtn" href="${r.websiteUrl}" target="_blank" title="Website"><span>🔗</span></a>`:''}
-			  ${(r.telegramUrl) ? `<a class="socbtn" href="${r.telegramUrl.startsWith('http')?r.telegramUrl:'https://t.me/'+r.telegramUrl.replace('@','')}" target="_blank" title="Telegram"><span>✈️</span></a>`:''}
-			  ${(r.xUrl) ? `<a class="socbtn" href="${r.xUrl}" target="_blank" title="X (Twitter)"><span>𝕏</span></a>`:''}
-			</div>
+
+			<div class="ca-row">
+				<a class="addr" href="${PEPUSCAN_TOKEN}${r.ca}" target="_blank" title="Open on PepuScan">
+				  <span class="ca-full">${r.ca}</span>
+				  <span class="ca-short">${short(r.ca)}</span>
+				</a>
+			  <button class="act copy-btn" data-ca="${r.ca}" title="Copy contract">Copy</button>
+			  <a class="act buy" href="${PEPUSWAP_BUY_BASE}${r.ca}" target="_blank" title="Buy on PepuSwap">Buy</a>
+			</div>			
+
 		  </div>
 
 		  <!-- MIDDLE: the 6 tags -->
@@ -1461,43 +1582,21 @@ function render(){
 			<span class="chip">Holders ${niceNum(r.holders||0)}</span>
 			<span class="chip">Vol 24h ${niceUSD(r.vol24)}</span>				
 			<span class="chip">Age ${r.ageDays}d <span class="muted"></span></span>
-		
-			${(() => {
-			  const dash = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
-
-			  // normalize first manual URL from tokenlock.json (accepts bare domains)
-			  const raw = (r.manualLockUrls && r.manualLockUrls[0]) || null;
-			  const manualUrl = raw ? (raw.startsWith('http') ? raw : `https://${raw}`) : null;
-
-			  // on-chain vs external
-			  const hasManual = (r.manualLockedN || 0) > 0 && !!manualUrl;
-			  const onChainLockedPortion = (r.lockedN || 0) - (r.manualLockedN || 0);
-			  const hasToshLock = (r.lockedN || 0) > 0 && onChainLockedPortion > 0;
-
-			  if (!hasToshLock && !hasManual) {
-				// no locks found → still take user to dashboard if they click
-				return `<a class="chip bad" href="${dash}" target="_blank" rel="noopener">No lock</a>`;
-			  }
-
-			  if (hasToshLock) {
-				// on-chain ToshLock present
-				return `<a class="chip lock" href="${dash}" target="_blank" rel="noopener">ToshLock</a>`;
-			  }
-
-			  // only external (manual) lock present
-			  return `<a class="chip lock" href="${esc(manualUrl)}" target="_blank" rel="noopener">Ext Lock</a>`;
-			})()}
-
-
-			
+			<a class="chip ${r.lockClass}" href="${r.lockHref}" target="_blank" rel="noopener">
+			  ${r.lockLabel}
+			</a>
 		  </div>
-
+			<div class="social">
+			  ${(r.websiteUrl)  ? `<a class="socbtn" href="${r.websiteUrl}" target="_blank" title="Website"><span>🔗</span></a>`:''}
+			  ${(r.telegramUrl) ? `<a class="socbtn" href="${r.telegramUrl.startsWith('http')?r.telegramUrl:'https://t.me/'+r.telegramUrl.replace('@','')}" target="_blank" title="Telegram"><span>✈️</span></a>`:''}
+			  ${(r.xUrl)        ? `<a class="socbtn" href="${r.xUrl}" target="_blank" title="X (Twitter)"><span>𝕏</span></a>`:''}
+			</div>
 		  <!-- RIGHT: score -->
 		  <div class="score-wrap">
 			<div class="score-badge ${scoreCls}" title="Overall ToshScore (0–100)">
 			  <span class="score-num">${fmtScore(r.score)}</span>
 			</div>
-			<div class="score-caption">ToshScore</div>
+
 		  </div>
 		</div>
 

@@ -17,7 +17,26 @@ html,body{
   color:var(--fg);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu
 }
+/* keep your existing .token-head; just pin the score up-right */
+.score-wrap{
+  grid-area:score;
+  justify-self:end;   /* right edge */
+  align-self:start;   /* top of the header */
+  text-align:right;
+}
 
+/* show full CA nicely in the pill */
+.addr{
+  font-size:12px;
+  letter-spacing:.3px;
+  white-space:normal;     /* allow wrapping */
+  word-break:break-all;   /* wrap long hex cleanly */
+}
+
+/* make the buttons smaller */
+.actbar{ gap:4px; }
+.act.sm{ padding:4px 8px; font-size:11px; border-radius:8px; }
+.act.buy.sm{ font-weight:700; }
 .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
 .glow{ text-shadow:0 0 10px var(--accent), 0 0 24px var(--accent) }
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -928,60 +947,111 @@ function mapSnapshotToRow(s, prioritySet){
       price:  s.price ?? pool.price ?? 0,
       market_cap: s.market_cap ?? pool.market_cap ?? 0
     },
+
+    // basic timing
     poolTs: s.creationTs || null,
-
-    // ✅ add these two so chips display correctly
-    reserve: s.reserve ?? 0,
-    vol24:   s.vol24   ?? 0,
-
-    totalN: s.totalN ?? 0,
-    burnedN: s.burnedN ?? 0,
-    lockedN: s.lockedN ?? 0,
-    manualLockedN: s.manualLockedN ?? 0,
-    lockedPct: s.lockedPct ?? 0,
-    avgDays: s.avgLockDays ?? 0,
-    totalBI: (s.total ?? "0"),
-    burnedBI:(s.burned ?? "0"),
-    lockedBI:(s.locked ?? "0"),
-
-    creator: (s.creator || null),
-    creationTx: s.creationTx || null,
     creationTs: s.creationTs || null,
-    launchpad: !!s.launchpad,
-    priority: prioritySet ? prioritySet.has(ca) : false,
+    creationTx: s.creationTx || null,
+    launchpad : !!s.launchpad,
 
-    holders: s.holders ?? 0,
-    transfers: s.transfers ?? 0,
-    top10Share: s.top10Share ?? null,
-    topHolders: Array.isArray(s.topHolders) ? s.topHolders : [],
+    // supply/locks (numbers + bigints as strings)
+    dec        : s.dec ?? 18,
+    totalN     : s.totalN ?? 0,
+    burnedN    : s.burnedN ?? 0,
+    lockedN    : s.lockedN ?? 0,
+    manualLockedN : s.manualLockedN ?? 0,
+    lockedPct  : s.lockedPct ?? 0,
+    avgDays    : s.avgLockDays ?? 0,
+    totalBI    : s.total ?? "0",
+    burnedBI   : s.burned ?? "0",
+    lockedBI   : s.locked ?? "0",
 
-    iconUrl: s.iconUrl || null,
-    xUrl: s.xUrl || null,
-    telegramUrl: s.telegramUrl || null,
-    websiteUrl: s.websiteUrl || null,
+    // liquidity/volume
+    reserve    : s.reserve ?? 0,
+    vol24      : s.vol24   ?? 0,
 
-    votes: s.votes ?? 0,
-    votesMax: s.votesMax ?? 0,
-    councilAvg: (typeof s.councilAvg === 'number') ? s.councilAvg : null,
-    councilCount: s.councilCount ?? 0,
-    councilVotes: Array.isArray(s.councilVotes) ? s.councilVotes : [],
+    // creator & links
+    creator     : (s.creator || null),
+    iconUrl     : s.iconUrl || null,
+    xUrl        : s.xUrl || null,
+    telegramUrl : s.telegramUrl || null,
+    websiteUrl  : s.websiteUrl || null,
 
-    p_locked:  s.p_locked ?? 0,
-    p_time:    s.p_time ?? 0,
-    p_dev:     s.p_dev ?? 0,
-    p_age:     s.p_age ?? 0,
-    p_depth:   s.p_depth ?? 0,
-    p_vol:     s.p_vol ?? 0,
-    p_votes:   s.p_votes ?? 0,
-    p_council: s.p_council ?? 0,
-    p_hold:    s.p_hold ?? 0,
-    score:     s.score ?? 0,
+    // holders/top holders
+    holders     : s.holders ?? 0,
+    transfers   : s.transfers ?? 0,
+    top10Share  : s.top10Share ?? null,
+    topHolders  : Array.isArray(s.topHolders) ? s.topHolders : [],
 
-    ageDays: s.creationTs ? Math.max(0, Math.floor((Date.now()/1000 - s.creationTs)/86400)) : 0,
-    ageSource: s.launchpad ? 'Launchpad' : 'Explorer'
+    // votes / council
+    votes        : s.votes ?? 0,
+    votesMax     : s.votesMax ?? 0,
+    councilAvg   : (typeof s.councilAvg === 'number') ? s.councilAvg : null,
+    councilCount : s.councilCount ?? 0,
+    councilVotes : Array.isArray(s.councilVotes) ? s.councilVotes : [],
+
+    // precomputed category scores & overall
+    p_locked  : s.p_locked ?? 0,
+    p_time    : s.p_time ?? 0,
+    p_dev     : s.p_dev ?? 0,
+    p_age     : s.p_age ?? 0,
+    p_depth   : s.p_depth ?? 0,
+    p_vol     : s.p_vol ?? 0,
+    p_votes   : s.p_votes ?? 0,
+    p_council : s.p_council ?? 0,
+    p_hold    : s.p_hold ?? 0,
+    score     : s.score ?? 0,
+
+    // derived
+    ageDays   : s.creationTs ? Math.max(0, Math.floor((Date.now()/1000 - s.creationTs)/86400)) : 0,
+    ageSource : s.launchpad ? 'Launchpad' : 'Explorer',
+
+    // boot helpers
+    priority  : prioritySet ? prioritySet.has(ca) : false,
+
+    // lock chip defaults (can be overridden by tokenlock.json or chain hydration)
+    lockLabel : 'No lock',
+    lockHref  : 'https://www.toshtech.xyz/toshlock.html',
+    lockClass : 'bad',
+    manualLockUrls : []
   };
 }
 
+
+async function applyManualLocksFromJsonOnly(){
+  try{
+    MANUAL_LOCKS = await loadManualLocks();   // Map<token, [{amount, unit, unlock, owner, name, url}]>
+
+    for (const r of ROWS_ALL){
+      const arr = MANUAL_LOCKS.get(r.ca) || [];
+      // collect unique URLs from tokenlock.json
+      const urls = Array.from(new Set(arr.map(e => e.url).filter(Boolean))).map(normUrl).filter(Boolean);
+      r.manualLockUrls = urls;
+
+      // decide which chip to show using ONLY snapshot totals + tokenlock URLs
+      const onChainLockedPortion = Math.max(0, (r.lockedN || 0) - (r.manualLockedN || 0));
+      const hasToshLock = onChainLockedPortion > 0;
+      const hasManual   = (r.manualLockedN || 0) > 0 && urls.length > 0;
+
+      if (hasToshLock){
+        r.lockLabel = 'ToshLock';
+        r.lockHref  = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
+        r.lockClass = 'lock';
+      } else if (hasManual){
+        r.lockLabel = 'Ext Lock';
+        r.lockHref  = urls[0];
+        r.lockClass = 'lock';
+      } else {
+        r.lockLabel = 'No lock';
+        r.lockHref  = 'https://www.toshtech.xyz/toshlock.html';  // ← your requested target
+        r.lockClass = 'bad';
+      }
+    }
+    scheduleRender();
+  }catch(e){
+    console.warn('manual lock hydration failed', e);
+  }
+}
 async function paintSnapshot(){
   setStatus("Loading snapshot…");
   const snap = await fetch(SNAPSHOT_URL, { cache: 'no-cache' }).then(r=>r.json());
@@ -1055,19 +1125,22 @@ async function tryPaintSnapshotFirst() {
     return false;
   }
 }
-
 async function boot(){
   showOverlay(true);
   const ok = await paintSnapshot();
   if (ok){
-    // ✅ pull freshest council immediately
+    // council.json: refresh council data on top of snapshot
     mergeCouncilFromLive();
+
+    // tokenlock.json: add manual URLs & compute chip (no chain calls)
+    applyManualLocksFromJsonOnly();
+
+    showOverlay(false);
     return;
   }
   setStatus("Snapshot empty. Click Reload to refresh.");
   showOverlay(false);
 }
-
 
 
 
@@ -1461,35 +1534,9 @@ function render(){
 			<span class="chip">Holders ${niceNum(r.holders||0)}</span>
 			<span class="chip">Vol 24h ${niceUSD(r.vol24)}</span>				
 			<span class="chip">Age ${r.ageDays}d <span class="muted"></span></span>
-		
-			${(() => {
-			  const dash = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
-
-			  // normalize first manual URL from tokenlock.json (accepts bare domains)
-			  const raw = (r.manualLockUrls && r.manualLockUrls[0]) || null;
-			  const manualUrl = raw ? (raw.startsWith('http') ? raw : `https://${raw}`) : null;
-
-			  // on-chain vs external
-			  const hasManual = (r.manualLockedN || 0) > 0 && !!manualUrl;
-			  const onChainLockedPortion = (r.lockedN || 0) - (r.manualLockedN || 0);
-			  const hasToshLock = (r.lockedN || 0) > 0 && onChainLockedPortion > 0;
-
-			  if (!hasToshLock && !hasManual) {
-				// no locks found → still take user to dashboard if they click
-				return `<a class="chip bad" href="${dash}" target="_blank" rel="noopener">No lock</a>`;
-			  }
-
-			  if (hasToshLock) {
-				// on-chain ToshLock present
-				return `<a class="chip lock" href="${dash}" target="_blank" rel="noopener">ToshLock</a>`;
-			  }
-
-			  // only external (manual) lock present
-			  return `<a class="chip lock" href="${esc(manualUrl)}" target="_blank" rel="noopener">Ext Lock</a>`;
-			})()}
-
-
-			
+			<a class="chip ${r.lockClass}" href="${r.lockHref}" target="_blank" rel="noopener">
+			  ${r.lockLabel}
+			</a>				
 		  </div>
 
 		  <!-- RIGHT: score -->
