@@ -1434,24 +1434,33 @@ function render(){
 			<span class="chip">Vol 24h ${niceUSD(r.vol24)}</span>				
 			<span class="chip">Age ${r.ageDays}d <span class="muted"></span></span>
 		
+			${(() => {
+			  const dash = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
 
-			${
-			  !(r.lockedN>0)
-				? `<a class="chip bad" href="https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}" target="_blank" rel="noopener">No lock</a>`
-				: (() => {
-					const dash = `https://www.toshtech.xyz/toshdashboard.html?token=${r.ca}`;
-					const manualUrl = (r.manualLockUrls && r.manualLockUrls.length) ? r.manualLockUrls[0] : dash;
-					// Single chip, two clickable parts:
-					return `
-					  <div class="chip lock" title="View locks">
-						<a href="${dash}" target="_blank" rel="noopener">Lock</a>
-						${ (r.manualLockedN>0)
-							? `<a href="${esc(manualUrl)}" target="_blank" rel="noopener">+ Manual lock</a>`
-							: ''
-						}
-					  </div>`;
-				  })()
-			}
+			  // normalize first manual URL from tokenlock.json (accepts bare domains)
+			  const raw = (r.manualLockUrls && r.manualLockUrls[0]) || null;
+			  const manualUrl = raw ? (raw.startsWith('http') ? raw : `https://${raw}`) : null;
+
+			  // on-chain vs external
+			  const hasManual = (r.manualLockedN || 0) > 0 && !!manualUrl;
+			  const onChainLockedPortion = (r.lockedN || 0) - (r.manualLockedN || 0);
+			  const hasToshLock = (r.lockedN || 0) > 0 && onChainLockedPortion > 0;
+
+			  if (!hasToshLock && !hasManual) {
+				// no locks found → still take user to dashboard if they click
+				return `<a class="chip bad" href="${dash}" target="_blank" rel="noopener">No lock</a>`;
+			  }
+
+			  if (hasToshLock) {
+				// on-chain ToshLock present
+				return `<a class="chip lock" href="${dash}" target="_blank" rel="noopener">ToshLock</a>`;
+			  }
+
+			  // only external (manual) lock present
+			  return `<a class="chip lock" href="${esc(manualUrl)}" target="_blank" rel="noopener">Ext Lock</a>`;
+			})()}
+
+
 			
 		  </div>
 
