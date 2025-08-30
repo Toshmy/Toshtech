@@ -306,15 +306,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="max-w-xl mx-auto tech-glass p-6 glow-text animate-fadeIn space-y-4">
     <h2 class="text-2xl md:text-3xl font-bold text-green-200 mb-4">$TOSH Token Metrics (Live)</h2>
     
-    <div class="grid grid-cols-2 gap-4 text-green-100 text-left">
-      <div><span class="font-semibold text-green-300">Holders:</span> <span id="holders">--</span></div>
-      <div><span class="font-semibold text-green-300">$</span> <span id="price">--</span></div>
-      <div><span class="font-semibold text-green-300">MC (FDV):</span> <span id="fdv">--</span><span>$</span></div>
-      <div><span class="font-semibold text-green-300">24h Change:</span> <span id="priceChange">--</span></div>
-      <div><span class="font-semibold text-green-300">24h Vol.:</span> <span id="volume">--</span><span>$</span></div>
-      <div><span class="font-semibold text-green-300">Liquidity:</span> <span id="liquidity">--</span><span>$</span></div>
-      <div><span class="font-semibold text-green-300">24h Tx:</span> <span id="transactions">--</span></div>
-    </div>
+
+
+	<div class="grid grid-cols-2 gap-4 text-green-100 text-left">
+
+	  <!-- SECTION: Price & Performance -->
+	  <div class="col-span-2 text-green-300 uppercase text-xs tracking-wide border-t border-white border-opacity-10 pt-2">Price & Performance</div>
+	  <div><span class="font-semibold text-green-300">$</span> <span id="price">--</span></div>
+	  <div><span class="font-semibold text-green-300">24h Change:</span> <span id="priceChange">--</span></div>
+	  <div><span class="font-semibold text-green-300">24h Vol.:</span> <span id="volume">--</span><span>$</span></div>
+	  <div><span class="font-semibold text-green-300">Liquidity:</span> <span id="liquidity">--</span><span>$</span></div>
+
+	  <!-- SECTION: Market Cap & Supply -->
+	  <div class="col-span-2 text-green-300 uppercase text-xs tracking-wide border-t border-white border-opacity-10 pt-2">Market Cap & Supply</div>
+	  <div><span class="font-semibold text-green-300">Circ. MC:</span> <span id="circMC">--</span><span>$</span></div>
+	  <div><span class="font-semibold text-green-300">MC (FDV):</span> <span id="fdv">--</span><span>$</span></div>
+	  <div><span class="font-semibold text-green-300">Circ. Supply:</span> <span id="circSupply">--</span></div>
+	  <div><span class="font-semibold text-green-300">Holders:</span> <span id="holders">--</span></div>
+
+	  <!-- SECTION: Ownership & Locks -->
+	  <div class="col-span-2 text-green-300 uppercase text-xs tracking-wide border-t border-white border-opacity-10 pt-2">Ownership & Locks</div>
+	  <div><span class="font-semibold text-green-300">Top-10 Share:</span> <span id="top10Share">--</span></div>
+	  <div><span class="font-semibold text-green-300">Whale HHI (Top10):</span> <span id="hhi">--</span></div>
+	  <div><span class="font-semibold text-green-300">Locked % / Days:</span> <span id="lockedPct">--</span> / <span id="avgLockDays">--</span></div>
+	  <div><span class="font-semibold text-green-300">Age:</span> <span id="ageDays">--</span> days</div>
+
+	  <!-- SECTION: Efficiency -->
+	  <div class="col-span-2 text-green-300 uppercase text-xs tracking-wide border-t border-white border-opacity-10 pt-2">Efficiency</div>
+	  <div><span class="font-semibold text-green-300">Liq / CircMC:</span> <span id="liqToMC">--</span></div>
+	  <div><span class="font-semibold text-green-300">24h Turnover:</span> <span id="turnover">--</span></div>
+
+	  <!-- Timestamp -->
+	  <div class="col-span-2 text-right text-xs text-green-400">As of <span id="updatedAt">--</span></div>
+	</div>
 
     <p class="text-green-400 text-sm mt-4 italic">Live data from official sources. Updates every 15 minutes.</p>
   </div>
@@ -348,29 +372,32 @@ window.addEventListener('DOMContentLoaded', () => {
   const introSound = document.getElementById('intro-sound');
   const hoverSound = document.getElementById('hover-sound');
 
-  hoverSound.volume = 0.1;
-  hoverSound.play().catch(() => {});
-  hoverSound.pause();
-  hoverSound.currentTime = 0;
+  if (hoverSound) {
+    hoverSound.volume = 0.1;
+    hoverSound.play().catch(() => {});
+    hoverSound.pause();
+    hoverSound.currentTime = 0;
+  }
 
+  if (introSound) {
+    const playIntro = () => {
+      introSound.volume = 0.5;
+      introSound.play().catch(() => {});
+      document.removeEventListener('click', playIntro);
+    };
+    document.addEventListener('click', playIntro);
+  }
 
-  const playIntro = () => {
-    introSound.volume = 0.5;
-    introSound.play().catch(() => {});
-    document.removeEventListener('click', playIntro);
-  };
-
-  document.addEventListener('click', playIntro);
-
-  // Hover Sound on social links
   const socialBtns = document.querySelectorAll('a');
   socialBtns.forEach(btn => {
     btn.addEventListener('mouseenter', () => {
+      if (!hoverSound) return;
       hoverSound.currentTime = 0;
       hoverSound.play().catch(() => {});
     });
   });
 });
+
 document.addEventListener("DOMContentLoaded", () => {
   // Toggle mobile menu
   const toggleBtn = document.getElementById('menu-toggle');
@@ -440,60 +467,191 @@ const interval = setInterval(() => {
   cup.style.animationDelay = `${delay}s`;
 });
 
-async function loadToshMetrics() {
+
+async function loadToshMetricsUnified() {
+  const CA_TOSH   = '0x0b52dfa17542f30f3072c53ca5061120c74d86e9'.toLowerCase();
+  const POOL_ADDR = '0x36337e694b3b1eadde50101e8aa4f4fa74463aee'.toLowerCase();
+  const SNAP_URL  = 'https://toshboard-snapshot.toshtech777.workers.dev/snapshot.json';
+  const POOLS_URL = 'https://www.toshtech.xyz/pools_cache.json';
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const colorize = (el, value) => { if (!el) return; el.style.color = value > 0 ? 'limegreen' : value < 0 ? 'red' : 'inherit'; };
+
+  // Recursively collect all objects that look like pool entries
+  const collectCandidates = (node, acc = []) => {
+    if (!node) return acc;
+    if (Array.isArray(node)) {
+      node.forEach(n => collectCandidates(n, acc));
+    } else if (typeof node === 'object') {
+      // If it looks like a pool/token object, record it
+      const hasAnyKey = ('symbol' in node) || ('address' in node) || ('pool_address' in node) || ('name' in node) || ('price_changes' in node);
+      if (hasAnyKey) acc.push(node);
+      // Recurse into values
+      Object.values(node).forEach(v => {
+        if (v && (typeof v === 'object')) collectCandidates(v, acc);
+      });
+    }
+    return acc;
+  };
+
+  const findToshPool = (root) => {
+    const list = collectCandidates(root);
+    const match = list.find(p => {
+      const addr = (p?.address || '').toLowerCase();
+      const pool = (p?.pool_address || '').toLowerCase();
+      const sym  = (p?.symbol || '').toUpperCase();
+      const name = (p?.name || '').toUpperCase();
+      return (
+        addr === CA_TOSH ||
+        pool === POOL_ADDR ||
+        sym === 'TOSH' ||
+        name.includes('TOSH')
+      );
+    });
+    return match || null;
+  };
+
+  const parsePct = (v) => {
+    if (v == null) return NaN;
+    const n = Number(String(v).replace(/[^0-9+.\-]/g, ''));
+    return Number.isFinite(n) ? n : NaN;
+  };
+
   try {
-    // Fetch both JSON files (adjust paths if needed)
-    const [toshResp, marketResp] = await Promise.all([
-      fetch('data/tosh.json'),
-      fetch('data/market.json')
+    const [snapRes, poolsRes] = await Promise.all([
+      fetch(`${SNAP_URL}?t=${Date.now()}`,  { cache: 'no-store' }),
+      fetch(`${POOLS_URL}?t=${Date.now()}`, { cache: 'no-store' }),
     ]);
 
-    if (!toshResp.ok || !marketResp.ok) throw new Error('Failed to fetch data');
-
-    const toshData = await toshResp.json();
-    const marketData = await marketResp.json();
-
-    // Extract relevant fields from tosh.json
-    const holders = toshData.holders || '--';
-
-    // Extract relevant fields from market.json attributes
-    const attrs = marketData.data.attributes || {};
-    const price = attrs.base_token_price_usd || '--';
-    const fdv = attrs.fdv_usd || '--';
-    const priceChange = attrs.price_change_percentage?.h24 || '--';
-    const volume = attrs.volume_usd?.h24 || '--';
-    const liquidity = attrs.reserve_in_usd || '--';
-    const transactionsObj = attrs.transactions?.h24 || {};
-    const transactions = transactionsObj.buys + transactionsObj.sells || '--';
-
-    // Update DOM elements
-    document.getElementById('holders').textContent = holders;
-    document.getElementById('price').textContent = parseFloat(price).toFixed(8);
-    document.getElementById('fdv').textContent = Number(fdv).toLocaleString(undefined, {maximumFractionDigits: 2});
-    document.getElementById('volume').textContent = Number(volume).toLocaleString(undefined, {maximumFractionDigits: 2});
-    document.getElementById('liquidity').textContent = Number(liquidity).toLocaleString(undefined, {maximumFractionDigits: 2});
-    document.getElementById('transactions').textContent = transactions;
-
-    // Handle price change with color coding
-    const priceChangeElem = document.getElementById('priceChange');
-    if (priceChange === '--' || isNaN(priceChange)) {
-      priceChangeElem.textContent = '--';
-      priceChangeElem.style.color = '';
-    } else {
-      const pcFloat = parseFloat(priceChange);
-      priceChangeElem.textContent = pcFloat.toFixed(2) + '%';
-      priceChangeElem.style.color = pcFloat > 0 ? 'limegreen' : pcFloat < 0 ? 'red' : 'inherit';
+    // snapshot.json
+    let snapItem = null, snapComputedAt = null;
+    if (snapRes.ok) {
+      const snap = await snapRes.json();
+      snapComputedAt = Number(snap.computedAt || 0) || null;
+      const items = Array.isArray(snap.items) ? snap.items : [];
+      snapItem = items.find(i =>
+        (i?.pool?.symbol || '').toUpperCase() === 'TOSH' ||
+        ((i?.ca || '').toLowerCase() === CA_TOSH)
+      ) || null;
     }
 
-  } catch (error) {
-    console.error('Error loading $TOSH metrics:', error);
+    // pools_cache.json (any shape)
+    let poolRoot = null, poolItem = null, poolUpdatedAt = null;
+    if (poolsRes.ok) {
+      poolRoot = await poolsRes.json();
+      poolItem = findToshPool(poolRoot);
+      // Try to read last_updated if present anywhere on the matched node
+      const lu = poolItem?.last_updated;
+      poolUpdatedAt = lu ? Number(lu) * 1000 : null;
+    }
+
+    // Log what we found (dev help)
+    console.debug('pools_cache poolItem →', poolItem);
+
+    // Base values (prefer pools for live market fields)
+    const price   = Number(poolItem?.price ?? snapItem?.price ?? NaN);
+    const fdv     = Number(snapItem?.market_cap ?? poolItem?.market_cap ?? NaN);
+    const liq     = Number(poolItem?.reserve_in_usd ?? snapItem?.reserve ?? NaN);
+    const vol24   = Number(poolItem?.volume_24h_usd ?? snapItem?.vol24 ?? NaN);
+    const holders = Number(snapItem?.holders ?? NaN);
+
+    // Robust 24h change extraction
+    let h24Raw = null;
+    if (poolItem) {
+      h24Raw =
+        poolItem?.price_changes?.h24 ??
+        poolItem?.price_change?.h24 ??
+        poolItem?.priceChange?.h24 ??
+        poolItem?.h24_change ??
+        poolItem?.change_24h ?? null;
+    }
+    const h24 = parsePct(h24Raw);
+    console.debug('raw h24 →', h24Raw, 'parsed →', h24);
+
+    // Circulating supply & cap (snapshot)
+    const totalN  = Number(snapItem?.totalN ?? 0);
+    const burnedN = Number(snapItem?.burnedN ?? 0);
+    const lockedN = Number(snapItem?.lockedN ?? 0);
+    const manualLockedN = Number(snapItem?.manualLockedN ?? 0);
+    const circSupply = Math.max(0, totalN - burnedN - lockedN - manualLockedN);
+    const circMC = isFinite(price) ? price * circSupply : NaN;
+
+    // Locks & concentration (snapshot)
+    const lockedPct   = Number(snapItem?.lockedPct ?? NaN);
+    const avgLockDays = Number(snapItem?.avgLockDays ?? NaN);
+    const top10Share  = Number(snapItem?.top10Share ?? NaN);
+
+    // Whale HHI (snapshot)
+    const topHolders = Array.isArray(snapItem?.topHolders) ? snapItem.topHolders : [];
+    const hhi = topHolders.reduce((acc, h) => {
+      const f = Number(h.pctCirc || 0) / 100; return acc + f*f;
+    }, 0);
+
+    // Age (snapshot)
+    const creationTsMs = Number(snapItem?.creationTs || 0) * 1000;
+    const ageDays = creationTsMs ? Math.max(0, Math.floor((Date.now() - creationTsMs) / 86400000)) : NaN;
+
+    // Ratios
+    const liqToMC  = isFinite(circMC) && circMC > 0 ? liq / circMC : NaN;
+    const turnover = isFinite(circMC) && circMC > 0 ? vol24 / circMC : NaN;
+
+    // Freshness
+    const stamp = Math.max(
+      Number(snapItem?.computedAt || 0) || 0,
+      Number(snapComputedAt || 0) || 0,
+      Number(poolUpdatedAt || 0) || 0
+    );
+    const updatedAt = stamp ? new Date(stamp).toLocaleString() : '--';
+
+    // Populate DOM
+    setText('holders', isFinite(holders) ? holders.toLocaleString() : '--');
+    setText('price',   isFinite(price)   ? price.toFixed(8) : '--');
+    setText('fdv',     isFinite(fdv)     ? fdv.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '--');
+    setText('volume',  isFinite(vol24)   ? vol24.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '--');
+    setText('liquidity', isFinite(liq)   ? liq.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '--');
+
+    const pcEl = document.getElementById('priceChange');
+    if (Number.isFinite(h24)) {
+      setText('priceChange', `${h24.toFixed(2)}%`);
+      colorize(pcEl, h24);
+    } else {
+      setText('priceChange', '--');
+      if (pcEl) pcEl.style.color = '';
+    }
+
+    setText('circSupply', circSupply ? circSupply.toLocaleString() : '--');
+    setText('circMC', isFinite(circMC) ? circMC.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '--');
+
+    setText('lockedPct',   isFinite(lockedPct)   ? `${lockedPct.toFixed(2)}%` : '--');
+    setText('avgLockDays', isFinite(avgLockDays) ? `${Math.round(avgLockDays)}d` : '--');
+
+    setText('top10Share', isFinite(top10Share) ? `${top10Share.toFixed(2)}%` : '--');
+    const top10El = document.getElementById('top10Share');
+    if (top10El && isFinite(top10Share)) {
+      top10El.style.color = top10Share > 50 ? 'red' : top10Share > 33 ? 'orange' : 'limegreen';
+    }
+
+    setText('ageDays', isFinite(ageDays) ? String(ageDays) : '--');
+    setText('liqToMC',  isFinite(liqToMC)  ? liqToMC.toFixed(3) : '--');
+    setText('turnover', isFinite(turnover) ? turnover.toFixed(3) : '--');
+
+    setText('hhi', hhi ? hhi.toFixed(3) : '--');
+    const hhiEl = document.getElementById('hhi');
+    if (hhiEl && hhi) {
+      hhiEl.style.color = hhi > 0.06 ? 'red' : hhi > 0.025 ? 'orange' : 'limegreen';
+    }
+
+    setText('updatedAt', updatedAt);
+  } catch (e) {
+    console.error('Unified loader error:', e);
   }
 }
 
-// Run on page load
-window.addEventListener('DOMContentLoaded', loadToshMetrics);
-
+// initial run + 15-min refresh
+loadToshMetricsUnified();
+setInterval(loadToshMetricsUnified, 15 * 60 * 1000);
 </script>
+
 
 </body>
 </html>
