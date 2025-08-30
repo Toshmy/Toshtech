@@ -11,8 +11,8 @@
     "0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
       "votes": [
         {
-          "voter_id": "tg:@tosh_my",
-          "display": "Tosh",
+          "voter_id": "tg:@Z3r0xDEV",
+          "display": "Z3r0x",
           "categories": {
             "liquidity_locking": 75.0,
             "distribution_risk": 40.0,
@@ -21,12 +21,45 @@
             "contract_risks": -20.0
           },
           "notes": "Test tosh bot",
-          "timestamp": "2025-08-30T02:47:41Z"
+          "timestamp": "2025-08-30T09:33:58Z"
+        },
+        {
+          "voter_id": "tg:@tosh_my",
+          "display": "Tosh",
+          "categories": {
+            "liquidity_locking": 55.0,
+            "distribution_risk": 30.0,
+            "team_transparency": 80.0,
+            "execution_progress": 65.0,
+            "contract_risks": 100.0
+          },
+          "notes": "Test tosh bot2",
+          "timestamp": "2025-08-30T09:43:13Z"
         }
       ],
       "launch_type": "launchpad",
-      "category": "Tosh",
-      "category_key": "short]"
+      "category": "Tosh token",
+      "category_key": "dead"
+    },
+    "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
+      "votes": [
+        {
+          "voter_id": "tg:@tosh_my",
+          "display": "Tosh",
+          "categories": {
+            "liquidity_locking": -100.0,
+            "distribution_risk": -100.0,
+            "team_transparency": -100.0,
+            "execution_progress": -100.0,
+            "contract_risks": -100.0
+          },
+          "notes": "Test tosh bot",
+          "timestamp": "2025-08-30T02:55:27Z"
+        }
+      ],
+      "launch_type": "launchpad",
+      "category": "SCAM",
+      "category_key": "rug"
     }
   }
 }
