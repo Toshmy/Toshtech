@@ -20,10 +20,13 @@
             "execution_progress": 65.0,
             "contract_risks": -20.0
           },
-          "notes": "LP 6m",
-          "timestamp": "2025-08-30T02:12:51Z"
+          "notes": "Test tosh bot",
+          "timestamp": "2025-08-30T02:47:41Z"
         }
-      ]
+      ],
+      "launch_type": "launchpad",
+      "category": "Tosh",
+      "category_key": "short]"
     }
   }
 }
