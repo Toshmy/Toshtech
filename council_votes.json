@@ -64,6 +64,7 @@
 		"0x910c1acdbefc866f2cb2c482e044582e44395152": {
 			"launch_type": "launchpad",
 			"category": "Bobby token",
+			"category_key": "og",
 			"votes": [
 				{
 					"voter_id": "tg:@alice",

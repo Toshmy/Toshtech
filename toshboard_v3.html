@@ -529,8 +529,10 @@ async function loadCouncil(){
 		  count,
 		  votes: clean,
 		  launch_type: entry.launch_type || null,
-		  category: entry.category || entry.tag || entry.label || null   // <-- NEW
+		  category: entry.category || entry.tag || entry.label || null,
+		  category_key: entry.category_key || null   // <— NEW
 		});
+
       }
       return map;
     }
@@ -1111,6 +1113,7 @@ async function mergeCouncilFromLive(){
       r.councilCount = Number(e.count || 0);
       r.councilVotes = Array.isArray(e.votes) ? e.votes : [];
       r.councilCategory = e.category || r.councilCategory || null;
+	  r.councilCategoryKey = e.category_key || r.councilCategoryKey || null; // NEW
       r.p_council    = sCouncil(r.councilAvg);
       recomputeScore(r);
     }
@@ -1157,7 +1160,7 @@ async function boot(){
   if (ok){
     // council.json: refresh council data on top of snapshot
     mergeCouncilFromLive();
-	console.log('council map entry', cm.get('0x82144c93bd531e46f31033fe22d1055af17a514c'));
+
 
     // tokenlock.json: add manual URLs & compute chip (no chain calls)
     applyManualLocksFromJsonOnly();
@@ -1319,6 +1322,11 @@ const PRIORITY_SET = new Set(
 }
 
 /* ======= UI helpers ======= */
+const CATEGORY_CLASS_WHITELIST = new Set(['og','warn','rug','dead','neutral']);
+function safeCategoryClass(k){
+  const key = String(k||'').toLowerCase();
+  return CATEGORY_CLASS_WHITELIST.has(key) ? key : '';
+}
 function badgeClassForCategory(txt){
   const s = String(txt||'').toLowerCase();
   if (s.includes('og')) return 'og';
@@ -1452,7 +1460,7 @@ function renderCouncilPanel(r){
     window.__councilMoreBound = true;
   }
 
-  console.log('render votes for', r.ca, (r.councilVotes||[]).length);
+
 
   // ⬇⬇⬇ SAME LINE as return
   return `
@@ -1544,10 +1552,14 @@ function render(){
 		${renderCouncilPanel(r)}
 	  </div>
 	`;
-	const categoryText  = r.councilCategory ?? fallbackCategoryFromAvg(r.councilAvg);
-	const categoryBadge = categoryText
-	  ? '<span class="mini-badge ' + badgeClassForCategory(categoryText) + '" title="Council category">' + esc(categoryText) + '</span>'
+	const catText = r.councilCategory ?? fallbackCategoryFromAvg(r.councilAvg);
+	const catClass = safeCategoryClass(r.councilCategoryKey) || badgeClassForCategory(catText);
+
+	const categoryBadge = catText
+	  ? '<span class="mini-badge ' + catClass + '" title="Council category">' + esc(catText) + '</span>'
 	  : '';
+		
+
 
 	const councilBadge = Number.isFinite(r.councilAvg)
 	  ? '<span class="mini-badge neutral" title="Council average score and votes">' + fmtNDash(r.councilAvg,1) + '/100 · ' + fmtVotesCount(r.councilCount) + '</span>'
