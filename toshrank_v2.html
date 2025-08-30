@@ -367,6 +367,43 @@ function pLimit(max){
     if(running<max) run(); else queue.push(run);
   });
 }
+function deriveMarket(p){
+  const price = Number(p.price || 0);
+  const locked = Number(p.lockedHuman || 0);
+  const total  = Number(p.totalHuman  || 0);
+  const circ   = Math.max(0, Number(p.circHuman || 0));
+
+  const tvl = locked * price;
+  const fdv = total  * price;
+  const mc  = circ   * price;
+
+  return { price, tvl, fdv, mc };
+} // ← you were missing this
+const BOARD_SNAPSHOT_URL = "https://toshboard-snapshot.toshtech777.workers.dev/snapshot.json";
+
+async function loadBoardSnapshot(){
+  const m = new Map();
+  try{
+    const r = await fetch(BOARD_SNAPSHOT_URL, { cache:"no-cache" });
+    if(!r.ok) return m;
+    const js = await r.json();
+    for(const it of (js.items || [])){
+      const ca = String(it.ca || "").toLowerCase();
+      m.set(ca, {
+        price: Number(it.price || 0),
+        reserveUSD: Number(it.reserve || 0),
+        marketCap: Number(it.market_cap || 0),
+        meta: {
+          iconUrl: it.iconUrl || "",
+          websiteUrl: it.websiteUrl || "",
+          xUrl: it.xUrl || "",
+          telegramUrl: it.telegramUrl || ""
+        }
+      });
+    }
+  }catch(e){ console.warn("board snapshot error:", e); }
+  return m;
+}
 
 /* ===== Providers/Contracts ===== */
 const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
@@ -477,7 +514,8 @@ async function getLocksSummary(token){
 function tokenCellHTML(p){
   const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
   const detailsLink  = `https://www.toshtech.xyz/toshdashboard.html?token=${p.address}`;
-  const meta = tokenMetaFromGQL.get(p.address) || {};
+  const meta = (p.meta && typeof p.meta === 'object' ? p.meta : null) || tokenMetaFromGQL.get(p.address) || {};
+
   const logo = meta.iconUrl || "";
   const web = meta.websiteUrl || "";
   const x   = meta.xUrl || "";
@@ -513,15 +551,21 @@ let DATA = [];
 function render(){
   const rowsEl = $("rows");
   rowsEl.innerHTML = "";
-  if (!DATA.length){ $("empty").style.display=""; return; }
+  if (!DATA.length){ $("empty").style.display=""; $("status").textContent = "Projects: 0 • Total TVL: $0"; return; }
   $("empty").style.display="none";
 
-  // Sort by TVL (descending)
-  const byTVL = [...DATA].sort((a,b)=> (b.tvl || 0) - (a.tvl || 0));
-  let totalTVL = 0;
+  // Sort by computed TVL (desc)
+  const byTVL = [...DATA].sort((a,b)=>{
+    const A = deriveMarket(a).tvl;
+    const B = deriveMarket(b).tvl;
+    return B - A;
+  });
 
+  let totalTVL = 0;
   byTVL.forEach((p,i)=>{
-    totalTVL += (p.tvl || 0);
+    const { price, tvl, fdv, mc } = deriveMarket(p);
+    totalTVL += tvl;
+
     const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
     const avgU   = p.avgUnlock  ? timeFromNow(p.avgUnlock)  : "—";
     const nextTitle = p.nextUnlock ? tsToUTC(p.nextUnlock) : "-";
@@ -533,7 +577,6 @@ function render(){
     const burnedHuman = p.burnedHuman;
     const circHuman   = p.circHuman;
 
-    // Percent bars: denominator excludes burned for "tradable" view
     const denomForPct = Math.max(1e-18, totalHuman - burnedHuman);
     const circPct = Math.max(0, Math.min(100, (circHuman / denomForPct) * 100));
     const burnPct = Math.max(0, Math.min(100, (burnedHuman / Math.max(1e-18,totalHuman)) * 100));
@@ -541,41 +584,30 @@ function render(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td data-label="#" class="row-index">${i+1}</td>
-
-      <td class="token-cell">
-        ${tokenCellHTML(p)}
-      </td>
-
-      <!-- Dedicated TVL column (big & bold) -->
+      <td class="token-cell">${tokenCellHTML(p)}</td>
       <td data-label="TVL" class="tvl-cell">
-        <div class="tvl-amount">💰 $${fmtNum((p.tvl||0).toFixed(0))}</div>
+        <div class="tvl-amount">💰 $${fmtNum((tvl||0).toFixed(0))}</div>
       </td>
-
       <td data-label="Locked %">
         <div class="cell-val">
           <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
           <div class="small">${lockedPctClamped.toFixed(2)}%</div>
         </div>
       </td>
-
       <td data-label="Unlock Date">
         <div class="cell-val" title="Next: ${nextTitle} | Avg: ${avgTitle}">
           <div class="small">⏳ next ${nextU}</div>
           <div>🗓️ avg ${avgU}</div>
         </div>
       </td>
-
-      <!-- Metrics (no TVL here) -->
       <td data-label="Metrics">
-		<div class="cell-val">
-		  <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
-		  <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>	
-		  <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
-		  <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
-		  
-		</div>  
+        <div class="cell-val">
+          <div class="small">💸 Price: $${(price||0).toFixed(8)}</div>
+          <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>
+          <div class="small">📊 MC: $${fmtNum((mc||0).toFixed(2))}</div>
+          <div class="small">🌐 FDV: $${fmtNum((fdv||0).toFixed(2))}</div>
+        </div>
       </td>
-
       <td data-label="Supply (Adjusted)" class="supply-cell">
         <div class="cell-val">
           <div class="supplybar" title="Circulating % (green) vs Burned % (red)">
@@ -599,43 +631,84 @@ function render(){
   $("status").textContent = `Projects: ${byTVL.length} • Total TVL: $${fmtNum(totalTVL.toFixed(2))}`;
 }
 
+
 /* =========== Build =========== */
 
   const SNAPSHOT_URL = "https://toshlock-snapshot.toshtech777.workers.dev/snapshot";
 
-  async function build(){
-    $("status").textContent = "Loading…";
-    try{
-      const r = await fetch(SNAPSHOT_URL, { cache: "no-cache" });
-      const snap = await r.json();
-      // snap.rows already has the fields your renderer expects
-      DATA = (snap.rows || []).map(r => ({
-        address: r.address,
+async function build(){
+  $("status").textContent = "Loading…";
+  try{
+    // Load everything we need in parallel
+    const [snapRes, _poolsLoaded, _logosLoaded, boardMap] = await Promise.all([
+      fetch(SNAPSHOT_URL, { cache: "no-cache" }),
+      loadPoolsJson(),        // fills poolInfoByToken
+      loadTokenLogos(),       // fills tokenMetaFromGQL
+      loadBoardSnapshot()     // returns a Map
+    ]);
+
+    const snap = await snapRes.json();
+
+    DATA = (snap.rows || []).map(r => {
+      const address = String(r.address || "").toLowerCase();
+
+      // sources for price/liq
+      const pools = poolInfoByToken.get(address) || {};
+      const board = boardMap.get(address) || {};
+
+      // prefer board price; fallback to pools cache
+      const price  = Number(board.price)  > 0 ? Number(board.price)  : Number(pools.price || 0);
+      const liqUSD = Number(board.reserveUSD) > 0 ? Number(board.reserveUSD) : Number(pools.reserveUSD || 0);
+
+      // numeric inputs
+      const totalHuman  = Number(r.totalHuman  || 0);
+      const lockedHuman = Number(r.lockedHuman || 0);
+      const burnedHuman = Number(r.burnedHuman || 0);
+      const circHuman   = Number(
+        r.circHuman != null ? r.circHuman : Math.max(0, totalHuman - lockedHuman - burnedHuman)
+      );
+
+      const denom = Math.max(1e-18, totalHuman - burnedHuman);
+      const lockedPct = Number.isFinite(r.lockedPct) ? Number(r.lockedPct) : (lockedHuman/denom)*100;
+
+      // merge meta: snapshot > board > gql
+      const gqlMeta = tokenMetaFromGQL.get(address) || {};
+      const mergedMeta = {
+        iconUrl:     (r.meta?.iconUrl     || board?.meta?.iconUrl     || gqlMeta.iconUrl     || ""),
+        websiteUrl:  (r.meta?.websiteUrl  || board?.meta?.websiteUrl  || gqlMeta.websiteUrl  || ""),
+        xUrl:        (r.meta?.xUrl        || board?.meta?.xUrl        || gqlMeta.xUrl        || ""),
+        telegramUrl: (r.meta?.telegramUrl || board?.meta?.telegramUrl || gqlMeta.telegramUrl || "")
+      };
+
+      return {
+        address,
         name: r.name,
         symbol: r.symbol,
-        price: r.price,
-        liqUSD: r.liqUSD,
-        mc: r.mc,
-        fdv: r.fdv,
-        tvl: r.tvl,
-        totalHuman: r.totalHuman,
-        burnedHuman: r.burnedHuman,
-        lockedHuman: r.lockedHuman,
-        circHuman: r.circHuman,
-        lockedPct: r.lockedPct,
+        price,
+        liqUSD,
+        totalHuman,
+        burnedHuman,
+        lockedHuman,
+        circHuman,
+        lockedPct,
         nextUnlock: r.nextUnlock,
-        avgUnlock: r.avgUnlock
-      }));
-      $("status").textContent = `Projects: ${DATA.length} • Total TVL: $${Number(snap.totalTVL||0).toLocaleString()}`;
-      render();
-    }catch(e){
-      console.error(e);
-      $("status").textContent = "Failed to load snapshot";
-      $("empty").style.display="";
-    }
-  }
+        avgUnlock: r.avgUnlock,
+        meta: mergedMeta
+      };
+    });
 
-  document.addEventListener("DOMContentLoaded", build);
+    // compute total TVL on the page
+    const totalTVL = DATA.reduce((s,p)=> s + deriveMarket(p).tvl, 0);
+    $("status").textContent = `Projects: ${DATA.length} • Total TVL: $${fmtNum(totalTVL.toFixed(2))}`;
+
+    render();
+  }catch(e){
+    console.error(e);
+    $("status").textContent = "Failed to load snapshot";
+    $("empty").style.display="";
+  }
+}
+
 
 document.addEventListener("DOMContentLoaded", build);
 </script>

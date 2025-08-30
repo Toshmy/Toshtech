@@ -1,25 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-	<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-KQGNWXWKPM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-KQGNWXWKPM');
-</script>
-<!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-NCRKWCRS');</script>
-<!-- End Google Tag Manager -->
   <meta charset="utf-8" />
   <title>ToshLock — Projects with Active Locks</title>
-    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -250,258 +233,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em }
 .kpi .value{ font-size:28px; font-weight:900 }
 .kpi .sub{ font-size:12px; color:#bfeede }
-/* ---- Compact header KPI chips ---- */
-.kpi-chips{
-  display:flex; flex-wrap:wrap; gap:.5rem;
-  align-items:center; justify-content:flex-end;
-}
-.kchip{
-  display:flex; align-items:center; gap:.45rem;
-  padding:.4rem .6rem; border-radius:999px;
-  background:#0b1224; border:1px solid rgba(0,255,174,.18);
-  box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
-}
-.kchip-label{
-  font-size:11px; color:#bfeede; text-transform:uppercase; letter-spacing:.04em;
-}
-.kchip-value{
-  font-weight:800; font-size:13px; color:#eafff7; line-height:1;
-}
-.kchip-sub{ margin-left:.35rem; font-weight:700; font-size:12px; color:#bfeede; }
-
-/* small screens: chips wrap under title nicely */
-@media (max-width: 720px){
-  .kpi-chips{ justify-content:flex-start; }
-}
-/* Header stat chips (equal width) */
-.statbar{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(150px, 1fr));
-  gap:10px;
-  align-items:stretch;
-}
-.stat-chip{
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:4px;
-  padding:10px 12px;
-  border:1px solid var(--border);
-  border-radius:10px;
-  background:#081021;
-  min-height:44px;                /* same height for all */
-  box-shadow:var(--shadow);
-}
-.stat-chip .label{
-  font-size:11px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.04em;
-}
-.stat-chip .value{
-  font-weight:800;
-  font-size:14px;                 /* smaller than KPI cards */
-  line-height:1.2;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-/* Mobile: stack chips full width */
-@media (max-width:640px){
-  .statbar{ grid-template-columns:1fr; }
-}
-/* ---- Compact header KPI chips (equal width) ---- */
-.kpi-chips{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(160px, 1fr));
-  gap:10px;
-  align-items:stretch;
-}
-.kchip{
-  display:flex; align-items:center; justify-content:space-between; gap:.45rem;
-  width:100%;
-  padding:.4rem .6rem; border-radius:999px;
-  background:#0b1224; border:1px solid rgba(0,255,174,.18);
-  box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
-  min-height:40px;  /* consistent height */
-}
-.kchip-label{
-  font-size:11px; color:#bfeede; text-transform:uppercase; letter-spacing:.04em;
-}
-.kchip-value{
-  font-weight:800; font-size:13px; color:#eafff7; line-height:1;
-  display:flex; align-items:center; gap:.35rem;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.kchip-sub{ font-weight:700; font-size:12px; color:#bfeede; }
-
-/* Mobile: stack chips full width */
-@media (max-width:640px){
-  .kpi-chips{ grid-template-columns:1fr; }
-}
-/* ---- Compact header KPI chips ---- */
-.kpi-chips{
-  /* mobile: two equal chips on one line, full width under title */
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:8px;
-  width:100%;
-  align-items:stretch;
-}
-
-.kchip{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:.44rem .6rem;
-  border-radius:999px;
-  background:#0b1224;
-  border:1px solid rgba(0,255,174,.18);
-  box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
-  min-height:40px;              /* same height for both */
-}
-
-.kchip-label{
-  font-size:11px;
-  color:#bfeede;
-  text-transform:uppercase;
-  letter-spacing:.04em;
-}
-
-.kchip-value{
-  font-weight:800;
-  font-size:13px;
-  color:#eafff7;
-  line-height:1;
-  white-space:nowrap;
-}
-
-/* desktop: chips inline with title, right-aligned, equal widths */
-@media (min-width: 769px){
-  header.row{ align-items:center; }
-  .kpi-chips{
-    display:flex;
-    gap:8px;
-    width:auto;                 /* shrink to content */
-  }
-  .kchip{
-    min-width:160px;            /* equal visual width */
-  }
-}
-/* --- header chips: one line, top-right on desktop --- */
-header .kpi-chips{
-  margin-left:auto;                 /* push to the right */
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:.5rem;
-  flex-wrap:nowrap;                 /* single line on desktop */
-}
-header .kchip{
-  flex:0 0 auto;                    /* don't stretch/shrink oddly */
-  white-space:nowrap;               /* keep label+value together */
-}
-
-/* mobile: let them wrap and show two per row neatly */
-@media (max-width:720px){
-  header .kpi-chips{
-    margin-left:0;
-    justify-content:flex-start;
-    flex-wrap:wrap;                 /* allow wrapping on small screens */
-    width:100%;
-  }
-  header .kchip{
-    flex:1 1 calc(50% - .5rem);     /* two chips per line */
-    min-width:180px;                /* optional: avoid too small */
-  }
-}
-/* Desktop: one line, top-right, no fixed widths */
-header .kpi-chips{
-  margin-left:auto;              /* push chips to the right */
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:.5rem;
-  flex-wrap:nowrap;              /* keep them on one line */
-}
-header .kchip{
-  flex:0 0 auto;                 /* natural width; no fixed size */
-  min-width:unset;               /* in case a min-width was set earlier */
-  white-space:nowrap;            /* keep label + value tidy */
-}
-
-/* Mobile: allow wrapping, two per row */
-@media (max-width:720px){
-  header .kpi-chips{
-    margin-left:0;
-    justify-content:flex-start;
-    flex-wrap:wrap;
-    width:100%;
-  }
-  header .kchip{
-    flex:1 1 48%;                /* two per row without fixed size */
-  }
-}
-/* ----- Header layout: title + chips (no overlap) ----- */
-.wrap > header.row{
-  display:grid;                         /* grid beats flex for no-overlap */
-  grid-template-columns: 1fr auto;      /* title | chips */
-  align-items:center;
-  gap:10px;
-}
-
-/* Title: allow it to shrink gracefully */
-.wrap > header.row h1{
-  margin:0;
-  min-width:0;                          /* enables ellipsis */
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-size:clamp(18px, 2.2vw, 24px);   /* slightly smaller on narrow screens */
-}
-
-/* Chips: single line, top-right, compact */
-.wrap > header.row .kpi-chips{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:.5rem;
-  flex-wrap:nowrap;                     /* one line on desktop */
-  max-width:min(55vw, 560px);           /* don’t crowd the title */
-}
-
-.wrap > header.row .kchip{
-  flex:0 1 auto;                        /* natural width, can shrink a bit */
-  padding:.28rem .5rem;
-  border-radius:999px;
-  white-space:nowrap;
-}
-.wrap > header.row .kchip-label{
-  font-size:clamp(10px, .9vw, 11px);
-  letter-spacing:.04em;
-}
-.wrap > header.row .kchip-value{
-  font-size:clamp(12px, 1vw, 13px);
-  font-weight:800;
-  line-height:1.1;
-}
-
-/* Mobile: stack chips, two per row */
-@media (max-width:720px){
-  .wrap > header.row{
-    grid-template-columns: 1fr;         /* title on its own row */
-  }
-  .wrap > header.row .kpi-chips{
-    justify-content:flex-start;
-    flex-wrap:wrap;
-    max-width:100%;
-  }
-  .wrap > header.row .kchip{
-    flex:1 1 48%;                        /* two per row */
-  }
-}
-
+  
   </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
@@ -536,23 +268,24 @@ header .kchip{
   <div class="wrap">
     <header class="row" style="justify-content:space-between;margin-bottom:10px">
       <h1 class="glow-text" style="margin:0">🏆 ToshLock — Projects with Active Locks</h1>
-		<!-- Compact header chips (animated like #kpis) -->
-		<div class="kpi-chips">
-		  <div class="kchip" id="chipProjectsWrap" title="Projects with active locks">
-			<span class="kchip-label">Projects</span>
-			<span class="kchip-value">
-			  <span id="chipProjects">0</span>
-			</span>
-		  </div>
-
-		  <div class="kchip" id="chipTotalWrap">
-			<span class="kchip-label">Total TVL</span>
-			<span class="kchip-value" id="chipTotalTVL" title="$0">$0</span>
-		  </div>
-
-		</div>
-
+      <span id="status" class="pill">Loading…</span>
     </header>
+<section id="kpis" class="row" style="gap:12px;margin:10px 0 16px">
+  <div class="card" style="flex:1;min-width:180px">
+    <div class="muted">Projects</div>
+    <div id="kpiProjects" style="font-size:28px;font-weight:800;line-height:1.1">0</div>
+  </div>
+  <div class="card" style="flex:1;min-width:220px">
+    <div class="muted">Total TVL</div>
+    <div id="kpiTotalTVL" style="font-size:28px;font-weight:800;line-height:1.1">$0</div>
+  </div>
+  <div class="card" style="flex:2;min-width:260px">
+    <div class="muted">Top by TVL</div>
+    <div id="kpiBestName" style="font-size:18px;font-weight:700;opacity:.95">—</div>
+    <div id="kpiBestTVL" style="font-size:22px;font-weight:800;margin-top:4px">$0</div>
+  </div>
+</section>
+
     <section class="table-scroll card" style="padding:0">
       <table>
         <thead>
@@ -638,7 +371,7 @@ const fmtUSD0 = n => new Intl.NumberFormat(undefined,{style:'currency',currency:
 const fmtUSD2 = n => new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n||0);
 const fmtUSDC = n => new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',notation:'compact',maximumFractionDigits:2}).format(n||0);
 
-function countUp(el, to, fmt, duration=1200){
+function countUp(el, to, fmt, duration=800){
   if(!el) return;                              // null-safe
   const fromText = el.textContent || "";
   // crude parse of current number if present, else start at 0
@@ -654,24 +387,19 @@ function countUp(el, to, fmt, duration=1200){
 }
 
 function updateKpis(totalTVL, projectsCount, best){
-  const num = Number(projectsCount||0);
-  const tvl = Number(totalTVL||0);
-  const bestTVL = Number(best?.tvl||0);
+  const elProjects = document.getElementById("kpiProjects");
+  const elTotal    = document.getElementById("kpiTotalTVL");
+  const elBestName = document.getElementById("kpiBestName");
+  const elBestTVL  = document.getElementById("kpiBestTVL");
+  // if any are missing, just bail gracefully
+  if(!elProjects || !elTotal || !elBestName || !elBestTVL) return;
+
+  countUp(elProjects, Number(projectsCount||0), v => Math.round(v).toLocaleString());
+  countUp(elTotal, Number(totalTVL||0), v => fmtUSD2(v));
   const bestName = best ? (best.name || best.symbol || shortAddr(best.address)) : "—";
-
-  // Big cards (#kpis)
-  countUp(document.getElementById("kpiProjects"), num, v => Math.round(v).toLocaleString());
-  countUp(document.getElementById("kpiTotalTVL"), tvl, v => fmtUSD2(v));
-  const kbn = document.getElementById("kpiBestName"); if(kbn) kbn.textContent = bestName;
-  countUp(document.getElementById("kpiBestTVL"), bestTVL, v => fmtUSD2(v));
-
-  // Header chips (compact)
-  countUp(document.getElementById("chipProjects"), num, v => Math.round(v).toLocaleString());
-  countUp(document.getElementById("chipTotalTVL"), tvl, v => fmtUSDC(v));   // compact currency
-  const ctn = document.getElementById("chipTopName"); if(ctn) ctn.textContent = bestName;
-  countUp(document.getElementById("chipTopTVL"), bestTVL, v => fmtUSDC(v));
+  elBestName.textContent = bestName;
+  countUp(elBestTVL, Number(best?.tvl||0), v => fmtUSD2(v));
 }
-
 
 
 /* ===== HELPERS ===== */
@@ -841,41 +569,8 @@ async function getLocksSummary(token){
   }
   return { sumLocked: sum, earliestUnlock: earliestUnlock || null, avgUnlock: avgUnlock || null };
 }
-// helpers for names/titles
-const truncate = (s, n=16) => (s && s.length > n ? s.slice(0, n-1)+'…' : (s||'—'));
-const fmtUSDCompact = n => new Intl.NumberFormat(undefined, {
-  style:'currency', currency:'USD', notation:'compact', maximumFractionDigits:2
-}).format(n || 0);
-const fmtUSDExact = n => new Intl.NumberFormat(undefined, {
-  style:'currency', currency:'USD', maximumFractionDigits:2
-}).format(n || 0);
-
-function updateHeaderChips(totalTVL, projectsCount){
-  const elP  = document.getElementById("chipProjects");
-  const elT  = document.getElementById("chipTotalTVL");
-  const wrap = document.getElementById("chipTotalWrap");
-
-  if(elP){
-    countUp(elP, Number(projectsCount||0), v => Math.round(v).toLocaleString());
-  }
-  if(elT){
-    const tvlNum = Number(totalTVL||0);
-    countUp(elT, tvlNum, v => fmtUSDCompact(v));      // compact in chip
-    elT.title = fmtUSDExact(tvlNum);                  // exact in tooltip
-  }
-  if(wrap){
-    wrap.title = elT ? elT.title : "$0";
-  }
-}
-
-
 
 /* =========== UI helpers =========== */
-const safeText = (id, val) => {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-};
-
 function tokenCellHTML(p){
   const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
   const detailsLink  = `https://www.toshtech.xyz/toshdashboard.html?token=${p.address}`;
@@ -919,7 +614,7 @@ function render(){
 
   if (!DATA.length){
     $("empty").style.display = "";
-    
+    $("status").textContent = "Projects: 0 • Total TVL: $0";
     updateKpis(0, 0, null);
     return;
   }
@@ -1007,9 +702,7 @@ function render(){
 
   // KPIs + pill
   updateKpis(totalTVL, byTVL.length, best);
-  updateHeaderChips(totalTVL, byTVL.length);
-
-
+  $("status").textContent = `Projects: ${byTVL.length} • Total TVL: ${fmtUSD2(totalTVL)}`;
 }
 
 
@@ -1019,12 +712,7 @@ function render(){
   const SNAPSHOT_URL = "https://toshlock-snapshot.toshtech777.workers.dev/snapshot";
 
 async function build(){
-// show a lightweight loading state in the header chips
-safeText("chipProjects", "—");
-safeText("chipTotalTVL", "Loading…");
-safeText("chipTopName", "—");
-safeText("chipTopTVL", "$0");
-
+  $("status").textContent = "Loading…";
   try{
     // Load everything we need in parallel
     const [snapRes, _poolsLoaded, _logosLoaded, boardMap] = await Promise.all([
@@ -1086,12 +774,12 @@ safeText("chipTopTVL", "$0");
 
     // compute total TVL on the page
     const totalTVL = DATA.reduce((s,p)=> s + deriveMarket(p).tvl, 0);
-
+    $("status").textContent = `Projects: ${DATA.length} • Total TVL: $${fmtNum(totalTVL.toFixed(2))}`;
 
     render();
   }catch(e){
     console.error(e);
-    updateKpis(0, 0, null); // reset chips cleanly
+    $("status").textContent = "Failed to load snapshot";
     $("empty").style.display="";
   }
 }
