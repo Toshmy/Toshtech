@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ToshLock — Projects with Active Locks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+      --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+      --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,255,.18);
+      --green:#00ffae; --red:#ff6b6b;
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1150px;margin:24px auto;padding:0 16px}
+    .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;padding:.25rem .6rem;border-radius:999px;background:#081021;border:1px solid var(--border);color:#a8ffd9}
+
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px;white-space:nowrap}
+    th{text-align:left;background:var(--bg-2);position:sticky;top:0}
+    .table-scroll{overflow:auto;border-radius:12px}
+
+    .progress{height:8px;background:#0f1730;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), var(--accent-2));width:0%}
+
+    .supplybar{height:10px;background:#0f1730;border:1px solid var(--border);border-radius:6px;display:flex;overflow:hidden}
+    .supplybar .circ{background:var(--green);height:100%}
+    .supplybar .burn{background:var(--red);height:100%}
+
+    .muted{color:#98f5d3}
+    .small{font-size:12px;color:#bfeede}
+    .center{display:flex;align-items:center;justify-content:center;padding:18px;color:#bfeede}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+    td.token-cell{white-space:normal}
+    .token-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .token-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+    .token-logo{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:#0b1226;flex:0 0 36px}
+    .token-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .token-ca a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%}
+
+    .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:.22rem .6rem;background:#081021}
+    .chip .emoji{font-size:12px;opacity:.9}
+    .token-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+    td.supply-cell{min-width:220px;white-space:normal}
+
+    /* Emphasize TVL */
+    .tvl-amount{
+      font-size:18px;
+      font-weight:800;
+      line-height:1.15;
+    }
+    .circ-amount{
+      font-size:12px;
+      font-weight:800;
+      line-height:1.15;
+    }
+    @media (max-width: 640px){
+      .table-scroll{ overflow:visible }
+      thead{ display:none }
+      table, tbody, tr, td{ display:block; width:100% }
+      tr{
+        margin:12px 0; border:1px solid var(--border); border-radius:12px;
+        background:var(--card); box-shadow:var(--shadow); padding:10px
+      }
+      tr .row-index{ display:none }
+      td.token-cell{ padding-bottom:8px }
+      td.token-cell::before{ content:none !important }
+
+      .token-head{flex-wrap:wrap;gap:10px}
+      .token-actions{flex:1 0 100%;display:flex;justify-content:flex-start}
+      .token-links{width:100%;justify-content:flex-start}
+      .chip{ font-size:11px; padding:.22rem .55rem; max-width:100% }
+
+      td[data-label]{
+        display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:8px 4px
+      }
+      td[data-label]::before{
+        content:attr(data-label);
+        flex:0 0 42%;
+        max-width:220px;
+        font-size:11px; color:#bfeede; opacity:.8; text-transform:uppercase; letter-spacing:.03em;
+        padding-top:3px;
+      }
+      .cell-val{
+        flex:1; min-width:0; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+        overflow-wrap:anywhere;
+      }
+      .cell-val .progress{ width:100% }
+	  .cell-val .supplybar{ width:100%; align-self:stretch; }
+      td.supply-cell{ min-width:auto }
+      .mono{ word-break:normal }
+    }
+  :root{
+    --bg:#0c1222; --bg-2:#0b1226; --fg:#e8fff6; --muted:#a8ffd9;
+    --accent:#00ffae; --accent-2:#00d99c; --card:rgba(255,255,255,.05);
+    --border:rgba(0,255,174,.2); --shadow:0 0 30px rgba(0,255,174,.18);
+  }
+
+  /* Basic utilities */
+  .hidden{display:none !important;}
+  .rotate-180{transform:rotate(180deg);}    
+
+  html,body{
+    margin:0;
+    background:radial-gradient(circle at 20% 10%, #1a2238 0%, var(--bg) 70%);
+    color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+  }
+  a{color:#93c5fd;text-decoration:none}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px;padding-top:48px;}
+  .glow-text{text-shadow:0 0 12px var(--accent),0 0 24px var(--accent)}
+  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(6px);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .between{justify-content:space-between}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+  .muted{color:var(--muted);opacity:.9;font-size:12px}
+  *{box-sizing:border-box}
+  label{display:block;margin-bottom:6px;font-size:12px;color:var(--muted)}
+  input,button,select{
+    width:100%;border-radius:12px;border:1px solid var(--border);
+    background:#0f1730;color:#fff;padding:12px
+  }
+  input:focus,button:focus{outline:2px solid var(--accent);}
+  .btn{cursor:pointer;background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#00251b;border:0;font-weight:700;width:auto}
+  .btn.blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#eef5ff}
+  .btn.gray{background:linear-gradient(135deg,#64748b,#475569);color:#eef5ff}
+  .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;
+    background:#081021;border:1px solid var(--border);color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}
+  th{text-align:left;background:var(--bg-2)}
+  .table-scroll{overflow-x:auto;overflow-y:hidden;border-radius:12px;-webkit-overflow-scrolling:touch}
+  pre{background:#0f1730;border:1px dashed var(--border);border-radius:12px;padding:12px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  td:nth-child(1), th:nth-child(1){ white-space:nowrap; }
+  #amountHint{margin-top:6px;min-height:16px}
+  .flatpickr-calendar{background:#0f1730;border:1px solid var(--border);box-shadow:var(--shadow)}
+
+  /* ====== NAV ====== */
+  .site-nav{
+    position:fixed; left:0; right:0; top:4.5rem; z-index:60;
+    background:rgba(0,0,0,.8); backdrop-filter:blur(6px);
+  }
+  .nav-inner{max-width:64rem; margin:0 auto; padding:0 .75rem;}
+  .nav-row{display:flex; align-items:center; justify-content:space-between; padding:.75rem 0;}
+  .brand{color:#fff; font-weight:700; font-size:1.125rem;}
+
+  /* Desktop links */
+  .links-desktop{align-items:center; gap:1.5rem; font-weight:600;}
+  .links-desktop a{color:#fff; text-decoration:none;}
+  .links-desktop a:hover{color:var(--accent);}
+
+  /* Hamburger button (mobile only) */
+  .site-nav .menu-btn{
+    color:#fff !important;
+    -webkit-tap-highlight-color:transparent;
+    background:transparent;
+    border:0;
+    padding:.25rem;
+    cursor:pointer;
+    width:auto;
+    display:inline-flex;
+    align-items:center;
+    margin-left:auto;
+    flex:0 0 auto;
+  }
+  .site-nav .menu-btn svg{width:1.5rem;height:1.5rem;stroke:#fff;display:block;}
+  .site-nav .menu-btn:focus{outline:none;}
+  .site-nav .menu-btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+    box-shadow:none;
+  }
+
+  /* Mobile menu */
+  .mobile-menu{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    padding:.5rem 0 .75rem;
+    font-weight:600;
+    text-align:center;
+    align-items:center;
+    width:100%;
+  }
+  .mobile-menu a{color:#fff;text-decoration:none;}
+  .mobile-menu a:hover{color:var(--accent);}
+
+  /* Dropdown (kept for future use) */
+  .nav-has-dropdown{position:relative;}
+  .nav-dropdown{
+    position:absolute; right:0; top:100%; margin-top:.5rem;
+    background:rgba(3,10,22,.92); border:1px solid rgba(0,255,174,.25);
+    backdrop-filter:blur(10px); border-radius:.75rem;
+    box-shadow:0 14px 40px rgba(0,0,0,.45),
+               0 0 0 1px rgba(0,255,174,.08) inset;
+    padding:.5rem; min-width:14rem;
+    opacity:0; visibility:hidden; transform:translateY(6px);
+    transition:opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
+    z-index:80;
+  }
+  .nav-has-dropdown:hover .nav-dropdown,
+  .nav-has-dropdown:focus-within .nav-dropdown{
+    opacity:1; visibility:visible; transform:translateY(0);
+  }
+  .nav-dropdown a{display:block; padding:.6rem .8rem; border-radius:.6rem; color:#eafff7;}
+  .nav-dropdown a:hover{background:rgba(255,255,255,.08);}
+
+  /* Responsive */
+  @media (max-width:768px){
+    .links-desktop{display:none !important;}
+    #menu-toggle{display:inline-flex !important;}
+    #mobile-menu{display:flex;} /* toggled by .hidden */
+  }
+  @media (min-width:769px){
+    .links-desktop{display:flex !important; gap:1.5rem;}
+    #menu-toggle{display:none !important;}
+    #mobile-menu{display:none !important;}
+  }	
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <!-- NAVIGATION: Only ToshLock / ToshDashboard / ToshRank -->
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <div class="nav-row">
+        <div class="brand">Menu</div>
+        <div class="links-desktop only-desktop">
+          <a href="index.html">Home</a>
+		  <a href="toshlock.html">ToshLock (Locker)</a>
+          <a href="toshdashboard.html">ToshDashboard</a>
+          <a href="toshrank.html">ToshRank</a>
+        </div>
+        <!-- Move the hamburger to be the LAST flex child so it sits at far right on mobile -->
+        <button id="menu-toggle" class="menu-btn only-mobile" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="mobile-menu" class="mobile-menu hidden" aria-hidden="true">
+        <a href="index.html">Home</a>
+		<a href="toshlock.html">ToshLock (Locker)</a>
+        <a href="toshdashboard.html">ToshDashboard</a>
+        <a href="toshrank.html">ToshRank</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <header class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h1 class="glow-text" style="margin:0">🏆 ToshLock — Projects with Active Locks</h1>
+      <span id="status" class="pill">Loading…</span>
+    </header>
+
+    <section class="table-scroll card" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Token</th>
+            <th class="tvl-col">TVL</th>
+            <th>Locked %</th>
+            <th>Unlock Date</th>
+            <th>Metrics</th>
+            <th>Supply (Adjusted)</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="center" style="display:none">No active locks found.</div>
+    </section>
+
+    <pre id="log" class="card muted" style="margin-top:12px;display:none"></pre>
+  </div>
+
+<script>
+    // Offset nav below banner (matches index behavior)
+    (function(){
+      const nav = document.querySelector('.site-nav');
+      const banner = document.querySelector('.banner');
+      function updateMenuTop(){
+        const h = banner ? banner.offsetHeight : 0; // 4.5rem fallback
+        nav.style.top = h + 'px';
+      }
+      window.addEventListener('resize', updateMenuTop);
+      updateMenuTop();
+    })();
+
+    // Hamburger toggle (menu stays right-aligned)
+    (function(){
+      const btn = document.getElementById('menu-toggle');
+      const panel = document.getElementById('mobile-menu');
+      if(!btn || !panel) return;
+      btn.addEventListener('click', ()=>{
+        const nowHidden = panel.classList.toggle('hidden');
+        const showing = !nowHidden;
+        btn.setAttribute('aria-expanded', String(showing));
+        panel.setAttribute('aria-hidden', String(!showing));
+      });
+    })();
+
+    // Highlight active link (desktop + mobile)
+    (function(){
+      const path = location.pathname.split('/').pop() || 'index.html';
+      document.querySelectorAll('nav a[href]').forEach(a=>{
+        if (a.getAttribute('href') === path) a.style.color = '#00ffae';
+      });
+    })();
+
+/* ===== CONFIG ===== */
+const CONFIG = {
+  LOCKER: "0xCCEfe66507762370C2487dd198d7D1fEfc6dEF8F",
+  RPC: "https://rpc-pepu-v2-mainnet-0.t.conduit.xyz",
+  EXPLORER: "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
+  GQL_URL: "https://pepu-mainnet2-pumppad.0sum.io/subgraphs/name/launchpad"
+};
+
+const GQL_QUERY = `query PresalesLogos { presales(first: 1000) { data token } }`;
+const POOLS_JSON_URL = "pools_cache.json";
+const BURN_ADDRS = [
+  "0xa9fD599cd8857e90059c83e4885Dc09986039085",
+  "0x000000000000000000000000000000000000dEaD"
+];
+const ERC20 = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const LOCKER_ABI = [
+  "event LiquidityLocked(address indexed token,address indexed user,uint256 indexed lockId,uint256 amount,uint256 unlockTime,string name)",
+  "function getActiveLocksByToken(address token,uint256 offset,uint256 limit) view returns (uint256[] lockIds,address[] owners,uint256[] amounts,uint256[] unlockTimes,string[] names)"
+];
+
+/* ===== HELPERS ===== */
+const $ = id => document.getElementById(id);
+function fmtNum(n){ return Number(n).toLocaleString(); }
+function shortAddr(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
+function bnToNum(bn, decimals){ try{ return Number(ethers.utils.formatUnits(bn, decimals)); }catch{ return 0; } }
+function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+function timeFromNow(ts){
+  if (!ts) return "—";
+  const now = Math.floor(Date.now()/1000);
+  const diff = ts - now;
+  const abs = Math.abs(diff);
+  const m = Math.floor(abs/60), h=Math.floor(m/60), d=Math.floor(h/24), mo=Math.floor(d/30);
+  const unit = mo>=1 ? [mo,"month"] : d>=1 ? [d,"day"] : h>=1 ? [h,"hour"] : m>=1 ? [m,"min"] : [abs,"sec"];
+  const [val, label] = unit;
+  return diff >= 0 ? `in ${val} ${label}${val>1?'s':''}` : `${val} ${label}${val>1?'s':''} ago`;
+}
+function tsToUTC(ts){ try{ return new Date(ts*1000).toISOString().replace('T',' ').replace('Z',' UTC'); } catch{ return "—"; } }
+function pLimit(max){
+  let running=0, queue=[];
+  const next=()=>{ running--; if(queue.length) queue.shift()(); };
+  return fn => new Promise((res,rej)=>{
+    const run=()=>{ running++; Promise.resolve().then(fn).then(v=>{res(v);next();},e=>{rej(e);next();}); };
+    if(running<max) run(); else queue.push(run);
+  });
+}
+
+/* ===== Providers/Contracts ===== */
+const ro = new ethers.providers.JsonRpcProvider(CONFIG.RPC);
+const locker = new ethers.Contract(CONFIG.LOCKER, LOCKER_ABI, ro);
+
+/* ===== External caches ===== */
+let poolInfoByToken = new Map(); // tokenCA -> { price, reserveUSD, pools: Set<poolCA>, name, symbol, _maxReserveSeen }
+let tokenMetaFromGQL = new Map();
+
+/* Load & aggregate price/reserve across pools */
+async function loadPoolsJson(){
+  poolInfoByToken.clear();
+  try{
+    const r = await fetch(POOLS_JSON_URL, { cache: "no-cache" });
+    if (!r.ok) return;
+    const js = await r.json();
+    const rows = Array.isArray(js) ? js : (js.data || []);
+    for (const row of rows){
+      const token = (row.address || "").toLowerCase();
+      const pool  = (row.pool_address || "").toLowerCase();
+      if(!/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
+
+      if(!poolInfoByToken.has(token)){
+        poolInfoByToken.set(token, {
+          price: Number(row.price || 0),
+          reserveUSD: 0,
+          pools: new Set(),
+          name: row.name || "",
+          symbol: row.symbol || "",
+          _maxReserveSeen: 0
+        });
+      }
+      const info = poolInfoByToken.get(token);
+      if(/^0x[a-fA-F0-9]{40}$/.test(pool)) info.pools.add(pool);
+
+      const rowReserve = Number(row.reserve_in_usd || 0);
+      info.reserveUSD += rowReserve;                       // sum USD liquidity across pools
+      if (rowReserve > info._maxReserveSeen) {             // pick price from most-liquid pool
+        info._maxReserveSeen = rowReserve;
+        info.price = Number(row.price || 0);
+      }
+    }
+  }catch(e){ console.warn("pools_cache load error:", e); }
+}
+
+/* Logos / socials via GQL — direct */
+async function loadTokenLogos(){
+  tokenMetaFromGQL.clear();
+  try{
+    const r = await fetch(CONFIG.GQL_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({ query: GQL_QUERY })
+    });
+    if (!r.ok) { console.warn("GQL fetch failed:", r.status); return; }
+    const js = await r.json();
+    const presales = js?.data?.presales || [];
+    for (const p of presales){
+      const addr = (p.token || "").toLowerCase();
+      if(!/^0x[a-fA-F0-9]{40}$/.test(addr)) continue;
+      let parsed = {};
+      try{ parsed = JSON.parse(p.data || "{}"); }catch{}
+      const iconUrl = parsed.iconUrl || "";
+      const websiteUrl = parsed.websiteUrl || "";
+      const xUrl = parsed.xUrl || parsed.twitterUrl || "";
+      const telegramUrl = parsed.telegramUrl || "";
+      tokenMetaFromGQL.set(addr, { iconUrl, websiteUrl, xUrl, telegramUrl });
+    }
+  }catch(e){ console.warn("GQL error:", e); }
+}
+
+/* Find tokens that have active locks (via events) */
+async function discoverLockedTokens(){
+  const topic0 = ethers.utils.id("LiquidityLocked(address,address,uint256,uint256,uint256,string)");
+  const latest = await ro.getBlockNumber();
+  const fromBlock = Math.max(0, latest - 800_000);
+  const logs = await ro.getLogs({ address: CONFIG.LOCKER, topics: [topic0], fromBlock, toBlock: "latest" });
+  const tokens = new Set();
+  for (const lg of logs){
+    const token = "0x" + lg.topics[1].slice(26);
+    tokens.add(token.toLowerCase());
+  }
+  return Array.from(tokens);
+}
+
+/* Sum of active locked amounts + unlock stats */
+async function getLocksSummary(token){
+  const [ids, , amounts, unlockTimes] = await locker.getActiveLocksByToken(token, 0, 1000).catch(()=>[[],[],[],[]]);
+  let sum = ethers.BigNumber.from(0);
+  let sumWeighted = ethers.BigNumber.from(0);
+  let earliestUnlock = null;
+  for (let i=0;i<ids.length;i++){
+    const amt = amounts[i];
+    const ut  = Number(unlockTimes[i]) || 0;
+    sum = sum.add(amt);
+    sumWeighted = sumWeighted.add(amt.mul(ut));
+    if (!earliestUnlock || ut < earliestUnlock) earliestUnlock = ut;
+  }
+  let avgUnlock = null;
+  if (!sum.isZero()) {
+    const avgBN = sumWeighted.div(sum);
+    avgUnlock = avgBN.toNumber();
+  }
+  return { sumLocked: sum, earliestUnlock: earliestUnlock || null, avgUnlock: avgUnlock || null };
+}
+
+/* =========== UI helpers =========== */
+function tokenCellHTML(p){
+  const explorerLink = `${CONFIG.EXPLORER}/address/${p.address}`;
+  const detailsLink  = `https://www.toshtech.xyz/toshdashboard.html?token=${p.address}`;
+  const meta = tokenMetaFromGQL.get(p.address) || {};
+  const logo = meta.iconUrl || "";
+  const web = meta.websiteUrl || "";
+  const x   = meta.xUrl || "";
+  const tg  = meta.telegramUrl || "";
+  return `
+    <div class="token-head">
+      <div class="token-left">
+        ${logo ? `<img class="token-logo" src="${logo}" alt="" onerror="this.style.display='none'">` : `<div class="token-logo"></div>`}
+        <div style="min-width:0">
+          <div class="token-name">${escapeHtml(p.name || p.symbol || '')}</div>
+          <div class="small mono token-ca">
+            <a href="${explorerLink}" target="_blank" rel="noopener" title="${p.address}">
+              ${shortAddr(p.address)}
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="token-actions">
+        <a class="chip" href="${detailsLink}" target="_blank" rel="noopener"><span class="emoji">🔒</span> Active Locks</a>
+      </div>
+    </div>
+    <div class="token-links">
+      ${web ? `<a class="chip" href="${web}" target="_blank" rel="noopener">🕸️ Website</a>` : ""}
+      ${x   ? `<a class="chip" href="${x}"   target="_blank" rel="noopener">𝕏 X</a>` : ""}
+      ${tg  ? `<a class="chip" href="${tg}"  target="_blank" rel="noopener">💬 Telegram</a>` : ""}
+    </div>
+  `;
+}
+
+/* =========== Render =========== */
+let DATA = [];
+
+function render(){
+  const rowsEl = $("rows");
+  rowsEl.innerHTML = "";
+  if (!DATA.length){ $("empty").style.display=""; return; }
+  $("empty").style.display="none";
+
+  // Sort by TVL (descending)
+  const byTVL = [...DATA].sort((a,b)=> (b.tvl || 0) - (a.tvl || 0));
+  let totalTVL = 0;
+
+  byTVL.forEach((p,i)=>{
+    totalTVL += (p.tvl || 0);
+    const nextU  = p.nextUnlock ? timeFromNow(p.nextUnlock) : "—";
+    const avgU   = p.avgUnlock  ? timeFromNow(p.avgUnlock)  : "—";
+    const nextTitle = p.nextUnlock ? tsToUTC(p.nextUnlock) : "-";
+    const avgTitle  = p.avgUnlock  ? tsToUTC(p.avgUnlock)  : "-";
+
+    const lockedPctClamped = isFinite(p.lockedPct) ? Math.max(0, Math.min(100, p.lockedPct)) : 0;
+
+    const totalHuman  = p.totalHuman;
+    const burnedHuman = p.burnedHuman;
+    const circHuman   = p.circHuman;
+
+    // Percent bars: denominator excludes burned for "tradable" view
+    const denomForPct = Math.max(1e-18, totalHuman - burnedHuman);
+    const circPct = Math.max(0, Math.min(100, (circHuman / denomForPct) * 100));
+    const burnPct = Math.max(0, Math.min(100, (burnedHuman / Math.max(1e-18,totalHuman)) * 100));
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td data-label="#" class="row-index">${i+1}</td>
+
+      <td class="token-cell">
+        ${tokenCellHTML(p)}
+      </td>
+
+      <!-- Dedicated TVL column (big & bold) -->
+      <td data-label="TVL" class="tvl-cell">
+        <div class="tvl-amount">💰 $${fmtNum((p.tvl||0).toFixed(0))}</div>
+      </td>
+
+      <td data-label="Locked %">
+        <div class="cell-val">
+          <div class="progress"><i style="width:${lockedPctClamped.toFixed(2)}%"></i></div>
+          <div class="small">${lockedPctClamped.toFixed(2)}%</div>
+        </div>
+      </td>
+
+      <td data-label="Unlock Date">
+        <div class="cell-val" title="Next: ${nextTitle} | Avg: ${avgTitle}">
+          <div class="small">⏳ next ${nextU}</div>
+          <div>🗓️ avg ${avgU}</div>
+        </div>
+      </td>
+
+      <!-- Metrics (no TVL here) -->
+      <td data-label="Metrics">
+		<div class="cell-val">
+		  <div class="small">💸 Price: $${(p.price||0).toFixed(8)}</div>
+		  <div class="small">💧 Liquidity: $${fmtNum((p.liqUSD||0).toFixed(2))}</div>	
+		  <div class="small">📊 MC: $${fmtNum((p.mc||0).toFixed(2))}</div>
+		  <div class="small">🌐 FDV: $${fmtNum((p.fdv||0).toFixed(2))}</div>
+		  
+		</div>  
+      </td>
+
+      <td data-label="Supply (Adjusted)" class="supply-cell">
+        <div class="cell-val">
+          <div class="supplybar" title="Circulating % (green) vs Burned % (red)">
+            <div class="circ" style="width:${circPct.toFixed(2)}%"></div>
+            <div class="burn" style="width:${burnPct.toFixed(2)}%"></div>
+          </div>
+          <div class="small">
+            📦 Total: ${fmtNum(totalHuman.toFixed(0))}<br>
+            🔒 Locked: ${fmtNum(p.lockedHuman.toFixed(0))}<br>
+            🔥 Burned: ${fmtNum(burnedHuman.toFixed(0))}<br>
+          </div>
+          <div class="circ-amount">
+            ✅ Circulating: ${fmtNum(circHuman.toFixed(0))}
+          </div>
+        </div>
+      </td>
+    `;
+    rowsEl.appendChild(tr);
+  });
+
+  $("status").textContent = `Projects: ${byTVL.length} • Total TVL: $${fmtNum(totalTVL.toFixed(2))}`;
+}
+
+/* =========== Build =========== */
+
+  const SNAPSHOT_URL = "https://toshlock-snapshot.toshtech777.workers.dev/snapshot";
+
+  async function build(){
+    $("status").textContent = "Loading…";
+    try{
+      const r = await fetch(SNAPSHOT_URL, { cache: "no-cache" });
+      const snap = await r.json();
+      // snap.rows already has the fields your renderer expects
+      DATA = (snap.rows || []).map(r => ({
+        address: r.address,
+        name: r.name,
+        symbol: r.symbol,
+        price: r.price,
+        liqUSD: r.liqUSD,
+        mc: r.mc,
+        fdv: r.fdv,
+        tvl: r.tvl,
+        totalHuman: r.totalHuman,
+        burnedHuman: r.burnedHuman,
+        lockedHuman: r.lockedHuman,
+        circHuman: r.circHuman,
+        lockedPct: r.lockedPct,
+        nextUnlock: r.nextUnlock,
+        avgUnlock: r.avgUnlock
+      }));
+      $("status").textContent = `Projects: ${DATA.length} • Total TVL: $${Number(snap.totalTVL||0).toLocaleString()}`;
+      render();
+    }catch(e){
+      console.error(e);
+      $("status").textContent = "Failed to load snapshot";
+      $("empty").style.display="";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", build);
+
+document.addEventListener("DOMContentLoaded", build);
+</script>
+</body>
+</html>
