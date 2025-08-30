@@ -1,134 +1,29 @@
 {
-	"schema_version": "1.1",
-	"weights": {
-		"liquidity_locking": 0.3,
-		"distribution_risk": 0.25,
-		"team_transparency": 0.2,
-		"execution_progress": 0.15,
-		"contract_risks": 0.1
-	},
-	"voters": [
-		{
-			"id": "tg:@alice",
-			"display": "Alice"
-		},
-		{
-			"id": "tg:@bob",
-			"display": "Bob"
-		},
-		{
-			"id": "tg:@tosh_my",
-			"display": "Tosh"
-		},
-		{
-			"id": "tg:@dave",
-			"display": "Dave"
-		},
-		{
-			"id": "tg:@emma",
-			"display": "Emma"
-		}
-	],
-	"tokens": {
-		"0x82144c93bd531e46f31033fe22d1055af17a514c": {
-			"launch_type": "launchpad",
-			"votes": [
-				{
-					"voter_id": "tg:@Voldy",
-					"display": "Voldy",
-					"categories": {
-						"liquidity_locking": 100,
-						"distribution_risk": 100,
-						"team_transparency": 100,
-						"execution_progress": 100,
-						"contract_risks": 100
-					},
-					"notes": "Thank Venom & xyz",
-					"timestamp": "2025-08-29T12:34:56Z"
-				},
-				{
-					"voter_id": "tg:@tosh_my",
-					"display": "Tosh",
-					"categories": {
-						"liquidity_locking": 100,
-						"distribution_risk": 100,
-						"team_transparency": 100,
-						"execution_progress": 100,
-						"contract_risks": 100
-					},
-					"notes": "Number 1 MC",
-					"timestamp": "2025-08-29T12:34:56Z"
-				}
-			]
-		},
-		"0x910c1acdbefc866f2cb2c482e044582e44395152": {
-			"launch_type": "launchpad",
-			"category": "Bobby token",
-			"category_key": "og",
-			"votes": [
-				{
-					"voter_id": "tg:@alice",
-					"display": "Alice",
-					"categories": {
-						"liquidity_locking": 90,
-						"distribution_risk": 85,
-						"team_transparency": 70,
-						"execution_progress": 75,
-						"contract_risks": 80
-					},
-					"notes": "Strong lock and good distribution.",
-					"timestamp": "2025-08-30T12:00:00Z"
-				},
-				{
-					"voter_id": "tg:@bob",
-					"display": "Bob",
-					"categories": {
-						"liquidity_locking": 60,
-						"distribution_risk": 55,
-						"team_transparency": 65,
-						"execution_progress": 50,
-						"contract_risks": 60
-					},
-					"notes": "Some concerns about execution speed.",
-					"timestamp": 1767200000
-				}
-			]
-		},
-		"0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
-			"launch_type": "launchpad",
-			"votes": [
-				{
-					"voter_id": "tg:@alice",
-					"display": "Alice",
-					"categories": {
-						"liquidity_locking": 0,
-						"distribution_risk": 0,
-						"team_transparency": 0,
-						"execution_progress": 0,
-						"contract_risks": 0
-					},
-					"notes": "LP 6m, links OK",
-					"timestamp": "2025-08-29T12:34:56Z"
-				}
-			]
-		},
-		"0xd42fabf08d04d1eb5c69f770c6e049832b69d788": {
-			"launch_type": "manual",
-			"votes": [
-				{
-					"voter_id": "tg:@bob",
-					"display": "Bob",
-					"categories": {
-						"liquidity_locking": 0,
-						"distribution_risk": 0,
-						"team_transparency": 0,
-						"execution_progress": 0,
-						"contract_risks": 0
-					},
-					"notes": "Owner can set 25% tax; no renounce",
-					"timestamp": 1767139200
-				}
-			]
-		}
-	}
+  "schema_version": "1.1",
+  "weights": {
+    "liquidity_locking": 0.3,
+    "distribution_risk": 0.25,
+    "team_transparency": 0.2,
+    "execution_progress": 0.15,
+    "contract_risks": 0.1
+  },
+  "tokens": {
+    "0x0b52dfa17542f30f3072c53ca5061120c74d86e9": {
+      "votes": [
+        {
+          "voter_id": "tg:@tosh_my",
+          "display": "Tosh",
+          "categories": {
+            "liquidity_locking": 75.0,
+            "distribution_risk": 40.0,
+            "team_transparency": 80.0,
+            "execution_progress": 65.0,
+            "contract_risks": -20.0
+          },
+          "notes": "LP 6m",
+          "timestamp": "2025-08-30T02:12:51Z"
+        }
+      ]
+    }
+  }
 }
