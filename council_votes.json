@@ -24,19 +24,6 @@
           "timestamp": "2025-08-30T09:33:58Z"
         },
         {
-          "voter_id": "tg:@tosh_my",
-          "display": "Tosh",
-          "categories": {
-            "liquidity_locking": 55.0,
-            "distribution_risk": 30.0,
-            "team_transparency": 80.0,
-            "execution_progress": 65.0,
-            "contract_risks": 100.0
-          },
-          "notes": "Test tosh bot2",
-          "timestamp": "2025-08-30T09:43:13Z"
-        },
-        {
           "voter_id": "tg:@Yashiroxtx",
           "display": "Yashiro",
           "categories": {
@@ -48,11 +35,37 @@
           },
           "notes": "Test tosh bot",
           "timestamp": "2025-08-30T11:01:24Z"
+        },
+        {
+          "voter_id": "tg:@REAL_VOLDEMORT",
+          "display": "⚡️⚡️⚡️⚡️⚡️",
+          "categories": {
+            "liquidity_locking": 75.0,
+            "distribution_risk": 40.0,
+            "team_transparency": 80.0,
+            "execution_progress": 65.0,
+            "contract_risks": -20.0
+          },
+          "notes": "Test tosh bot",
+          "timestamp": "2025-08-30T12:18:31Z"
+        },
+        {
+          "voter_id": "tg:@tosh_my",
+          "display": "Tosh",
+          "categories": {
+            "liquidity_locking": 75.0,
+            "distribution_risk": 40.0,
+            "team_transparency": 80.0,
+            "execution_progress": 65.0,
+            "contract_risks": -20.0
+          },
+          "notes": "TesT8",
+          "timestamp": "2025-08-30T12:22:15Z"
         }
       ],
       "launch_type": "launchpad",
       "category": "Tosh",
-      "category_key": "dead"
+      "category_key": "OG"
     },
     "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
       "votes": [
