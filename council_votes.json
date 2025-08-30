@@ -53,19 +53,19 @@
           "voter_id": "tg:@tosh_my",
           "display": "Tosh",
           "categories": {
-            "liquidity_locking": 100.0,
-            "distribution_risk": 100.0,
-            "team_transparency": 100.0,
-            "execution_progress": 100.0,
-            "contract_risks": 100.0
+            "liquidity_locking": 0.0,
+            "distribution_risk": 0.0,
+            "team_transparency": 0.0,
+            "execution_progress": 0.0,
+            "contract_risks": 0.0
           },
-          "notes": "Test Ui 3",
-          "timestamp": "2025-08-30T17:09:26Z"
+          "notes": "Test 4",
+          "timestamp": "2025-08-30T17:18:52Z"
         }
       ],
       "launch_type": "launchpad",
-      "category": "Tech",
-      "category_key": "og"
+      "category": "Toshtech",
+      "category_key": "Og"
     },
     "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
       "votes": [
