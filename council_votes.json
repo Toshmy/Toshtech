@@ -53,19 +53,20 @@
           "voter_id": "tg:@tosh_my",
           "display": "Tosh",
           "categories": {
-            "liquidity_locking": 25.0,
+            "liquidity_locking": 50.0,
             "distribution_risk": 25.0,
-            "team_transparency": 100.0,
+            "team_transparency": 75.0,
             "execution_progress": 75.0,
             "contract_risks": 100.0
           },
-          "notes": "Test Ui",
-          "timestamp": "2025-08-30T16:45:20Z"
+          "notes": "Test voteui 2",
+          "timestamp": "2025-08-30T16:58:31Z",
+          "score": 100.0
         }
       ],
       "launch_type": "launchpad",
       "category": "OG",
-      "category_key": "Og"
+      "category_key": "OG"
     },
     "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
       "votes": [
