@@ -27,6 +27,26 @@
       "launch_type": "launchpad",
       "category": "Tosh",
       "category_key": "dead"
+    },
+    "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
+      "votes": [
+        {
+          "voter_id": "tg:@tosh_my",
+          "display": "Tosh",
+          "categories": {
+            "liquidity_locking": -100.0,
+            "distribution_risk": -100.0,
+            "team_transparency": -100.0,
+            "execution_progress": -100.0,
+            "contract_risks": -100.0
+          },
+          "notes": "Test tosh bot",
+          "timestamp": "2025-08-30T02:55:27Z"
+        }
+      ],
+      "launch_type": "launchpad",
+      "category": "SCAM",
+      "category_key": "rug"
     }
   }
 }
