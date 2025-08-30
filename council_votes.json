@@ -53,19 +53,19 @@
           "voter_id": "tg:@tosh_my",
           "display": "Tosh",
           "categories": {
-            "liquidity_locking": 0.0,
-            "distribution_risk": 0.0,
-            "team_transparency": 0.0,
-            "execution_progress": 0.0,
-            "contract_risks": 0.0
+            "liquidity_locking": -100.0,
+            "distribution_risk": -100.0,
+            "team_transparency": -100.0,
+            "execution_progress": -100.0,
+            "contract_risks": -100.0
           },
-          "notes": "Test 4",
-          "timestamp": "2025-08-30T17:18:52Z"
+          "notes": "Very Bad",
+          "timestamp": "2025-08-30T17:28:48Z"
         }
       ],
       "launch_type": "launchpad",
-      "category": "Toshtech",
-      "category_key": "Og"
+      "category": "Tech",
+      "category_key": "rug"
     },
     "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
       "votes": [
