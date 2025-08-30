@@ -35,10 +35,23 @@
           },
           "notes": "Test tosh bot2",
           "timestamp": "2025-08-30T09:43:13Z"
+        },
+        {
+          "voter_id": "tg:@Yashiroxtx",
+          "display": "Yashiro",
+          "categories": {
+            "liquidity_locking": 75.0,
+            "distribution_risk": 40.0,
+            "team_transparency": 80.0,
+            "execution_progress": 65.0,
+            "contract_risks": -20.0
+          },
+          "notes": "Test tosh bot",
+          "timestamp": "2025-08-30T11:01:24Z"
         }
       ],
       "launch_type": "launchpad",
-      "category": "Tosh token",
+      "category": "Tosh",
       "category_key": "dead"
     },
     "0xc2c122f73557a48e10921fba6ed94c7270f7fa1f": {
